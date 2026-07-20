@@ -14,15 +14,14 @@ class F1Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "f1_index",
-            "fetch_index_daily",
-            "sh000001",
+            "f1_margin",
+            "fetch_margin_data",
             start_date,
             end_date
         )
 
     def calculate_margin_growth(self, df: pd.DataFrame) -> pd.Series:
-        df["margin_balance"] = df["close"] * df["volume"] * 0.001
+        df["margin_balance"] = pd.to_numeric(df["融资余额"], errors="coerce")
         df["margin_growth"] = df["margin_balance"].pct_change()
         return df
 
@@ -50,21 +49,20 @@ class F1Calculator:
         df = self.calculate_margin_growth(df)
         df = self.calculate_percentile(df)
 
-        today = df[df["date"] == date]
-        if today.empty:
+        if df.empty:
             self._db.upsert_status(date, "f1", "missing", result.source, "No data for date")
             return {"f1": None, "status": "missing"}
 
-        percentile = today["percentile"].iloc[0]
-        if pd.isna(percentile):
+        latest = df.iloc[-1]
+        if pd.isna(latest["percentile"]):
             self._db.upsert_status(date, "f1", "missing", result.source, "Insufficient data")
             return {"f1": None, "status": "missing"}
 
-        score = self.calculate_score(percentile)
+        score = self.calculate_score(latest["percentile"])
 
-        self._db.upsert_raw_data(date, "f1_margin_growth", today["margin_growth"].iloc[0])
-        self._db.upsert_raw_data(date, "f1_percentile", percentile)
+        self._db.upsert_raw_data(date, "f1_margin_growth", latest["margin_growth"])
+        self._db.upsert_raw_data(date, "f1_percentile", latest["percentile"])
         self._db.upsert_score(date, {"F1": score})
         self._db.upsert_status(date, "f1", "normal", result.source)
 
-        return {"f1": score, "status": "normal", "percentile": percentile}
+        return {"f1": score, "status": "normal", "percentile": latest["percentile"]}

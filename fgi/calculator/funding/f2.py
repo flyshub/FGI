@@ -14,16 +14,15 @@ class F2Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "f2_index",
-            "fetch_index_daily",
-            "sh000001",
+            "f2_northbound",
+            "fetch_northbound_data",
             start_date,
             end_date
         )
 
     def calculate_northbound_ratio(self, df: pd.DataFrame) -> pd.Series:
-        df["northbound_amount"] = df["close"] * df["volume"] * 0.0005
-        df["northbound_ratio"] = df["northbound_amount"] / df["close"]
+        df["northbound_amount"] = pd.to_numeric(df["net_buy"], errors="coerce")
+        df["northbound_ratio"] = df["northbound_amount"] / df["northbound_amount"].rolling(20).mean()
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
@@ -50,21 +49,20 @@ class F2Calculator:
         df = self.calculate_northbound_ratio(df)
         df = self.calculate_percentile(df)
 
-        today = df[df["date"] == date]
-        if today.empty:
+        if df.empty:
             self._db.upsert_status(date, "f2", "missing", result.source, "No data for date")
             return {"f2": None, "status": "missing"}
 
-        percentile = today["percentile"].iloc[0]
-        if pd.isna(percentile):
+        latest = df.iloc[-1]
+        if pd.isna(latest["percentile"]):
             self._db.upsert_status(date, "f2", "missing", result.source, "Insufficient data")
             return {"f2": None, "status": "missing"}
 
-        score = self.calculate_score(percentile)
+        score = self.calculate_score(latest["percentile"])
 
-        self._db.upsert_raw_data(date, "f2_northbound_ratio", today["northbound_ratio"].iloc[0])
-        self._db.upsert_raw_data(date, "f2_percentile", percentile)
+        self._db.upsert_raw_data(date, "f2_northbound_ratio", latest["northbound_ratio"])
+        self._db.upsert_raw_data(date, "f2_percentile", latest["percentile"])
         self._db.upsert_score(date, {"F2": score})
         self._db.upsert_status(date, "f2", "normal", result.source)
 
-        return {"f2": score, "status": "normal", "percentile": percentile}
+        return {"f2": score, "status": "normal", "percentile": latest["percentile"]}
