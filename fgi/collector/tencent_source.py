@@ -28,6 +28,8 @@ class TencentSource(DataSource):
 
             df = pd.DataFrame(kline, columns=["date", "open", "close", "high", "low", "volume"])
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            for col in ["open", "close", "high", "low", "volume"]:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
             mask = (df["date"] >= start_date) & (df["date"] <= end_date)
             df = df.loc[mask].copy()
             return DataSourceResult(df, DataSourceStatus.HEALTHY, "tencent")
