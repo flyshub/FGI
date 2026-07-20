@@ -1,0 +1,28 @@
+from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
+
+
+class MockSource(DataSource):
+    def __init__(self, name: str = "mock", healthy: bool = True):
+        self._name = name
+        self._healthy = healthy
+
+    def fetch_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        import pandas as pd
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "open": [100.0] * len(dates),
+            "close": [100.0] * len(dates),
+            "high": [100.0] * len(dates),
+            "low": [100.0] * len(dates),
+            "volume": [1000000] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_index_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
+        return self.fetch_daily(symbol, start_date, end_date)
+
+    def health_check(self) -> DataSourceStatus:
+        return DataSourceStatus.HEALTHY if self._healthy else DataSourceStatus.FAILED
