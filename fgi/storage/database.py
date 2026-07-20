@@ -27,6 +27,8 @@ class Database:
         self.close()
 
     def init_schema(self):
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS raw_data (
                 date TEXT,
@@ -58,6 +60,8 @@ class Database:
         """)
 
     def upsert_raw_data(self, date: str, indicator: str, value: float):
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         self._conn.execute("""
             INSERT INTO raw_data (date, indicator, value)
             VALUES (?, ?, ?)
@@ -67,6 +71,8 @@ class Database:
         """, (date, indicator, value))
 
     def upsert_raw_data_batch(self, df: pd.DataFrame, indicator: str):
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         records = [(row["date"], indicator, row["value"]) for _, row in df.iterrows()]
         self._conn.executemany("""
             INSERT INTO raw_data (date, indicator, value)
@@ -77,6 +83,8 @@ class Database:
         """, records)
 
     def get_raw_data(self, indicator: str, start_date: str, end_date: str) -> pd.DataFrame:
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         query = """
             SELECT date, value FROM raw_data
             WHERE indicator = ? AND date >= ? AND date <= ?
@@ -85,6 +93,8 @@ class Database:
         return pd.read_sql_query(query, self._conn, params=(indicator, start_date, end_date))
 
     def upsert_score(self, date: str, scores: dict):
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         fields = list(scores.keys())
         values = [scores[f] for f in fields]
         placeholders = ", ".join(["?"] * len(fields))
@@ -98,6 +108,8 @@ class Database:
         """, [date] + values)
 
     def get_scores(self, start_date: str, end_date: str) -> pd.DataFrame:
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         query = """
             SELECT * FROM scores_daily
             WHERE date >= ? AND date <= ?
@@ -105,7 +117,9 @@ class Database:
         """
         return pd.read_sql_query(query, self._conn, params=(start_date, end_date))
 
-    def upsert_status(self, date: str, indicator: str, status: str, source: str = None, error: str = None):
+    def upsert_status(self, date: str, indicator: str, status: str, source: str = "", error: str = ""):
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         self._conn.execute("""
             INSERT INTO daily_status (date, indicator, status, source, error)
             VALUES (?, ?, ?, ?, ?)
@@ -113,7 +127,7 @@ class Database:
                 status = excluded.status,
                 source = excluded.source,
                 error = excluded.error
-        """, (date, indicator, status, source, error))
+        """, (date, indicator, status, source, error or ""))
 
     def get_status(self, date: str) -> pd.DataFrame:
         query = """
@@ -122,6 +136,8 @@ class Database:
         return pd.read_sql_query(query, self._conn, params=(date,))
 
     def get_latest_score_date(self) -> Optional[str]:
+        if self._conn is None:
+            raise RuntimeError("Database not connected")
         cursor = self._conn.execute("SELECT MAX(date) FROM scores_daily")
         row = cursor.fetchone()
         return row[0] if row else None

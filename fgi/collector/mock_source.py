@@ -1,3 +1,4 @@
+import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 
@@ -9,7 +10,6 @@ class MockSource(DataSource):
     def fetch_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
-        import pandas as pd
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
         df = pd.DataFrame({
             "date": dates.strftime("%Y-%m-%d"),
@@ -23,6 +23,37 @@ class MockSource(DataSource):
 
     def fetch_index_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
         return self.fetch_daily(symbol, start_date, end_date)
+
+    def fetch_zt_pool(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "symbol": ["000001"] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_js_weibo(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "bullish_count": [100] * len(dates),
+            "bearish_count": [50] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_cyb_daily(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "turnover_rate": [0.5] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
     def health_check(self) -> DataSourceStatus:
         return DataSourceStatus.HEALTHY if self._healthy else DataSourceStatus.FAILED
