@@ -1,0 +1,46 @@
+name: FGI Daily Update
+
+on:
+  schedule:
+    - cron: '0 20 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date to run (YYYY-MM-DD)'
+        required: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Get target date
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "target_date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+          else
+            echo "target_date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run FGI daily update
+        run: python -m fgi.output.daily_run --date ${{ steps.date.outputs.target_date }}
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: fgi-results-${{ steps.date.outputs.target_date }}
+          path: |
+            data/fgi.db
+            output/
