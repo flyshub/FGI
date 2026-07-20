@@ -15,7 +15,7 @@ class TencentSource(DataSource):
                 code = f"sh{symbol}" if symbol.startswith("6") else f"sz{symbol}"
 
             url = "http://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
-            params = {"param": f"{code},day,,,{640},qfq"}
+            params = {"param": f"{code},day,,,{1500},qfq"}
             resp = self._session.get(url, params=params, timeout=10)
             data = resp.json()
 
