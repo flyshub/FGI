@@ -16,3 +16,12 @@ Thumbs.db
 # Temp
 *.tmp
 *.temp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Data
+data/
+*.db
