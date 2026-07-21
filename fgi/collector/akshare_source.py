@@ -183,28 +183,27 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
 
-    def fetch_zt_stats(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch 涨跌停统计 using levistock."""
+    def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch daily 涨停板 summary (count + seal fund sum) via stock_zt_pool_em."""
         try:
-            import levistock as lk
+            ak = self._get_client()
             dates = pd.date_range(start=start_date, end=end_date, freq="B")
             frames = []
             for d in dates:
-                ds = d.strftime("%Y-%m-%d")
-                data = self._cached(("zttt", ds), lambda ds=ds: _retry(lambda ds=ds: lk.get_zttt(date=ds), retries=2, delay=2))
-                if data and "errcode" in data and data["errcode"] == "0":
+                ds = d.strftime("%Y%m%d")
+                df = self._cached(("zts", ds), lambda ds=ds: _retry(lambda ds=ds: ak.stock_zt_pool_em(date=ds), retries=2, delay=2))
+                if df is not None and not df.empty:
                     frames.append({
-                        "date": ds,
-                        "limit_up_count": len(data.get("StockList", [])),
-                        "limit_down_count": len(data.get("ZhuShuList", [])),
-                        "limit_up_ratio": float(data.get("ttag", 0)),
+                        "date": d.strftime("%Y-%m-%d"),
+                        "limit_up_count": len(df),
+                        "seal_fund_sum": float(df["封板资金"].sum()),
                     })
             if not frames:
-                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No zt stats for any date")
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No zt data for any date")
             result_df = pd.DataFrame(frames)
-            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "levistock")
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
         except Exception as e:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_option_volume(self, start_date: str, end_date: str) -> DataSourceResult:
         try:
@@ -242,42 +241,6 @@ class AKShareSource(DataSource):
             df = df.loc[mask].copy()
             if df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PE data in range")
-            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
-        except Exception as e:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
-
-    def fetch_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
-        try:
-            import requests
-            url = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
-            params = {
-                "secid": "1.000001",
-                "klt": "101",
-                "fields1": "f1,f2,f3,f7",
-                "fields2": "f51,f52,f53,f54,f55,f56,f57",
-                "lmt": "0",
-            }
-            resp = _retry(lambda: requests.get(url, params=params, timeout=15))
-            data = resp.json()
-            if not data.get("data") or not data["data"].get("klines"):
-                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund flow data")
-            records = []
-            for line in data["data"]["klines"]:
-                parts = line.split(",")
-                if len(parts) >= 5:
-                    records.append({
-                        "date": parts[0],
-                        "main_net": float(parts[1]),
-                        "small_net": float(parts[2]),
-                        "mid_net": float(parts[3]),
-                        "big_net": float(parts[4]),
-                        "super_big_net": float(parts[5]) if len(parts) > 5 else 0.0,
-                    })
-            df = pd.DataFrame(records)
-            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
-            df = df.loc[mask].copy()
-            if df.empty:
-                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund flow data in range")
             return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))

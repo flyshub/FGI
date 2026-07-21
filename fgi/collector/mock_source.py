@@ -109,6 +109,17 @@ class MockSource(DataSource):
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
+    def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "limit_up_count": [50] * len(dates),
+            "seal_fund_sum": [1000000000.0] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
     def fetch_sentiment_data(self, start_date: str, end_date: str) -> DataSourceResult:
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
@@ -131,20 +142,6 @@ class MockSource(DataSource):
             "date": dates.strftime("%Y-%m-%d"),
             "滚动市盈率": [12.0 + i * 0.01 for i in range(len(dates))],
             "静态市盈率": [15.0] * len(dates),
-        })
-        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
-
-    def fetch_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
-        if not self._healthy:
-            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
-        dates = pd.date_range(start=start_date, end=end_date, freq="B")
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "main_net": [1000000.0] * len(dates),
-            "small_net": [500000.0] * len(dates),
-            "mid_net": [700000.0] * len(dates),
-            "big_net": [300000.0] * len(dates),
-            "super_big_net": [200000.0] * len(dates),
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 

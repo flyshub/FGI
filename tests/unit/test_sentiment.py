@@ -30,7 +30,7 @@ def data_manager():
     manager.configure_chain("s1_sentiment_zz", ["mock"])
     manager.configure_chain("s2_sentiment", ["mock"])
     manager.configure_chain("s3_index", ["mock"])
-    manager.configure_chain("s4_index", ["mock"])
+    manager.configure_chain("s4_zt_daily", ["mock"])
     return manager
 
 
@@ -153,12 +153,11 @@ class TestS4Calculator:
     def test_calculate_zt_ratio(self, s4_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "call_volume": [100000] * 100,
-            "put_volume": [10000] * 100,
+            "seal_fund_sum": [1000000000.0] * 100,
         })
         result = s4_calculator.calculate_zt_ratio(df)
         assert "zt_ratio" in result.columns
-        assert result["zt_ratio"].iloc[0] == 0.1
+        assert result["zt_ratio"].iloc[0] == 1000000000.0
 
     def test_calculate_score(self, s4_calculator):
         score = s4_calculator.calculate_score(0.5)

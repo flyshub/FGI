@@ -35,7 +35,7 @@ def setup_data_manager() -> DataSourceManager:
     except Exception:
         pass
     for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
-                       "s1_sentiment_zz", "s2_sentiment", "s3_index", "s4_index",
+                       "s1_sentiment_zz", "s2_sentiment", "s3_index", "s4_zt_daily",
                        "v1_pe", "v2_index",
                        "f1_margin", "f2_northbound", "f3_index"]:
         sources = []

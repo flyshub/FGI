@@ -15,7 +15,7 @@ class M1Calculator:
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
             "m1_zt_stats",
-            "fetch_zt_stats",
+            "fetch_zt_daily_summary",
             start_date,
             end_date
         )

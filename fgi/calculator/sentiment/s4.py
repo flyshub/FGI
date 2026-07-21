@@ -15,14 +15,14 @@ class S4Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s4_index",
-            "fetch_option_volume",
+            "s4_zt_daily",
+            "fetch_zt_daily_summary",
             start_date,
             end_date
         )
 
     def calculate_zt_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["zt_ratio"] = df["put_volume"] / df["call_volume"]
+        df["zt_ratio"] = df["seal_fund_sum"]
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
