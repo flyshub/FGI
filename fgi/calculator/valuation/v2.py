@@ -1,70 +1,63 @@
 import pandas as pd
-from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
+import numpy as np
+from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
-from fgi.common.utils import rolling_percentile
+from fgi.common.utils import zscore
 from fgi.storage.database import Database
 from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class V2Calculator:
+    """V3.8: ΔERP Z-score (250-day window, negative sigmoid). Derived from V1 ERP."""
+
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
         self._db = db
-        self._window = PERCENTILE_WINDOW_YEARS * 252
+        self._window = 250
 
-    def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "v2_index",
-            "fetch_index_daily",
-            "sh000012",
-            start_date,
-            end_date
-        )
+    def calculate_derp_zscore(self, erp_series: pd.Series) -> pd.Series:
+        delta = erp_series.diff()
+        z = zscore(delta, window=self._window, min_periods=self._window)
+        scores = 100.0 / (1.0 + np.exp(z))
+        return scores
 
-    def calculate_deviation(self, df: pd.DataFrame) -> pd.Series:
-        df["ma20"] = df["close"].rolling(window=20).mean()
-        df["deviation"] = (df["close"] - df["ma20"]) / df["ma20"]
-        return df
-
-    def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
-        df["percentile"] = rolling_percentile(df["deviation"], window=self._window)
-        return df
-
-    def calculate_score(self, percentile: float) -> float:
-        return percentile * 100
+    def calculate_score(self, score: float) -> float:
+        return score
 
     def run(self, date: str, lookback_days: int = None) -> dict:
         if lookback_days is None:
-            lookback_days = self._window + 20
+            lookback_days = self._window + 60
 
         end_date = date
         start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
         start_date = start_date.strftime("%Y-%m-%d")
 
-        result = self.fetch_data(start_date, end_date)
-        if result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "v2", "missing", result.source, result.error)
+        raw = self._db.get_raw_data("v1_erp", start_date, end_date)
+        if raw.empty:
+            self._db.upsert_status(date, "v2", "missing", "database", "No ERP data available")
             return {"v2": None, "status": "missing"}
 
-        df = result.data
-        df = self.calculate_deviation(df)
-        df = self.calculate_percentile(df)
+        erp_df = pd.DataFrame({
+            "date": raw["date"],
+            "erp": raw["value"],
+        }).sort_values("date")
 
-        today = df[df["date"] == date]
+        scores = self.calculate_derp_zscore(erp_df["erp"])
+        erp_df["score"] = scores
+
+        today = erp_df[erp_df["date"] == date]
         if today.empty:
-            self._db.upsert_status(date, "v2", "missing", result.source, "No data for date")
+            self._db.upsert_status(date, "v2", "missing", "database", "No data for date")
             return {"v2": None, "status": "missing"}
 
-        percentile = today["percentile"].iloc[0]
-        if pd.isna(percentile):
-            self._db.upsert_status(date, "v2", "missing", result.source, "Insufficient data")
+        score = today["score"].iloc[0]
+        if pd.isna(score):
+            self._db.upsert_status(date, "v2", "missing", "database", "Insufficient data")
             return {"v2": None, "status": "missing"}
 
-        score = self.calculate_score(percentile)
+        self._db.upsert_raw_data(date, "v2_score", float(score))
+        self._db.upsert_raw_data(date, "v2_percentile", float(score) / 100.0)
+        self._db.upsert_score(date, {"V2": float(score)})
+        self._db.upsert_status(date, "v2", "normal", "database")
 
-        self._db.upsert_raw_data(date, "v2_deviation", today["deviation"].iloc[0])
-        self._db.upsert_raw_data(date, "v2_percentile", percentile)
-        self._db.upsert_score(date, {"V2": score})
-        self._db.upsert_status(date, "v2", "normal", result.source)
-
-        return {"v2": score, "status": "normal", "percentile": percentile}
+        return {"v2": float(score), "status": "normal"}

@@ -8,6 +8,8 @@ from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class S2Calculator:
+    """V3.8: 股吧热度 (formerly S3) - zzshare market_hot_sentiment p_close"""
+
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
         self._db = db
@@ -15,20 +17,20 @@ class S2Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s2_sentiment",
-            "fetch_open_sentiment",
+            "s3_sentiment",
+            "fetch_market_hot_sentiment",
             start_date,
             end_date
         )
 
-    def calculate_sentiment(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["sentiment"] = df["up_num"] / (df["up_num"] + df["down_num"])
+    def calculate_heat(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["heat"] = pd.to_numeric(df["p_close"], errors="coerce").fillna(100.0)
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
         if df is None:
-            df = pd.DataFrame({"sentiment": [0.5]})
-        df["percentile"] = rolling_percentile(df["sentiment"], window=self._window)
+            df = pd.DataFrame({"heat": [1000000]})
+        df["percentile"] = rolling_percentile(df["heat"], window=self._window)
         return df
 
     def calculate_score(self, percentile: float) -> float:
@@ -52,7 +54,7 @@ class S2Calculator:
             self._db.upsert_status(date, "s2", "missing", result.source, "No data")
             return {"s2": None, "status": "missing"}
 
-        df = self.calculate_sentiment(df)
+        df = self.calculate_heat(df)
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
@@ -67,7 +69,7 @@ class S2Calculator:
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "s2_sentiment", today["sentiment"].iloc[0])
+        self._db.upsert_raw_data(date, "s2_heat", today["heat"].iloc[0])
         self._db.upsert_raw_data(date, "s2_percentile", percentile)
         self._db.upsert_score(date, {"S2": score})
         self._db.upsert_status(date, "s2", "normal", result.source)

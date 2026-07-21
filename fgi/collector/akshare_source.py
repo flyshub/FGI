@@ -185,34 +185,6 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
 
-    def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch daily 涨停板 summary via levistock (historical support)."""
-        try:
-            import levistock as lk
-            dates = pd.date_range(start=start_date, end=end_date, freq="B")
-            frames = []
-            for d in dates:
-                ds = d.strftime("%Y-%m-%d")
-                emotion = self._cached(("mph", ds), lambda ds=ds: lk.market_emotion_kph(date=ds))
-                zt_count = emotion.get("sjzt", emotion.get("zt", 0)) if isinstance(emotion, dict) else 0
-
-                limit_up_list = self._cached(("zs", ds), lambda ds=ds: lk.limit_up_his_kph(date=ds))
-                seal_fund = 0.0
-                if isinstance(limit_up_list, list):
-                    seal_fund = sum(item.get("seal_money", 0) for item in limit_up_list)
-
-                frames.append({
-                    "date": ds,
-                    "limit_up_count": int(zt_count),
-                    "seal_fund_sum": float(seal_fund),
-                })
-            if not frames:
-                return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", "No zt data for any date")
-            result_df = pd.DataFrame(frames)
-            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "levistock")
-        except Exception as e:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
-
     def fetch_option_volume(self, start_date: str, end_date: str) -> DataSourceResult:
         try:
             ak = self._get_client()
@@ -296,8 +268,45 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
+    def fetch_market_cap(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 上证总市值 (monthly, from macro_china_stock_market_cap)."""
+        try:
+            ak = self._get_client()
+            df = _retry(lambda: ak.macro_china_stock_market_cap())
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No market cap data")
+            df["date"] = df["数据日期"].str.extract(r"(\d{4})年(\d{2})月份") \
+                .apply(lambda x: f"{x[0]}-{x[1]}-01", axis=1)
+            df["market_cap"] = pd.to_numeric(df["市价总值-上海"], errors="coerce")
+            result_df = df[["date", "market_cap"]].dropna(subset=["market_cap"]).copy()
+            mask = (result_df["date"] >= start_date) & (result_df["date"] <= end_date)
+            result_df = result_df.loc[mask].copy()
+            if result_df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No market cap data in range")
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
+    def fetch_bond_yield(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 中国10年期国债收益率 (daily, from bond_zh_us_rate)."""
+        try:
+            ak = self._get_client()
+            df = _retry(lambda: ak.bond_zh_us_rate())
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No bond yield data")
+            df["date"] = pd.to_datetime(df["日期"]).dt.strftime("%Y-%m-%d")
+            df["yield_10y"] = pd.to_numeric(df["中国国债收益率10年"], errors="coerce")
+            result_df = df[["date", "yield_10y"]].dropna(subset=["yield_10y"]).copy()
+            mask = (result_df["date"] >= start_date) & (result_df["date"] <= end_date)
+            result_df = result_df.loc[mask].copy()
+            if result_df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No bond yield data in range")
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
     def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch daily 涨停板 summary via levistock (supports today's date)."""
+        """Fetch daily 涨停板 summary via levistock (supports today's date with per-day error handling)."""
         try:
             import levistock as lk
             import time

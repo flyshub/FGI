@@ -37,11 +37,11 @@ def setup_data_manager() -> DataSourceManager:
     except Exception:
         pass
     for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
-                       "s1_sentiment_zz", "s2_sentiment", "s3_sentiment", "s4_zt_daily",
-                       "v1_pe", "v2_index",
-                       "f1_margin", "f2_fund_position", "f3_index", "f3_industry_flow"]:
+                       "s1_sentiment_zz", "s3_sentiment", "s4_zt_daily",
+                       "v1_pe", "v1_bond", "v2_index",
+                       "f1_margin", "f1_market_cap", "f2_fund_position", "f3_index", "f3_industry_flow"]:
         sources = []
-        if indicator in ("s1_sentiment_zz", "s2_sentiment", "m2_sentiment", "s3_sentiment") and zzshare_ok:
+        if indicator in ("s1_sentiment_zz", "m2_sentiment", "s3_sentiment") and zzshare_ok:
             sources.append("zzshare")
         if AKSHARE_ENABLED:
             sources.append("akshare")

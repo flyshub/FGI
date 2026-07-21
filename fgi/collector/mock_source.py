@@ -60,7 +60,7 @@ class MockSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
         df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
+            "信用交易日期": dates.strftime("%Y%m%d"),
             "融资余额": [1000000.0 + i * 100 for i in range(len(dates))],
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
@@ -150,6 +150,26 @@ class MockSource(DataSource):
             "flat_num": [200] * len(dates),
             "up_num": [100] * len(dates),
             "down_num": [50] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_market_cap(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "market_cap": [463852.98] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_bond_yield(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "yield_10y": [2.80] * len(dates),
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 

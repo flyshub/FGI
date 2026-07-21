@@ -64,14 +64,25 @@ class TestCalculateFgi:
 
 
 class TestApplyConsistencyAdjustment:
-    def test_no_adjustment(self):
-        scores = {"momentum": 50, "sentiment": 50, "valuation": 50, "funding": 50}
-        assert apply_consistency_adjustment(50, scores) == 50
+    """V3.8: MAD-based consistency adjustment"""
 
-    def test_low_adjustment(self):
-        scores = {"momentum": 10, "sentiment": 10, "valuation": 10, "funding": 10}
-        result = apply_consistency_adjustment(10, scores)
-        assert result > 10
+    def test_mad_computation(self):
+        scores = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]
+        _, mad = apply_consistency_adjustment(50, scores)
+        assert mad == 0.0
+
+    def test_mad_with_variance(self):
+        scores = [10, 20, 80, 90, 30, 70, 40, 60, 25, 75, 35, 65]
+        _, mad = apply_consistency_adjustment(50, scores)
+        assert mad > 0
+
+    def test_mad_adjustment_extreme(self):
+        from fgi.common.utils import adjust_fgi_with_mad_pct
+        result_low = adjust_fgi_with_mad_pct(10, 0.3, 0.5)
+        assert result_low > 10  # extreme fear pushed toward 50
+        assert result_low < 50
+        result = adjust_fgi_with_mad_pct(50, 0.3, 0.5)
+        assert result == 50  # neutral, no adjustment
 
 
 class TestCalculateHealthScore:

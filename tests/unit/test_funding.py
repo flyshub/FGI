@@ -27,6 +27,7 @@ def data_manager():
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
     manager.configure_chain("f1_margin", ["mock"])
+    manager.configure_chain("f1_market_cap", ["mock"])
     manager.configure_chain("f2_fund_position", ["mock"])
     manager.configure_chain("f3_industry_flow", ["mock"])
     manager.configure_chain("f3_index", ["mock"])
@@ -49,14 +50,20 @@ def f3_calculator(data_manager, db):
 
 
 class TestF1Calculator:
-    def test_calculate_margin_growth(self, f1_calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "融资余额": [1000000.0] * 100
+    """V3.8: margin_balance / market_cap ratio with monthly forward-fill"""
+
+    def test_calculate_margin_ratio(self, f1_calculator):
+        margin_df = pd.DataFrame({
+            "信用交易日期": ["20240103"] * 100,
+            "融资余额": [1000000.0] * 100,
         })
-        result = f1_calculator.calculate_margin_growth(df)
-        assert "margin_growth" in result.columns
-        assert "margin_balance" in result.columns
+        cap_df = pd.DataFrame({
+            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+            "market_cap": [463852.98] * 100,
+        })
+        result = f1_calculator.calculate_margin_ratio(margin_df, cap_df)
+        assert "margin_ratio" in result.columns
+        assert result["margin_ratio"].iloc[0] > 0
 
     def test_calculate_score(self, f1_calculator):
         score = f1_calculator.calculate_score(0.5)

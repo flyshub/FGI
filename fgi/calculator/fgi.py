@@ -4,7 +4,7 @@ from fgi.config.settings import (
     HEALTHY_THRESHOLD, ANOMALY_PERCENTILE,
     FGI_EXTREME_HIGH, FGI_EXTREME_LOW, MISSING_DAY_LIMIT
 )
-from fgi.common.utils import calculate_fgi, apply_consistency_adjustment, calculate_health_score
+from fgi.common.utils import calculate_fgi, apply_consistency_adjustment, adjust_fgi_with_mad_pct, rolling_percentile, calculate_health_score
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m3 import M3Calculator
@@ -12,7 +12,6 @@ from fgi.calculator.momentum.m4 import M4Calculator
 from fgi.calculator.sentiment.s1 import S1Calculator
 from fgi.calculator.sentiment.s2 import S2Calculator
 from fgi.calculator.sentiment.s3 import S3Calculator
-from fgi.calculator.sentiment.s4 import S4Calculator
 from fgi.calculator.valuation.v1 import V1Calculator
 from fgi.calculator.valuation.v2 import V2Calculator
 from fgi.calculator.funding.f1 import F1Calculator
@@ -22,9 +21,9 @@ from fgi.calculator.funding.f3 import F3Calculator
 
 INDICATOR_WEIGHTS = {
     "momentum": {"M1": 0.25, "M2": 0.25, "M3": 0.25, "M4": 0.25},
-    "sentiment": {"S1": 0.25, "S2": 0.25, "S3": 0.25, "S4": 0.25},
+    "sentiment": {"S1": 0.3333, "S2": 0.3333, "S3": 0.3334},
     "valuation": {"V1": 0.50, "V2": 0.50},
-    "funding": {"F1": 0.33, "F2": 0.33, "F3": 0.34},
+    "funding": {"F1": 0.3333, "F2": 0.3333, "F3": 0.3334},
 }
 
 DIMENSION_WEIGHTS = {
@@ -47,7 +46,6 @@ class FGICalculator:
             "S1": S1Calculator(data_manager, db),
             "S2": S2Calculator(data_manager, db),
             "S3": S3Calculator(data_manager, db),
-            "S4": S4Calculator(data_manager, db),
             "V1": V1Calculator(data_manager, db),
             "V2": V2Calculator(data_manager, db),
             "F1": F1Calculator(data_manager, db),
@@ -80,12 +78,17 @@ class FGICalculator:
         return weighted_sum / total_weight
 
     def calculate_health(self, indicator_results: dict) -> float:
-        total = len(indicator_results)
-        if total == 0:
+        import pandas as pd
+        statuses = []
+        for name in indicator_results:
+            r = indicator_results[name]
+            statuses.append({
+                "indicator": name,
+                "status": r.get("status", "missing"),
+            })
+        if not statuses:
             return 0
-        normal = sum(1 for r in indicator_results.values()
-                     if r.get("status") == "normal")
-        return (normal / total) * 100
+        return calculate_health_score(pd.DataFrame(statuses))
 
     def run(self, date: str) -> dict:
         indicator_results = self.run_all_indicators(date)
@@ -97,7 +100,29 @@ class FGICalculator:
             )
 
         raw_fgi = calculate_fgi(dimension_scores)
-        fgi_final = apply_consistency_adjustment(raw_fgi, dimension_scores)
+
+        all_scores = []
+        for name, r in indicator_results.items():
+            s = r.get(name.lower()) or r.get("score")
+            if s is not None:
+                all_scores.append(float(s))
+
+        _, mad = apply_consistency_adjustment(raw_fgi, all_scores)
+        self._db.upsert_raw_data(date, "mad", float(mad))
+        self._db.commit()
+
+        mad_history = self._db.get_raw_data("mad", "2015-01-01", date)
+        if len(mad_history) > 252:
+            import pandas as pd
+            mad_series = pd.Series(mad_history["value"].values, index=mad_history["date"])
+            mad_pct = rolling_percentile(mad_series, window=1260)
+            mad_pct_val = mad_pct.iloc[-1]
+            if not pd.isna(mad_pct_val):
+                fgi_final = adjust_fgi_with_mad_pct(raw_fgi, mad, float(mad_pct_val))
+            else:
+                fgi_final = raw_fgi
+        else:
+            fgi_final = raw_fgi
 
         health = self.calculate_health(indicator_results)
 

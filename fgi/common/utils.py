@@ -10,9 +10,9 @@ def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     return series.rolling(window=window, min_periods=252).apply(percentile_rank, raw=False)
 
 
-def zscore(series: pd.Series, window: int = 1260) -> pd.Series:
-    mean = series.rolling(window=window, min_periods=252).mean()
-    std = series.rolling(window=window, min_periods=252).std()
+def zscore(series: pd.Series, window: int = 1260, min_periods: int = 252) -> pd.Series:
+    mean = series.rolling(window=window, min_periods=min_periods).mean()
+    std = series.rolling(window=window, min_periods=min_periods).std()
     return (series - mean) / std
 
 
@@ -44,17 +44,24 @@ def calculate_fgi(dimension_scores: dict) -> float:
     return raw_fgi
 
 
-def apply_consistency_adjustment(fgi: float, dimension_scores: dict) -> float:
-    if fgi < 15 or fgi > 85:
-        low_dims = [dim for dim, score in dimension_scores.items() if score < 30]
-        high_dims = [dim for dim, score in dimension_scores.items() if score > 70]
-        if fgi < 15 and low_dims:
-            adjustment = sum(dimension_scores[dim] for dim in low_dims) * 0.05
-            return fgi + adjustment
-        elif fgi > 85 and high_dims:
-            adjustment = sum(dimension_scores[dim] for dim in high_dims) * 0.05
-            return fgi - adjustment
-    return fgi
+def apply_consistency_adjustment(fgi_raw: float, indicator_scores: list) -> tuple[float, float]:
+    import numpy as np
+    if len(indicator_scores) < 4:
+        return fgi_raw, 0.0
+    arr = np.array(indicator_scores, dtype=float)
+    arr = arr[~np.isnan(arr)]
+    if len(arr) < 4:
+        return fgi_raw, 0.0
+    median = np.median(arr)
+    mad = float(np.median(np.abs(arr - median)))
+    return fgi_raw, mad
+
+
+def adjust_fgi_with_mad_pct(fgi_raw: float, mad: float, mad_pct: float) -> float:
+    if fgi_raw < 15 or fgi_raw > 85:
+        lam = min(mad_pct * 0.6, 0.3)
+        return fgi_raw * (1.0 - lam) + 50.0 * lam
+    return fgi_raw
 
 
 def calculate_health_score(status_df: pd.DataFrame) -> float:
