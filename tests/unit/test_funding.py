@@ -121,12 +121,13 @@ class TestF3Calculator:
     def test_calculate_large_single_inflow(self, f3_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100.0] * 100,
-            "volume": [1000000] * 100
+            "close": [100.0 + i * 0.5 for i in range(100)],
+            "volume": [1000000.0] * 100,
         })
         result = f3_calculator.calculate_large_single_inflow(df)
         assert "large_single_ratio" in result.columns
         assert "large_single_inflow" in result.columns
+        assert "flow_est" in result.columns
 
     def test_calculate_score(self, f3_calculator):
         score = f3_calculator.calculate_score(0.5)

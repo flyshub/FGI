@@ -14,19 +14,18 @@ class V1Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "v1_index",
-            "fetch_index_daily",
-            "sh000300",
+            "v1_pe",
+            "fetch_pe_data",
             start_date,
             end_date
         )
 
-    def calculate_deviation(self, df: pd.DataFrame) -> pd.Series:
-        df["ma20"] = df["close"].rolling(window=20).mean()
-        df["deviation"] = (df["close"] - df["ma20"]) / df["ma20"]
+    def calculate_deviation(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["pe_ma20"] = df["滚动市盈率"].rolling(window=20).mean()
+        df["deviation"] = (df["滚动市盈率"] - df["pe_ma20"]) / df["pe_ma20"]
         return df
 
-    def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
+    def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
         df["percentile"] = rolling_percentile(df["deviation"], window=self._window)
         return df
 

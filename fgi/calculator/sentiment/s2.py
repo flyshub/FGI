@@ -15,14 +15,14 @@ class S2Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s2_index",
-            "fetch_js_weibo",
+            "s2_sentiment",
+            "fetch_open_sentiment",
             start_date,
             end_date
         )
 
     def calculate_sentiment(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["sentiment"] = df["bullish_count"] / (df["bullish_count"] + df["bearish_count"])
+        df["sentiment"] = df["up_num"] / (df["up_num"] + df["down_num"])
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:

@@ -123,5 +123,43 @@ class MockSource(DataSource):
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
+    def fetch_pe_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "滚动市盈率": [12.0 + i * 0.01 for i in range(len(dates))],
+            "静态市盈率": [15.0] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "main_net": [1000000.0] * len(dates),
+            "small_net": [500000.0] * len(dates),
+            "mid_net": [700000.0] * len(dates),
+            "big_net": [300000.0] * len(dates),
+            "super_big_net": [200000.0] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_open_sentiment(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "up_num": [3044] * len(dates),
+            "down_num": [2165] * len(dates),
+            "uplimit_num": [97] * len(dates),
+            "downlimit_num": [20] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
     def health_check(self) -> DataSourceStatus:
         return DataSourceStatus.HEALTHY if self._healthy else DataSourceStatus.FAILED

@@ -230,6 +230,58 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
+    def fetch_pe_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        try:
+            ak = self._get_client()
+            df = _retry(lambda: ak.stock_index_pe_lg(symbol="沪深300"))
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PE data")
+            df = df.rename(columns={"日期": "date"})
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
+            df = df.loc[mask].copy()
+            if df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PE data in range")
+            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
+    def fetch_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
+        try:
+            import requests
+            url = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
+            params = {
+                "secid": "1.000001",
+                "klt": "101",
+                "fields1": "f1,f2,f3,f7",
+                "fields2": "f51,f52,f53,f54,f55,f56,f57",
+                "lmt": "0",
+            }
+            resp = _retry(lambda: requests.get(url, params=params, timeout=15))
+            data = resp.json()
+            if not data.get("data") or not data["data"].get("klines"):
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund flow data")
+            records = []
+            for line in data["data"]["klines"]:
+                parts = line.split(",")
+                if len(parts) >= 5:
+                    records.append({
+                        "date": parts[0],
+                        "main_net": float(parts[1]),
+                        "small_net": float(parts[2]),
+                        "mid_net": float(parts[3]),
+                        "big_net": float(parts[4]),
+                        "super_big_net": float(parts[5]) if len(parts) > 5 else 0.0,
+                    })
+            df = pd.DataFrame(records)
+            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
+            df = df.loc[mask].copy()
+            if df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund flow data in range")
+            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
     def health_check(self) -> DataSourceStatus:
         try:
             ak = self._get_client()

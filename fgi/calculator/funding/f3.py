@@ -21,12 +21,14 @@ class F3Calculator:
             end_date
         )
 
-    def calculate_large_single_inflow(self, df: pd.DataFrame) -> pd.Series:
-        df["large_single_inflow"] = df["close"] * df["volume"] * 0.0002
-        df["large_single_ratio"] = df["large_single_inflow"] / df["close"]
+    def calculate_large_single_inflow(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["price_change"] = df["close"].diff()
+        df["flow_est"] = df["price_change"] * df["volume"]
+        df["large_single_inflow"] = df["flow_est"].abs()
+        df["large_single_ratio"] = df["large_single_inflow"]
         return df
 
-    def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
+    def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
         df["percentile"] = rolling_percentile(df["large_single_ratio"], window=self._window)
         return df
 

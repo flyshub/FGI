@@ -12,9 +12,9 @@ def setup_data_manager() -> DataSourceManager:
     manager = DataSourceManager()
     manager.register_source("akshare", AKShareSource())
     manager.register_source("mock", MockSource())
-    for indicator in ["m1_zt_pool", "m2_js_weibo", "m3_index", "m4_cyb_turnover",
-                       "s1_index", "s2_index", "s3_index", "s4_index",
-                       "v1_index", "v2_index",
+    for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
+                       "s1_sentiment_zz", "s2_sentiment", "s3_index", "s4_index",
+                       "v1_pe", "v2_index",
                        "f1_margin", "f2_northbound", "f3_index"]:
         manager.configure_chain(indicator, ["akshare", "mock"])
     return manager

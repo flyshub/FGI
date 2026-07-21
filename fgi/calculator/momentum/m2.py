@@ -14,16 +14,14 @@ class M2Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "m2_js_weibo",
-            "fetch_js_weibo",
+            "m2_sentiment",
+            "fetch_open_sentiment",
             start_date,
             end_date
         )
 
     def calculate_sentiment_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date")
-        df["bullish_ratio"] = df["bullish_count"] / (df["bullish_count"] + df["bearish_count"])
+        df["bullish_ratio"] = df["up_num"] / (df["up_num"] + df["down_num"])
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:

@@ -28,7 +28,7 @@ def data_manager():
     manager.register_source("mock", mock)
     # 为每个指标配置 chain
     manager.configure_chain("m1_zt_stats", ["mock"])
-    manager.configure_chain("m2_js_weibo", ["mock"])
+    manager.configure_chain("m2_sentiment", ["mock"])
     manager.configure_chain("m4_cyb_turnover", ["mock"])
     return manager
 
@@ -87,8 +87,8 @@ class TestM2Calculator:
     def test_calculate_sentiment_ratio(self, m2_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "bullish_count": [100] * 100,
-            "bearish_count": [50] * 100
+            "up_num": [100] * 100,
+            "down_num": [50] * 100
         })
         result = m2_calculator.calculate_sentiment_ratio(df)
         assert "bullish_ratio" in result.columns

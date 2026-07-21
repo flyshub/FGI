@@ -25,7 +25,7 @@ def data_manager():
     manager = DataSourceManager()
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
-    manager.configure_chain("v1_index", ["mock"])
+    manager.configure_chain("v1_pe", ["mock"])
     manager.configure_chain("v2_index", ["mock"])
     return manager
 
@@ -44,11 +44,11 @@ class TestV1Calculator:
     def test_calculate_deviation(self, v1_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100 + i * 0.1 for i in range(100)]
+            "滚动市盈率": [12 + i * 0.05 for i in range(100)]
         })
         result = v1_calculator.calculate_deviation(df)
         assert "deviation" in result.columns
-        assert "ma20" in result.columns
+        assert "pe_ma20" in result.columns
         assert result["deviation"].iloc[70] is not None
 
     def test_calculate_score(self, v1_calculator):

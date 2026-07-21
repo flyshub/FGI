@@ -5,6 +5,7 @@ from fgi.collector.fallback import DataSourceManager, FallbackChain
 from fgi.collector.akshare_source import AKShareSource
 from fgi.collector.mootdx_source import MootdxSource
 from fgi.collector.tencent_source import TencentSource
+from fgi.collector.zzshare_source import ZZShareSource
 from fgi.storage.database import Database
 from fgi.calculator.fgi import FGICalculator
 from fgi.config.settings import (
@@ -29,9 +30,13 @@ def setup_data_manager() -> DataSourceManager:
         manager.register_source("mootdx", MootdxSource())
     if TENCENT_ENABLED:
         manager.register_source("tencent", TencentSource())
-    for indicator in ["m1_zt_pool", "m2_js_weibo", "m3_index", "m4_cyb_turnover",
-                       "s1_index", "s2_index", "s3_index", "s4_index",
-                       "v1_index", "v2_index",
+    try:
+        manager.register_source("zzshare", ZZShareSource())
+    except Exception:
+        pass
+    for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
+                       "s1_sentiment_zz", "s2_sentiment", "s3_index", "s4_index",
+                       "v1_pe", "v2_index",
                        "f1_margin", "f2_northbound", "f3_index"]:
         sources = []
         if AKSHARE_ENABLED:
@@ -40,6 +45,11 @@ def setup_data_manager() -> DataSourceManager:
             sources.append("mootdx")
         if TENCENT_ENABLED:
             sources.append("tencent")
+        if indicator in ("s1_sentiment_zz", "s2_sentiment", "m2_sentiment"):
+            try:
+                sources.append("zzshare")
+            except Exception:
+                pass
         if sources:
             manager.configure_chain(indicator, sources)
     return manager

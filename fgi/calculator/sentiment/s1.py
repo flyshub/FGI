@@ -14,14 +14,14 @@ class S1Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s1_sentiment",
-            "fetch_sentiment_data",
+            "s1_sentiment_zz",
+            "fetch_open_sentiment",
             start_date,
             end_date
         )
 
     def calculate_rise_fall_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["rise_fall_ratio"] = (df["rise_num"] - df["fall_num"]) / (df["rise_num"] + df["fall_num"])
+        df["rise_fall_ratio"] = (df["up_num"] - df["down_num"]) / (df["up_num"] + df["down_num"])
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
