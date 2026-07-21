@@ -41,7 +41,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS scores_daily (
                 date TEXT PRIMARY KEY,
                 M1 REAL, M2 REAL, M3 REAL, M4 REAL,
-                S1 REAL, S2 REAL, S3 REAL, S4 REAL,
+                S1 REAL, S2 REAL, S3 REAL,
                 V1 REAL, V2 REAL,
                 F1 REAL, F2 REAL, F3 REAL,
                 FGI_raw REAL, FGI_final REAL,
