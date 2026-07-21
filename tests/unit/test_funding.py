@@ -54,7 +54,7 @@ class TestF1Calculator:
 
     def test_calculate_margin_ratio(self, f1_calculator):
         margin_df = pd.DataFrame({
-            "信用交易日期": ["20240103"] * 100,
+            "date": ["2024-01-03"] * 100,
             "融资余额": [1000000.0] * 100,
         })
         cap_df = pd.DataFrame({

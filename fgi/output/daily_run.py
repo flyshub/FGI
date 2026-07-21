@@ -81,6 +81,18 @@ def main():
         for dim, score in result['dimension_scores'].items():
             print(f"  {dim}: {score:.2f}")
 
+        try:
+            from fgi.output.pushplus import send_fgi_report
+            send_fgi_report(
+                fgi_raw=result["fgi_raw"],
+                dimension_scores=result["dimension_scores"],
+                indicator_results=result["indicator_results"],
+                health=result["health_score"],
+                date_str=target_date,
+            )
+        except Exception as e:
+            print(f"Push notification skipped: {e}")
+
 
 if __name__ == "__main__":
     main()
