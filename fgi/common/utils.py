@@ -64,18 +64,53 @@ def adjust_fgi_with_mad_pct(fgi_raw: float, mad: float, mad_pct: float) -> float
     return fgi_raw
 
 
-def calculate_health_score(status_df: pd.DataFrame) -> float:
+def calculate_health_score(status_df: pd.DataFrame, correlation_exceed_rate: float = 0.0) -> float:
     total_indicators = len(status_df)
     if total_indicators == 0:
         return 0
-    
+
     normal_count = len(status_df[status_df["status"] == "normal"])
     degraded_count = len(status_df[status_df["status"] == "degraded"])
-    missing_count = len(status_df[status_df["status"] == "missing"])
-    
+
     normal_ratio = normal_count / total_indicators
     degraded_ratio = degraded_count / total_indicators
-    missing_ratio = missing_count / total_indicators
-    
-    health_score = (normal_ratio * 50) + ((1 - degraded_ratio) * 30) + ((1 - missing_ratio) * 20)
+
+    health_score = (normal_ratio * 50) + ((1 - degraded_ratio) * 30) + ((1 - correlation_exceed_rate) * 20)
     return min(100, max(0, health_score))
+
+
+def calculate_correlation_exceed_rate(db, date: str, lookback: int = 60) -> float:
+    """Compute fraction of within-dimension indicator-score pairs exceeding 0.75 correlation."""
+    import numpy as np
+    dims = {
+        "momentum": ["M1", "M2", "M3", "M4"],
+        "sentiment": ["S1", "S2", "S3"],
+        "valuation": ["V1", "V2"],
+        "funding": ["F1", "F2", "F3"],
+    }
+    try:
+        from datetime import datetime, timedelta
+        start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=lookback * 2)).strftime("%Y-%m-%d")
+        scores = db.get_scores(start, date)
+        if scores is None or len(scores) < 20:
+            return 0.0
+        total_pairs = 0
+        exceeding = 0
+        for cols in dims.values():
+            available = [c for c in cols if c in scores.columns]
+            for i in range(len(available)):
+                for j in range(i + 1, len(available)):
+                    a = scores[available[i]].dropna()
+                    b = scores[available[j]].dropna()
+                    common = a.index.intersection(b.index)
+                    if len(common) < 20:
+                        continue
+                    corr = abs(a.loc[common].corr(b.loc[common]))
+                    total_pairs += 1
+                    if corr > 0.75:
+                        exceeding += 1
+        if total_pairs == 0:
+            return 0.0
+        return exceeding / total_pairs
+    except Exception:
+        return 0.0

@@ -54,6 +54,36 @@ def setup_data_manager() -> DataSourceManager:
     return manager
 
 
+def check_anomaly(db, date_str: str, fgi_raw: float):
+    """Check if today's FGI change exceeds the 5-year 99th percentile."""
+    import pandas as pd
+    end = date_str
+    start = (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=365 * 6)).strftime("%Y-%m-%d")
+    scores = db.get_scores(start, end)
+    if scores is None or len(scores) < 252:
+        print("  [anomaly] insufficient history for anomaly check")
+        return
+
+    changes = scores["FGI_raw"].dropna().diff().abs().dropna()
+    if len(changes) < 252:
+        print("  [anomaly] insufficient daily changes")
+        return
+
+    threshold = changes.quantile(0.99)
+    latest = scores[scores.index == date_str]
+    if latest.empty or pd.isna(latest["FGI_raw"].iloc[0]):
+        return
+
+    prev = scores[scores.index < date_str]
+    if prev.empty:
+        return
+    prev_fgi = prev["FGI_raw"].iloc[-1]
+    today_change = abs(fgi_raw - prev_fgi)
+
+    if today_change > threshold:
+        print(f"  [anomaly] WARNING: FGI change {today_change:.1f} exceeds 99% threshold {threshold:.1f}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="FGI Daily Update")
     parser.add_argument("--date", type=str, default=None,
@@ -80,6 +110,8 @@ def main():
         print(f"Health Score: {result['health_score']:.2f}")
         for dim, score in result['dimension_scores'].items():
             print(f"  {dim}: {score:.2f}")
+
+        check_anomaly(db, target_date, result["fgi_raw"])
 
         try:
             from fgi.output.pushplus import send_fgi_report

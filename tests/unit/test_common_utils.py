@@ -92,4 +92,4 @@ class TestCalculateHealthScore:
 
     def test_all_missing(self):
         df = pd.DataFrame({"status": ["missing"] * 13})
-        assert calculate_health_score(df) < 50
+        assert calculate_health_score(df) == 50

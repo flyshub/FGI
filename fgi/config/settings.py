@@ -24,3 +24,5 @@ ANOMALY_PERCENTILE = 99
 FGI_EXTREME_HIGH = 85
 FGI_EXTREME_LOW = 15
 MISSING_DAY_LIMIT = 5
+
+FGI_VERSION = os.getenv("FGI_VERSION", "current")  # "current" or "legacy"

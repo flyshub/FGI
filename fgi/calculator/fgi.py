@@ -4,7 +4,9 @@ from fgi.config.settings import (
     HEALTHY_THRESHOLD, ANOMALY_PERCENTILE,
     FGI_EXTREME_HIGH, FGI_EXTREME_LOW, MISSING_DAY_LIMIT
 )
-from fgi.common.utils import calculate_fgi, apply_consistency_adjustment, adjust_fgi_with_mad_pct, rolling_percentile, calculate_health_score
+from fgi.common.utils import (calculate_fgi, apply_consistency_adjustment,
+                                adjust_fgi_with_mad_pct, rolling_percentile,
+                                calculate_health_score, calculate_correlation_exceed_rate)
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m3 import M3Calculator
@@ -77,7 +79,24 @@ class FGICalculator:
         weighted_sum = sum(s * w for s, w in scores)
         return weighted_sum / total_weight
 
-    def calculate_health(self, indicator_results: dict) -> float:
+    def _check_m1s3_correlation(self, date: str):
+        """Check M1/S3 Pearson correlation from recent scores. Returns corr or None."""
+        try:
+            from datetime import datetime, timedelta
+            start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=120)).strftime("%Y-%m-%d")
+            scores = self._db.get_scores(start, date)
+            if scores is None or len(scores) < 20:
+                return None
+            if "M1" not in scores.columns or "S3" not in scores.columns:
+                return None
+            valid = scores[["M1", "S3"]].dropna()
+            if len(valid) < 20:
+                return None
+            return float(valid["M1"].corr(valid["S3"]))
+        except Exception:
+            return None
+
+    def calculate_health(self, indicator_results: dict, date: str = None) -> float:
         import pandas as pd
         statuses = []
         for name in indicator_results:
@@ -88,10 +107,21 @@ class FGICalculator:
             })
         if not statuses:
             return 0
-        return calculate_health_score(pd.DataFrame(statuses))
+        exceed_rate = 0.0
+        if date is not None:
+            exceed_rate = calculate_correlation_exceed_rate(self._db, date)
+        return calculate_health_score(pd.DataFrame(statuses), exceed_rate)
 
     def run(self, date: str) -> dict:
         indicator_results = self.run_all_indicators(date)
+
+        m1s3_corr = self._check_m1s3_correlation(date)
+        original_weights = dict(INDICATOR_WEIGHTS)
+        if m1s3_corr is not None and m1s3_corr > 0.85:
+            INDICATOR_WEIGHTS["sentiment"] = {"S1": 0.4167, "S2": 0.4167, "S3": 0.1666}
+            print(f"  [corr] M1/S3 corr={m1s3_corr:.2f}>0.85, halving S3 weight")
+        else:
+            INDICATOR_WEIGHTS["sentiment"] = original_weights["sentiment"]
 
         dimension_scores = {}
         for dim in DIMENSION_WEIGHTS:
@@ -124,7 +154,7 @@ class FGICalculator:
         else:
             fgi_final = raw_fgi
 
-        health = self.calculate_health(indicator_results)
+        health = self.calculate_health(indicator_results, date)
 
         scores = {
             "FGI_raw": raw_fgi,
