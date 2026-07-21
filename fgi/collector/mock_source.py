@@ -75,6 +75,25 @@ class MockSource(DataSource):
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
+    def fetch_fund_position(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="W-FRI")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "position": [90.0 + i * 0.1 for i in range(len(dates))],
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_industry_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        df = pd.DataFrame([{
+            "date": pd.Timestamp.now().strftime("%Y-%m-%d"),
+            "net_flow": 1000000.0,
+        }])
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
     def fetch_market_overview(self, start_date: str, end_date: str) -> DataSourceResult:
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")

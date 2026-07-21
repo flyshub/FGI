@@ -10,23 +10,37 @@ class F2Calculator:
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
         self._db = db
-        self._window = PERCENTILE_WINDOW_YEARS * 252
+        # Weekly data: 5 years ≈ 260 weeks
+        self._window = PERCENTILE_WINDOW_YEARS * 52
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "f2_northbound",
-            "fetch_northbound_data",
+            "f2_fund_position",
+            "fetch_fund_position",
             start_date,
             end_date
         )
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["northbound_amount"] = pd.to_numeric(df["net_buy"], errors="coerce")
-        df["percentile"] = rolling_percentile(df["northbound_amount"], window=self._window)
+        df["fund_position"] = pd.to_numeric(df["position"], errors="coerce")
+        df["percentile"] = rolling_percentile(df["fund_position"], window=self._window)
         return df
 
     def calculate_score(self, percentile: float) -> float:
         return percentile * 100
+
+    def _try_fetch_from_source(self, start_date: str, end_date: str, target_date: str) -> pd.DataFrame | None:
+        """Fetch all fund position data from source without date filtering."""
+        # Use a wide enough range to get all historical data
+        result = self.fetch_data("2017-01-01", end_date)
+        if result.status == DataSourceStatus.HEALTHY and result.data is not None and not result.data.empty:
+            for _, row in result.data.iterrows():
+                self._db.upsert_raw_data(str(row["date"]), "f2_fund_position", float(row["position"]))
+            self._db.commit()
+            df = result.data
+            df["fund_position"] = df["position"]
+            return df
+        return None
 
     def run(self, date: str, lookback_days: int = None) -> dict:
         if lookback_days is None:
@@ -36,32 +50,56 @@ class F2Calculator:
         start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
         start_date = start_date.strftime("%Y-%m-%d")
 
-        result = self.fetch_data(start_date, end_date)
-        if result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "f2", "missing", result.source, result.error)
-            return {"f2": None, "status": "missing"}
+        # First, try to get data from database
+        db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
 
-        df = result.data
+        today_in_db = not db_data.empty and date in db_data["date"].values
+        if not today_in_db:
+            # Fetch recent data (last 30 days) to handle weekly frequencies
+            recent_start = pd.Timestamp(date) - pd.Timedelta(days=30)
+            recent_start = recent_start.strftime("%Y-%m-%d")
+            result = self.fetch_data(recent_start, date)
+            if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+                for _, row in result.data.iterrows():
+                    self._db.upsert_raw_data(str(row["date"]), "f2_fund_position", float(row["position"]))
+                self._db.commit()
+                db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
+
+        if db_data.empty:
+            df = self._try_fetch_from_source(start_date, end_date, date)
+            if df is None:
+                self._db.upsert_status(date, "f2", "missing", "database", "No data collected")
+                return {"f2": None, "status": "missing"}
+        else:
+            df = pd.DataFrame({
+                "date": db_data["date"],
+                "fund_position": db_data["value"],
+            })
+            df = df[df["date"] >= start_date].copy()
+            if len(df) < 260:  # Need at least 5 years of weekly data
+                full_df = self._try_fetch_from_source(start_date, end_date, date)
+                if full_df is not None:
+                    df = full_df
+
         df = self.calculate_percentile(df)
 
-        if df.empty:
-            self._db.upsert_status(date, "f2", "missing", result.source, "No data for date")
+        # Forward-fill: find latest available date <= target date (weekly data may not have exact date)
+        available = df[df["date"] <= date]
+        if available.empty:
+            self._db.upsert_status(date, "f2", "missing", "database", "No data for date")
             return {"f2": None, "status": "missing"}
 
-        if df.iloc[-1]["date"] != date:
-            self._db.upsert_status(date, "f2", "missing", result.source, "No data for requested date")
+        today = available.iloc[[-1]]  # Latest available row
+        percentile = today["percentile"].iloc[0]
+        if pd.isna(percentile):
+            self._db.upsert_status(date, "f2", "missing", "database", "Insufficient data")
             return {"f2": None, "status": "missing"}
 
-        latest = df.iloc[-1]
-        if pd.isna(latest["percentile"]):
-            self._db.upsert_status(date, "f2", "missing", result.source, "Insufficient data")
-            return {"f2": None, "status": "missing"}
+        score = self.calculate_score(percentile)
 
-        score = self.calculate_score(latest["percentile"])
-
-        self._db.upsert_raw_data(date, "f2_northbound_amount", latest["northbound_amount"])
-        self._db.upsert_raw_data(date, "f2_percentile", latest["percentile"])
+        self._db.upsert_raw_data(date, "f2_fund_position", today["fund_position"].iloc[0])
+        self._db.upsert_raw_data(date, "f2_percentile", percentile)
         self._db.upsert_score(date, {"F2": score})
-        self._db.upsert_status(date, "f2", "normal", result.source)
+        self._db.upsert_status(date, "f2", "normal", "database")
 
-        return {"f2": score, "status": "normal", "percentile": latest["percentile"]}
+        return {"f2": score, "status": "normal", "percentile": percentile}

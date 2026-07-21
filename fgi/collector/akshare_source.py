@@ -260,3 +260,75 @@ class AKShareSource(DataSource):
             return DataSourceStatus.HEALTHY
         except Exception:
             return DataSourceStatus.FAILED
+
+    def fetch_fund_position(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 基金股票仓位 (weekly data, forward-filled to daily)."""
+        try:
+            ak = self._get_client()
+            df = _retry(lambda: ak.fund_stock_position_lg())
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund position data")
+            df = df.rename(columns={"date": "date", "position": "position"})
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
+            df = df.loc[mask].copy()
+            if df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund position data in range")
+            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
+    def fetch_industry_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 行业资金流汇总 (daily, real-time)."""
+        try:
+            ak = self._get_client()
+            df = _retry(lambda: ak.stock_fund_flow_industry(symbol="即时"))
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No industry fund flow data")
+            # Sum net flow across all industries
+            df["净额"] = pd.to_numeric(df["净额"], errors="coerce")
+            total_net = df["净额"].sum()
+            result_df = pd.DataFrame([{
+                "date": pd.Timestamp.now().strftime("%Y-%m-%d"),
+                "net_flow": float(total_net),
+            }])
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
+    def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch daily 涨停板 summary via levistock (supports today's date)."""
+        try:
+            import levistock as lk
+            import time
+            dates = pd.date_range(start=start_date, end=end_date, freq="B")
+            frames = []
+            for i, d in enumerate(dates):
+                ds = d.strftime("%Y-%m-%d")
+                try:
+                    if i % 20 == 0 and i > 0:
+                        time.sleep(0.5)
+                    emotion = self._cached(("mph", ds), lambda ds=ds: lk.market_emotion_kph(date=ds))
+                    if not isinstance(emotion, dict):
+                        continue
+                    zt_count = emotion.get("sjzt", emotion.get("zt", 0))
+                    zt_count = int(zt_count) if zt_count else 0
+
+                    limit_up_list = self._cached(("zs", ds), lambda ds=ds: lk.limit_up_his_kph(date=ds))
+                    seal_fund = 0.0
+                    if isinstance(limit_up_list, list):
+                        seal_fund = sum(item.get("seal_money", 0) for item in limit_up_list)
+
+                    frames.append({
+                        "date": ds,
+                        "limit_up_count": int(zt_count),
+                        "seal_fund_sum": float(seal_fund),
+                    })
+                except Exception:
+                    continue
+            if not frames:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", "No zt data for any date")
+            result_df = pd.DataFrame(frames)
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "levistock")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))

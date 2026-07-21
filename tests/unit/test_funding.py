@@ -27,7 +27,8 @@ def data_manager():
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
     manager.configure_chain("f1_margin", ["mock"])
-    manager.configure_chain("f2_northbound", ["mock"])
+    manager.configure_chain("f2_fund_position", ["mock"])
+    manager.configure_chain("f3_industry_flow", ["mock"])
     manager.configure_chain("f3_index", ["mock"])
     return manager
 
@@ -86,10 +87,10 @@ class TestF2Calculator:
     def test_calculate_percentile(self, f2_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "net_buy": [1000000.0] * 100
+            "position": [90.0] * 100
         })
         result = f2_calculator.calculate_percentile(df)
-        assert "northbound_amount" in result.columns
+        assert "fund_position" in result.columns
         assert "percentile" in result.columns
 
     def test_calculate_score(self, f2_calculator):
@@ -103,7 +104,7 @@ class TestF2Calculator:
         assert score == 100.0
 
     def test_run_with_mock_data(self, f2_calculator, db):
-        result = f2_calculator.run("2024-01-10", lookback_days=300)
+        result = f2_calculator.run("2024-01-10", lookback_days=2000)
         assert result["status"] == "normal"
         assert result["f2"] is not None
         assert 0 <= result["f2"] <= 100
@@ -118,16 +119,16 @@ class TestF2Calculator:
 
 
 class TestF3Calculator:
-    def test_calculate_large_single_inflow(self, f3_calculator):
+    def test_calculate_flow_proxy(self, f3_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
             "close": [100.0 + i * 0.5 for i in range(100)],
             "volume": [1000000.0] * 100,
         })
-        result = f3_calculator.calculate_large_single_inflow(df)
-        assert "large_single_ratio" in result.columns
-        assert "large_single_inflow" in result.columns
-        assert "flow_est" in result.columns
+        result = f3_calculator.calculate_flow_proxy(df)
+        assert "flow_magnitude" in result.columns
+        assert "flow_proxy" in result.columns
+        assert "price_change" in result.columns
 
     def test_calculate_score(self, f3_calculator):
         score = f3_calculator.calculate_score(0.5)
@@ -140,7 +141,7 @@ class TestF3Calculator:
         assert score == 100.0
 
     def test_run_with_mock_data(self, f3_calculator, db):
-        result = f3_calculator.run("2024-01-10", lookback_days=300)
+        result = f3_calculator.run("2024-01-10", lookback_days=2000)
         assert result["status"] == "normal"
         assert result["f3"] is not None
         assert 0 <= result["f3"] <= 100
