@@ -48,6 +48,10 @@ class F2Calculator:
             self._db.upsert_status(date, "f2", "missing", result.source, "No data for date")
             return {"f2": None, "status": "missing"}
 
+        if df.iloc[-1]["date"] != date:
+            self._db.upsert_status(date, "f2", "missing", result.source, "No data for requested date")
+            return {"f2": None, "status": "missing"}
+
         latest = df.iloc[-1]
         if pd.isna(latest["percentile"]):
             self._db.upsert_status(date, "f2", "missing", result.source, "Insufficient data")

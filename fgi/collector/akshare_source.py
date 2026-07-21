@@ -99,17 +99,6 @@ class AKShareSource(DataSource):
             daily = df.groupby("date", as_index=False)["net_buy"].sum(min_count=1)
             mask = (daily["date"] >= start_date) & (daily["date"] <= end_date)
             daily = daily.loc[mask].copy()
-
-            try:
-                summary = ak.stock_hsgt_fund_flow_summary_em()
-                nb = summary[summary["资金方向"] == "北向"]
-                if not nb.empty:
-                    today_val = nb["成交净买额"].sum()
-                    today_date = nb["交易日"].iloc[0].strftime("%Y-%m-%d") if hasattr(nb["交易日"].iloc[0], "strftime") else str(nb["交易日"].iloc[0])[:10]
-                    daily.loc[daily["date"] == today_date, "net_buy"] = today_val
-            except Exception:
-                pass
-
             daily = daily.dropna(subset=["net_buy"])
             if daily.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data in date range")
