@@ -14,6 +14,11 @@ INDICATOR_NAMES = {
     "F1": "融资占比", "F2": "基金仓位", "F3": "主力资金",
 }
 
+DIMENSION_NAMES = {
+    "momentum": "动量", "sentiment": "情绪",
+    "valuation": "估值", "funding": "资金",
+}
+
 
 def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
                         health: float, date_str: str) -> str:
@@ -29,7 +34,8 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         "|------|------|",
     ]
     for dim, score in dimension_scores.items():
-        lines.append(f"| {dim} | {score:.1f} |")
+        label = DIMENSION_NAMES.get(dim, dim)
+        lines.append(f"| {label} | {score:.1f} |")
 
     extreme_high = []
     extreme_low = []
