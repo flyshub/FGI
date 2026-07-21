@@ -97,5 +97,31 @@ class MockSource(DataSource):
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
+    def fetch_zt_stats(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "limit_up_count": [50] * len(dates),
+            "limit_down_count": [10] * len(dates),
+            "limit_up_ratio": [0.05] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_sentiment_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "rise_num": [3000] * len(dates),
+            "fall_num": [1800] * len(dates),
+            "flat_num": [200] * len(dates),
+            "up_num": [100] * len(dates),
+            "down_num": [50] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
     def health_check(self) -> DataSourceStatus:
         return DataSourceStatus.HEALTHY if self._healthy else DataSourceStatus.FAILED

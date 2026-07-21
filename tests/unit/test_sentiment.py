@@ -27,7 +27,7 @@ def data_manager():
     manager = DataSourceManager()
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
-    manager.configure_chain("s1_index", ["mock"])
+    manager.configure_chain("s1_sentiment", ["mock"])
     manager.configure_chain("s2_index", ["mock"])
     manager.configure_chain("s3_index", ["mock"])
     manager.configure_chain("s4_index", ["mock"])
@@ -58,8 +58,8 @@ class TestS1Calculator:
     def test_calculate_rise_fall_ratio(self, s1_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "bullish_count": [60] * 100,
-            "bearish_count": [40] * 100,
+            "rise_num": [60] * 100,
+            "fall_num": [40] * 100,
         })
         result = s1_calculator.calculate_rise_fall_ratio(df)
         assert "rise_fall_ratio" in result.columns

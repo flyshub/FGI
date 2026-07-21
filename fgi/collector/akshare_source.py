@@ -22,7 +22,6 @@ class AKShareSource(DataSource):
     def __init__(self):
         self._client = None
 
-
     def _get_client(self):
         if self._client is None:
             import akshare as ak
@@ -80,21 +79,6 @@ class AKShareSource(DataSource):
     def fetch_northbound_data(self, start_date: str, end_date: str) -> DataSourceResult:
         try:
             ak = self._get_client()
-            # Try combined 北向资金 API first (more reliable for recent data)
-            try:
-                df = _retry(lambda: ak.stock_hsgt_north_net_flow_in_em(symbol="北向"))
-                if df is not None and not df.empty:
-                    df = df.rename(columns={"日期": "date", "当日净流入": "net_buy"})
-                    if "net_buy" in df.columns:
-                        df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
-                        mask = (df["date"] >= start_date) & (df["date"] <= end_date)
-                        df = df.loc[mask].copy()
-                        if not df.empty and df["net_buy"].notna().any():
-                            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
-            except Exception:
-                pass
-
-            # Fallback: 沪股通 + 深股通 combined
             frames = []
             for symbol in ["沪股通", "深股通"]:
                 try:
@@ -111,7 +95,6 @@ class AKShareSource(DataSource):
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data for any channel")
 
             df = pd.concat(frames, ignore_index=True)
-            # Aggregate net_buy by date across both channels
             daily = df.groupby("date", as_index=False)["net_buy"].sum()
             mask = (daily["date"] >= start_date) & (daily["date"] <= end_date)
             daily = daily.loc[mask].copy()
@@ -179,44 +162,49 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
-    def fetch_js_weibo(self, start_date: str, end_date: str) -> DataSourceResult:
+    def fetch_sentiment_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 市场情绪数据 (涨跌家数) using levistock."""
+        try:
+            import levistock as lk
+            data = lk.market_emotion_cls()
+            if not data or "up_down_dis" not in data:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No sentiment data")
+
+            up_down = data["up_down_dis"]
+            result_df = pd.DataFrame([{
+                "date": pd.Timestamp.now().strftime("%Y-%m-%d"),
+                "rise_num": int(up_down.get("rise_num", 0)),
+                "fall_num": int(up_down.get("fall_num", 0)),
+                "flat_num": int(up_down.get("flat_num", 0)),
+                "up_num": int(up_down.get("up_num", 0)),
+                "down_num": int(up_down.get("down_num", 0)),
+            }])
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "levistock")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
+
+    def fetch_zt_stats(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 涨跌停统计 using levistock."""
         try:
             import levistock as lk
             dates = pd.date_range(start=start_date, end=end_date, freq="B")
             frames = []
             for d in dates:
                 ds = d.strftime("%Y-%m-%d")
-                data = self._cached(("kph", ds), lambda ds=ds: _retry(lambda ds=ds: lk.market_emotion_kph(date=ds), retries=2, delay=2))
-                if data and "rise_num" in data and "fall_num" in data:
+                data = self._cached(("zttt", ds), lambda ds=ds: _retry(lambda ds=ds: lk.get_zttt(date=ds), retries=2, delay=2))
+                if data and "errcode" in data and data["errcode"] == "0":
                     frames.append({
                         "date": ds,
-                        "bullish_count": int(data["rise_num"]),
-                        "bearish_count": int(data["fall_num"]),
+                        "limit_up_count": len(data.get("StockList", [])),
+                        "limit_down_count": len(data.get("ZhuShuList", [])),
+                        "limit_up_ratio": float(data.get("ttag", 0)),
                     })
             if not frames:
-                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data for any date")
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No zt stats for any date")
             result_df = pd.DataFrame(frames)
-            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "levistock")
         except Exception as e:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
-
-    def fetch_option_iv(self, start_date: str, end_date: str) -> DataSourceResult:
-        try:
-            ak = self._get_client()
-            # Use current month expiry
-            expiry = pd.Timestamp.now().strftime("%y%m")
-            df = _retry(lambda: ak.option_finance_board(symbol="华夏上证50ETF期权", end_month=expiry), retries=3, delay=2)
-            if df is None or df.empty:
-                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No option chain data")
-            # Use at-the-money options for IV proxy
-            if "前结价" in df.columns and "当前价" in df.columns:
-                df["iv_proxy"] = df["当前价"] / df["前结价"].replace(0, float("nan"))
-                avg_iv = df["iv_proxy"].mean()
-                result_df = pd.DataFrame([{"date": start_date, "iv": float(avg_iv)}])
-                return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
-            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", f"No usable columns: {list(df.columns)}")
-        except Exception as e:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+            return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
 
     def fetch_option_volume(self, start_date: str, end_date: str) -> DataSourceResult:
         try:

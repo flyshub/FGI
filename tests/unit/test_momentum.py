@@ -27,7 +27,7 @@ def data_manager():
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
     # 为每个指标配置 chain
-    manager.configure_chain("m1_zt_pool", ["mock"])
+    manager.configure_chain("m1_zt_stats", ["mock"])
     manager.configure_chain("m2_js_weibo", ["mock"])
     manager.configure_chain("m4_cyb_turnover", ["mock"])
     return manager
@@ -52,11 +52,11 @@ class TestM1Calculator:
     def test_calculate_zt_count(self, m1_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "symbol": ["000001"] * 100
+            "limit_up_count": [10] * 100
         })
         result = m1_calculator.calculate_zt_count(df)
         assert "zt_count" in result.columns
-        assert result["zt_count"].iloc[19] == 20
+        assert result["zt_count"].iloc[0] == 10
 
     def test_calculate_score(self, m1_calculator):
         score = m1_calculator.calculate_score(0.5)

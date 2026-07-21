@@ -14,16 +14,14 @@ class M1Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "m1_zt_pool",
-            "fetch_zt_pool",
+            "m1_zt_stats",
+            "fetch_zt_stats",
             start_date,
             end_date
         )
 
     def calculate_zt_count(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date")
-        df["zt_count"] = df["symbol"].rolling(window=20, min_periods=1).count().fillna(0)
+        df["zt_count"] = df["limit_up_count"]
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
