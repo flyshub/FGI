@@ -20,13 +20,9 @@ class F2Calculator:
             end_date
         )
 
-    def calculate_northbound_ratio(self, df: pd.DataFrame) -> pd.Series:
+    def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
         df["northbound_amount"] = pd.to_numeric(df["net_buy"], errors="coerce")
-        df["northbound_ratio"] = df["northbound_amount"] / df["northbound_amount"].rolling(20).mean()
-        return df
-
-    def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
-        df["percentile"] = rolling_percentile(df["northbound_ratio"], window=self._window)
+        df["percentile"] = rolling_percentile(df["northbound_amount"], window=self._window)
         return df
 
     def calculate_score(self, percentile: float) -> float:
@@ -46,7 +42,6 @@ class F2Calculator:
             return {"f2": None, "status": "missing"}
 
         df = result.data
-        df = self.calculate_northbound_ratio(df)
         df = self.calculate_percentile(df)
 
         if df.empty:
@@ -60,7 +55,7 @@ class F2Calculator:
 
         score = self.calculate_score(latest["percentile"])
 
-        self._db.upsert_raw_data(date, "f2_northbound_ratio", latest["northbound_ratio"])
+        self._db.upsert_raw_data(date, "f2_northbound_amount", latest["northbound_amount"])
         self._db.upsert_raw_data(date, "f2_percentile", latest["percentile"])
         self._db.upsert_score(date, {"F2": score})
         self._db.upsert_status(date, "f2", "normal", result.source)

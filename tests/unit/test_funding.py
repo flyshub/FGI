@@ -83,14 +83,14 @@ class TestF1Calculator:
 
 
 class TestF2Calculator:
-    def test_calculate_northbound_ratio(self, f2_calculator):
+    def test_calculate_percentile(self, f2_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
             "net_buy": [1000000.0] * 100
         })
-        result = f2_calculator.calculate_northbound_ratio(df)
-        assert "northbound_ratio" in result.columns
+        result = f2_calculator.calculate_percentile(df)
         assert "northbound_amount" in result.columns
+        assert "percentile" in result.columns
 
     def test_calculate_score(self, f2_calculator):
         score = f2_calculator.calculate_score(0.5)
