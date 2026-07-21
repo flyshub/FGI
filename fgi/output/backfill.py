@@ -9,6 +9,32 @@ from fgi.collector.zzshare_source import ZZShareSource
 from fgi.collector.base import DataSourceStatus
 
 
+def is_trading_day(date_str: str) -> bool:
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return dt.weekday() < 5
+
+
+def get_date_range(start_date: str, end_date: str) -> List[str]:
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    dates = []
+    current = start
+    while current <= end:
+        if is_trading_day(current.strftime("%Y-%m-%d")):
+            dates.append(current.strftime("%Y-%m-%d"))
+        current += timedelta(days=1)
+    return dates
+
+
+def batch_dates(dates: List[str], batch_size: int) -> List[List[str]]:
+    return [dates[i:i + batch_size] for i in range(0, len(dates), batch_size)]
+
+
+def backfill_indicator(db: Database, calculator, indicator: str, dates: List[str]):
+    for date in dates:
+        calculator.run(date)
+
+
 def setup_data_manager() -> DataSourceManager:
     manager = DataSourceManager()
     manager.register_source("akshare", AKShareSource())

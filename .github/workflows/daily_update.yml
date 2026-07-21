@@ -35,6 +35,8 @@ jobs:
           fi
       
       - name: Run FGI daily update
+        env:
+          FGI_PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: python -m fgi.output.daily_run --date ${{ steps.date.outputs.target_date }}
       
       - name: Upload results
