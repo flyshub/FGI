@@ -29,9 +29,10 @@ def setup_data_manager() -> DataSourceManager:
         manager.register_source("mootdx", MootdxSource())
     if TENCENT_ENABLED:
         manager.register_source("tencent", TencentSource())
-    for indicator in ["m3_index", "m1_zt", "m2_sentiment", "m4_turnover",
-                       "s1_rise_fall", "s4_zt_ratio", "v1_pe", "v2_bond",
-                       "f1_margin", "f2_northbound", "f3_large_single"]:
+    for indicator in ["m1_zt_pool", "m2_js_weibo", "m3_index", "m4_cyb_turnover",
+                       "s1_index", "s2_index", "s3_index", "s4_index",
+                       "v1_index", "v2_index",
+                       "f1_margin", "f2_northbound", "f3_index"]:
         sources = []
         if AKSHARE_ENABLED:
             sources.append("akshare")

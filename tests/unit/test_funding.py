@@ -26,8 +26,8 @@ def data_manager():
     manager = DataSourceManager()
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
-    manager.configure_chain("f1_index", ["mock"])
-    manager.configure_chain("f2_index", ["mock"])
+    manager.configure_chain("f1_margin", ["mock"])
+    manager.configure_chain("f2_northbound", ["mock"])
     manager.configure_chain("f3_index", ["mock"])
     return manager
 
@@ -51,8 +51,7 @@ class TestF1Calculator:
     def test_calculate_margin_growth(self, f1_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100.0] * 100,
-            "volume": [1000000] * 100
+            "融资余额": [1000000.0] * 100
         })
         result = f1_calculator.calculate_margin_growth(df)
         assert "margin_growth" in result.columns
@@ -87,8 +86,7 @@ class TestF2Calculator:
     def test_calculate_northbound_ratio(self, f2_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100.0] * 100,
-            "volume": [1000000] * 100
+            "net_buy": [1000000.0] * 100
         })
         result = f2_calculator.calculate_northbound_ratio(df)
         assert "northbound_ratio" in result.columns

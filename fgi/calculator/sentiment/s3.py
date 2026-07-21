@@ -22,10 +22,8 @@ class S3Calculator:
             end_date
         )
 
-    def calculate_volume(self, df: pd.DataFrame) -> pd.Series:
-        if df is None:
-            df = pd.DataFrame({"volume": [1000000]})
-        df["volume"] = 1000000
+    def calculate_volume(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["volume"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:

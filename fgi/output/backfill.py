@@ -1,24 +1,22 @@
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Optional
 from fgi.config.settings import LOOKBACK_START
 from fgi.storage.database import Database
 from fgi.calculator.fgi import FGICalculator
-from fgi.collector.fallback import DataSourceManager, FallbackChain
+from fgi.collector.fallback import DataSourceManager
 from fgi.collector.akshare_source import AKShareSource
-from fgi.collector.mootdx_source import MootdxSource
-from fgi.collector.tencent_source import TencentSource
+from fgi.collector.mock_source import MockSource
 
 
 def setup_data_manager() -> DataSourceManager:
     manager = DataSourceManager()
     manager.register_source("akshare", AKShareSource())
-    manager.register_source("mootdx", MootdxSource())
-    manager.register_source("tencent", TencentSource())
-    for indicator in ["m3_index", "m1_zt", "m2_sentiment", "m4_turnover",
-                       "s1_rise_fall", "s4_zt_ratio", "v1_pe", "v2_bond",
-                       "f1_margin", "f2_northbound", "f3_large_single"]:
-        sources = ["akshare", "mootdx", "tencent"]
-        manager.configure_chain(indicator, sources)
+    manager.register_source("mock", MockSource())
+    for indicator in ["m1_zt_pool", "m2_js_weibo", "m3_index", "m4_cyb_turnover",
+                       "s1_index", "s2_index", "s3_index", "s4_index",
+                       "v1_index", "v2_index",
+                       "f1_margin", "f2_northbound", "f3_index"]:
+        manager.configure_chain(indicator, ["akshare", "mock"])
     return manager
 
 
@@ -45,51 +43,59 @@ def batch_dates(dates: List[str], batch_size: int) -> List[List[str]]:
     return [dates[i:i + batch_size] for i in range(0, len(dates), batch_size)]
 
 
-def backfill_indicator(db: Database, calculator: FGICalculator, indicator: str, dates: List[str], batch_size: int = 30):
+def backfill_indicator(db: Database, calculator, indicator: str, dates: List[str], batch_size: int = 30):
     total = len(dates)
     processed = 0
-    
     for i in range(0, total, batch_size):
         batch = dates[i:i + batch_size]
         for date in batch:
             try:
                 result = calculator.run(date)
-                print(f"Processed {date} - FGI: {result['fgi_final']:.2f}")
+                print(f"Processed {date} - FGI: {result.get('fgi_final', 'N/A')}")
                 processed += 1
                 print(f"Progress: {processed}/{total} ({processed/total*100:.1f}%)")
             except Exception as e:
                 print(f"Error processing {date}: {e}")
 
 
-def backfill():
+def backfill(start_date: Optional[str] = None, end_date: Optional[str] = None):
     data_manager = setup_data_manager()
     db = Database()
-    
+
     with db:
         db.init_schema()
         calculator = FGICalculator(data_manager, db)
-        
-        end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = LOOKBACK_START
-        
+
+        if end_date is None:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        if start_date is None:
+            start_date = LOOKBACK_START
+
         print(f"Starting backfill from {start_date} to {end_date}")
-        
-        indicators = ["m3_index", "m1_zt", "m2_sentiment", "m4_turnover",
-                     "s1_rise_fall", "s4_zt_ratio", "v1_pe", "v2_bond",
-                     "f1_margin", "f2_northbound", "f3_large_single"]
-        
-        for indicator in indicators:
-            print(f"\nBackfilling indicator: {indicator}")
-            missing_dates = db.get_missing_dates(indicator, start_date, end_date)
-            
-            if not missing_dates:
-                print(f"  No missing dates for {indicator}")
-                continue
-                
-            print(f"  Found {len(missing_dates)} missing dates")
-            
-            # Process in monthly batches (30 days)
-            batches = batch_dates(missing_dates, 30)
-            for i, batch in enumerate(batches):
-                print(f"  Processing batch {i+1}/{len(batches)}")
-                backfill_indicator(db, calculator, indicator, batch, batch_size=30)
+
+        dates = get_date_range(start_date, end_date)
+        total = len(dates)
+        print(f"Total trading days: {total}")
+
+        success = 0
+        failed = 0
+        for i, date in enumerate(dates):
+            try:
+                result = calculator.run(date)
+                fgi = result.get("fgi_final", "N/A")
+                health = result.get("health_score", "N/A")
+                print(f"[{i+1}/{total}] {date}: FGI={fgi:.2f}, health={health:.2f}" if isinstance(fgi, float) and isinstance(health, float) else f"[{i+1}/{total}] {date}: FGI={fgi}, health={health}")
+                success += 1
+            except Exception as e:
+                print(f"[{i+1}/{total}] {date}: ERROR - {e}")
+                failed += 1
+
+        print(f"\nBackfill complete: {success} success, {failed} failed")
+        print(f"Total scores in database: {db._conn.execute('SELECT COUNT(*) FROM scores_daily').fetchone()[0]}")
+
+
+if __name__ == "__main__":
+    import sys
+    start = sys.argv[1] if len(sys.argv) > 1 else None
+    end = sys.argv[2] if len(sys.argv) > 2 else None
+    backfill(start, end)

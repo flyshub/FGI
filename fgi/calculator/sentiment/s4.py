@@ -16,18 +16,13 @@ class S4Calculator:
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
             "s4_index",
-            "fetch_index_daily",
-            "sh000001",
+            "fetch_option_volume",
             start_date,
             end_date
         )
 
-    def calculate_zt_ratio(self, df: pd.DataFrame) -> pd.Series:
-        if df is None:
-            df = pd.DataFrame({"zt_volume": [1000000], "volume": [10000000]})
-        df["zt_volume"] = 1000000
-        df["volume"] = 10000000
-        df["zt_ratio"] = df["zt_volume"] / df["volume"]
+    def calculate_zt_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["zt_ratio"] = df["put_volume"] / df["call_volume"]
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:

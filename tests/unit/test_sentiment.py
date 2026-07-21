@@ -58,13 +58,12 @@ class TestS1Calculator:
     def test_calculate_rise_fall_ratio(self, s1_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100 + i * 0.1 for i in range(100)]
+            "bullish_count": [60] * 100,
+            "bearish_count": [40] * 100,
         })
         result = s1_calculator.calculate_rise_fall_ratio(df)
         assert "rise_fall_ratio" in result.columns
-        assert "rise_count" in result.columns
-        assert "fall_count" in result.columns
-        assert result["rise_fall_ratio"].iloc[0] == 0.0
+        assert result["rise_fall_ratio"].iloc[0] == 0.2
 
     def test_calculate_score(self, s1_calculator):
         score = s1_calculator.calculate_score(0.5)
@@ -95,7 +94,8 @@ class TestS2Calculator:
     def test_calculate_sentiment(self, s2_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100 + i * 0.1 for i in range(100)]
+            "bullish_count": [100] * 100,
+            "bearish_count": [100] * 100,
         })
         result = s2_calculator.calculate_sentiment(df)
         assert "sentiment" in result.columns
@@ -124,7 +124,7 @@ class TestS3Calculator:
     def test_calculate_volume(self, s3_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100 + i * 0.1 for i in range(100)]
+            "volume": [1000000 + i * 1000 for i in range(100)]
         })
         result = s3_calculator.calculate_volume(df)
         assert "volume" in result.columns
@@ -153,12 +153,11 @@ class TestS4Calculator:
     def test_calculate_zt_ratio(self, s4_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100 + i * 0.1 for i in range(100)]
+            "call_volume": [100000] * 100,
+            "put_volume": [10000] * 100,
         })
         result = s4_calculator.calculate_zt_ratio(df)
         assert "zt_ratio" in result.columns
-        assert "zt_volume" in result.columns
-        assert "volume" in result.columns
         assert result["zt_ratio"].iloc[0] == 0.1
 
     def test_calculate_score(self, s4_calculator):

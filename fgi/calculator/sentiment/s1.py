@@ -15,18 +15,13 @@ class S1Calculator:
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
             "s1_index",
-            "fetch_index_daily",
-            "sh000001",
+            "fetch_market_overview",
             start_date,
             end_date
         )
 
-    def calculate_rise_fall_ratio(self, df: pd.DataFrame) -> pd.Series:
-        if "rise_count" not in df.columns:
-            df["rise_count"] = 100
-        if "fall_count" not in df.columns:
-            df["fall_count"] = 100
-        df["rise_fall_ratio"] = (df["rise_count"] - df["fall_count"]) / (df["rise_count"] + df["fall_count"])
+    def calculate_rise_fall_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["rise_fall_ratio"] = (df["bullish_count"] - df["bearish_count"]) / (df["bullish_count"] + df["bearish_count"])
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
