@@ -7,9 +7,16 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
+INDICATOR_NAMES = {
+    "M1": "涨停家数", "M2": "散户意愿", "M3": "均线偏离", "M4": "创业换手",
+    "S1": "涨跌比", "S2": "股吧热度", "S3": "涨停封单",
+    "V1": "沪深300·ERP", "V2": "ΔERP",
+    "F1": "融资占比", "F2": "基金仓位", "F3": "主力资金",
+}
+
+
 def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
                         health: float, date_str: str) -> str:
-    """Build FGI daily report as markdown."""
     level = "极度恐惧" if fgi_raw < 15 else "恐惧" if fgi_raw < 35 else \
             "中性" if fgi_raw <= 65 else "贪婪" if fgi_raw <= 85 else "极度贪婪"
 
@@ -24,18 +31,26 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     for dim, score in dimension_scores.items():
         lines.append(f"| {dim} | {score:.1f} |")
 
-    lines.append("")
-    highlights = []
+    extreme_high = []
+    extreme_low = []
     for name, r in sorted(indicator_results.items()):
-        s = r.get("score") or r.get(name.lower())
+        s = r.get("score")
+        if s is None:
+            s = r.get(name.lower())
         st = r.get("status", "?")
         if st == "normal" and s is not None:
+            label = INDICATOR_NAMES.get(name, name)
             if s >= 85:
-                highlights.append(f"{name} {s:.0f} ")
+                extreme_high.append(f"{label}{s:.0f}")
             elif s <= 15:
-                highlights.append(f"{name} {s:.0f} ")
-    if highlights:
-        lines.append("> " + " | ".join(highlights))
+                extreme_low.append(f"{label}{s:.0f}")
+
+    if extreme_high:
+        lines.append("")
+        lines.append("极度贪婪 " + " · ".join(extreme_high))
+    if extreme_low:
+        lines.append("")
+        lines.append("极度恐惧 " + " · ".join(extreme_low))
 
     return "\n".join(lines)
 
