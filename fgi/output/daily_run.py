@@ -24,6 +24,7 @@ def is_trading_day(date_str: str) -> bool:
 
 def setup_data_manager() -> DataSourceManager:
     manager = DataSourceManager()
+    zzshare_ok = False
     if AKSHARE_ENABLED:
         manager.register_source("akshare", AKShareSource())
     if MOOTDX_ENABLED:
@@ -32,6 +33,7 @@ def setup_data_manager() -> DataSourceManager:
         manager.register_source("tencent", TencentSource())
     try:
         manager.register_source("zzshare", ZZShareSource())
+        zzshare_ok = True
     except Exception:
         pass
     for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
@@ -39,17 +41,14 @@ def setup_data_manager() -> DataSourceManager:
                        "v1_pe", "v2_index",
                        "f1_margin", "f2_northbound", "f3_index"]:
         sources = []
+        if indicator in ("s1_sentiment_zz", "s2_sentiment", "m2_sentiment") and zzshare_ok:
+            sources.append("zzshare")
         if AKSHARE_ENABLED:
             sources.append("akshare")
         if MOOTDX_ENABLED:
             sources.append("mootdx")
         if TENCENT_ENABLED:
             sources.append("tencent")
-        if indicator in ("s1_sentiment_zz", "s2_sentiment", "m2_sentiment"):
-            try:
-                sources.append("zzshare")
-            except Exception:
-                pass
         if sources:
             manager.configure_chain(indicator, sources)
     return manager

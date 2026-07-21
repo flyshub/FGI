@@ -70,7 +70,7 @@ class FGICalculator:
         scores = []
         for ind, weight in weights.items():
             result = indicator_results.get(ind, {})
-            score = result.get("score") or result.get(ind)
+            score = result.get("score") or result.get(ind) or result.get(ind.lower())
             if score is not None:
                 scores.append((score, weight))
         if not scores:

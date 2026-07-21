@@ -184,26 +184,32 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
 
     def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch daily 涨停板 summary (count + seal fund sum) via stock_zt_pool_em."""
+        """Fetch daily 涨停板 summary via levistock (historical support)."""
         try:
-            ak = self._get_client()
+            import levistock as lk
             dates = pd.date_range(start=start_date, end=end_date, freq="B")
             frames = []
             for d in dates:
-                ds = d.strftime("%Y%m%d")
-                df = self._cached(("zts", ds), lambda ds=ds: _retry(lambda ds=ds: ak.stock_zt_pool_em(date=ds), retries=2, delay=2))
-                if df is not None and not df.empty:
-                    frames.append({
-                        "date": d.strftime("%Y-%m-%d"),
-                        "limit_up_count": len(df),
-                        "seal_fund_sum": float(df["封板资金"].sum()),
-                    })
+                ds = d.strftime("%Y-%m-%d")
+                emotion = self._cached(("mph", ds), lambda ds=ds: lk.market_emotion_kph(date=ds))
+                zt_count = emotion.get("sjzt", emotion.get("zt", 0)) if isinstance(emotion, dict) else 0
+
+                limit_up_list = self._cached(("zs", ds), lambda ds=ds: lk.limit_up_his_kph(date=ds))
+                seal_fund = 0.0
+                if isinstance(limit_up_list, list):
+                    seal_fund = sum(item.get("seal_money", 0) for item in limit_up_list)
+
+                frames.append({
+                    "date": ds,
+                    "limit_up_count": int(zt_count),
+                    "seal_fund_sum": float(seal_fund),
+                })
             if not frames:
-                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No zt data for any date")
+                return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", "No zt data for any date")
             result_df = pd.DataFrame(frames)
-            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
+            return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "levistock")
         except Exception as e:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+            return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", str(e))
 
     def fetch_option_volume(self, start_date: str, end_date: str) -> DataSourceResult:
         try:
