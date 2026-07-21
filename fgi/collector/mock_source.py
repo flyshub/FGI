@@ -60,7 +60,7 @@ class MockSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
         df = pd.DataFrame({
-            "信用交易日期": dates.strftime("%Y%m%d"),
+            "date": dates.strftime("%Y-%m-%d"),
             "融资余额": [1000000.0 + i * 100 for i in range(len(dates))],
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)

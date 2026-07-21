@@ -32,12 +32,11 @@ class F1Calculator:
 
     def calculate_margin_ratio(self, margin_df: pd.DataFrame, cap_df: pd.DataFrame) -> pd.DataFrame:
         margin_df = margin_df.copy()
-        raw_date_col = margin_df.columns[0]  # "信用交易日期" or "date"
-        date_str = margin_df[raw_date_col].astype(str).str.strip()
-        if "-" not in date_str.iloc[0]:
-            margin_df["date"] = pd.to_datetime(date_str, errors="coerce").dt.strftime("%Y-%m-%d")
+        raw_date = margin_df["date"].astype(str).str.strip()
+        if "-" not in raw_date.iloc[0]:
+            margin_df["date"] = pd.to_datetime(raw_date, errors="coerce").dt.strftime("%Y-%m-%d")
         else:
-            margin_df["date"] = date_str
+            margin_df["date"] = raw_date
         margin_df["margin_balance"] = pd.to_numeric(margin_df["融资余额"], errors="coerce")
         cap_df = cap_df.copy()
         cap_df["market_cap"] = pd.to_numeric(cap_df["market_cap"], errors="coerce")
