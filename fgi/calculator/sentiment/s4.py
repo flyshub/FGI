@@ -42,17 +42,31 @@ class S4Calculator:
         start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
         start_date = start_date.strftime("%Y-%m-%d")
 
-        result = self.fetch_data(start_date, end_date)
-        if result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "s4", "missing", result.source, result.error or "")
+        db_data = self._db.get_raw_data("s4_seal_fund", start_date, end_date)
+        missing = self._db.get_missing_dates("s4_seal_fund", start_date, end_date)
+
+        if len(missing) > 0:
+            missing_start = missing[0]
+            missing_end = missing[-1]
+            result = self.fetch_data(missing_start, missing_end)
+            if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+                batch = pd.DataFrame({
+                    "date": result.data["date"],
+                    "value": result.data["seal_fund_sum"] / 1e8,
+                })
+                self._db.upsert_raw_data_batch(batch, "s4_seal_fund")
+                self._db.commit()
+                db_data = self._db.get_raw_data("s4_seal_fund", start_date, end_date)
+
+        if db_data.empty:
+            self._db.upsert_status(date, "s4", "missing", "database", "No data collected")
             return {"s4": None, "status": "missing"}
 
-        df = result.data
-        if df is None:
-            self._db.upsert_status(date, "s4", "missing", result.source, "No data")
-            return {"s4": None, "status": "missing"}
-
-        df = self.calculate_zt_ratio(df)
+        df = pd.DataFrame({
+            "date": db_data["date"],
+            "zt_ratio": db_data["value"],
+        })
+        df = df[df["date"] >= start_date].copy()
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]

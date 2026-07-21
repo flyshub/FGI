@@ -39,13 +39,31 @@ class M1Calculator:
         start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
         start_date = start_date.strftime("%Y-%m-%d")
 
-        result = self.fetch_data(start_date, end_date)
-        if result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "m1", "missing", result.source or "", result.error or "")
+        db_data = self._db.get_raw_data("m1_zt_count", start_date, end_date)
+        missing = self._db.get_missing_dates("m1_zt_count", start_date, end_date)
+
+        if len(missing) > 0:
+            missing_start = missing[0]
+            missing_end = missing[-1]
+            result = self.fetch_data(missing_start, missing_end)
+            if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+                batch = pd.DataFrame({
+                    "date": result.data["date"],
+                    "value": result.data["limit_up_count"],
+                })
+                self._db.upsert_raw_data_batch(batch, "m1_zt_count")
+                self._db.commit()
+                db_data = self._db.get_raw_data("m1_zt_count", start_date, end_date)
+
+        if db_data.empty:
+            self._db.upsert_status(date, "m1", "missing", "database", "No data collected")
             return {"m1": None, "status": "missing"}
 
-        df = result.data
-        df = self.calculate_zt_count(df)
+        df = pd.DataFrame({
+            "date": db_data["date"],
+            "zt_count": db_data["value"],
+        })
+        df = df[df["date"] >= start_date].copy()
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
