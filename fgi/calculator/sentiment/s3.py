@@ -15,15 +15,14 @@ class S3Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s3_index",
-            "fetch_index_daily",
-            "sh000001",
+            "s3_sentiment",
+            "fetch_market_hot_sentiment",
             start_date,
             end_date
         )
 
     def calculate_volume(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["volume"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
+        df["volume"] = pd.to_numeric(df["p_close"], errors="coerce").fillna(100.0)
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:

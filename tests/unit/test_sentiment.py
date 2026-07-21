@@ -29,7 +29,7 @@ def data_manager():
     manager.register_source("mock", mock)
     manager.configure_chain("s1_sentiment_zz", ["mock"])
     manager.configure_chain("s2_sentiment", ["mock"])
-    manager.configure_chain("s3_index", ["mock"])
+    manager.configure_chain("s3_sentiment", ["mock"])
     manager.configure_chain("s4_zt_daily", ["mock"])
     return manager
 
@@ -124,11 +124,11 @@ class TestS3Calculator:
     def test_calculate_volume(self, s3_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "volume": [1000000 + i * 1000 for i in range(100)]
+            "p_close": [5000.0 + i * 10 for i in range(100)]
         })
         result = s3_calculator.calculate_volume(df)
         assert "volume" in result.columns
-        assert result["volume"].iloc[0] == 1000000
+        assert result["volume"].iloc[0] == 5000.0
 
     def test_calculate_score(self, s3_calculator):
         score = s3_calculator.calculate_score(0.5)
