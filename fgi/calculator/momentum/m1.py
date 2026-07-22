@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager

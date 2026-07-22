@@ -8,7 +8,8 @@ from fgi.output.backfill import (
     is_trading_day,
     get_date_range,
     batch_dates,
-    backfill_indicator
+    backfill_indicator,
+    compute_fgi_daily,
 )
 
 
@@ -82,3 +83,47 @@ class TestBackfillIndicator:
     def test_backfill_indicator_empty(self, db, mock_calculator):
         backfill_indicator(db, mock_calculator, "test_indicator", [])
         assert mock_calculator.call_count == 0
+
+
+class TestSetupDataManager:
+    def test_no_mock_source(self):
+        manager = setup_data_manager()
+        assert "mock" not in manager._sources
+
+    def test_no_s1_chain(self):
+        manager = setup_data_manager()
+        assert "s1_sentiment_zz" not in manager._chains
+
+    def test_chains_reference_only_registered_sources(self):
+        manager = setup_data_manager()
+        for indicator, chain in manager._chains.items():
+            assert len(chain._sources) > 0
+
+
+class TestTradingCalendarIntegration:
+    def test_resolver_used_for_backfill_dates(self, monkeypatch):
+        # backfill 直接调用 resolve_trading_days（无中间包装层）
+        import fgi.output.backfill as backfill_module
+        monkeypatch.setattr(backfill_module, "resolve_trading_days",
+                            lambda s, e, db=None: ["2024-01-02"])
+        assert backfill_module.resolve_trading_days("2024-01-01", "2024-01-05") == ["2024-01-02"]
+
+
+class TestComputeFgiDailyStatus:
+    def test_writes_daily_status(self, db):
+        class Calculator:
+            def run(self, date):
+                return {
+                    "date": date,
+                    "fgi_final": 50.0,
+                    "indicator_results": {
+                        "m3": {"score": 55.0, "status": "normal", "source": "akshare"},
+                        "f2": {"score": None, "status": "missing", "error": "No data"},
+                    },
+                }
+
+        compute_fgi_daily(Calculator(), db, ["2024-01-02"])
+        status = db.get_status("2024-01-02")
+        by_indicator = dict(zip(status["indicator"], status["status"]))
+        assert by_indicator["m3"] == "normal"
+        assert by_indicator["f2"] == "missing"

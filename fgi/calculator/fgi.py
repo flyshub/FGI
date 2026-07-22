@@ -1,3 +1,7 @@
+import copy
+
+import pandas as pd
+
 from fgi.collector.fallback import DataSourceManager
 from fgi.storage.database import Database
 from fgi.config.settings import (
@@ -11,7 +15,6 @@ from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m3 import M3Calculator
 from fgi.calculator.momentum.m4 import M4Calculator
-from fgi.calculator.sentiment.s1 import S1Calculator
 from fgi.calculator.sentiment.s2 import S2Calculator
 from fgi.calculator.sentiment.s3 import S3Calculator
 from fgi.calculator.valuation.v1 import V1Calculator
@@ -23,7 +26,7 @@ from fgi.calculator.funding.f3 import F3Calculator
 
 INDICATOR_WEIGHTS = {
     "momentum": {"M1": 0.25, "M2": 0.25, "M3": 0.25, "M4": 0.25},
-    "sentiment": {"S1": 0.3333, "S2": 0.3333, "S3": 0.3334},
+    "sentiment": {"S2": 0.50, "S3": 0.50},
     "valuation": {"V1": 0.50, "V2": 0.50},
     "funding": {"F1": 0.3333, "F2": 0.3333, "F3": 0.3334},
 }
@@ -45,7 +48,6 @@ class FGICalculator:
             "M2": M2Calculator(data_manager, db),
             "M3": M3Calculator(data_manager, db),
             "M4": M4Calculator(data_manager, db),
-            "S1": S1Calculator(data_manager, db),
             "S2": S2Calculator(data_manager, db),
             "S3": S3Calculator(data_manager, db),
             "V1": V1Calculator(data_manager, db),
@@ -62,19 +64,29 @@ class FGICalculator:
                 result = calc.run(date)
                 results[name] = result
             except Exception as e:
-                results[name] = {"score": None, "status": "error"}
+                results[name] = {"score": None, "status": "missing"}
         return results
 
-    def calculate_dimension_score(self, indicator_results: dict, dimension: str) -> float:
-        weights = INDICATOR_WEIGHTS[dimension]
+    @staticmethod
+    def _extract_score(result: dict, name: str):
+        """Extract an indicator score; only None/NaN count as missing (0.0 is valid)."""
+        for key in ("score", name, name.lower()):
+            score = result.get(key)
+            if score is not None and not pd.isna(score):
+                return score
+        return None
+
+    def calculate_dimension_score(self, indicator_results: dict, dimension: str,
+                                  weights: dict = None):
+        weights = (weights or INDICATOR_WEIGHTS)[dimension]
         scores = []
         for ind, weight in weights.items():
             result = indicator_results.get(ind, {})
-            score = result.get("score") or result.get(ind) or result.get(ind.lower())
+            score = self._extract_score(result, ind)
             if score is not None:
                 scores.append((score, weight))
         if not scores:
-            return 50.0
+            return None
         total_weight = sum(w for _, w in scores)
         weighted_sum = sum(s * w for s, w in scores)
         return weighted_sum / total_weight
@@ -112,28 +124,62 @@ class FGICalculator:
             exceed_rate = calculate_correlation_exceed_rate(self._db, date)
         return calculate_health_score(pd.DataFrame(statuses), exceed_rate)
 
+    def _apply_forward_fill(self, indicator_results: dict, date: str):
+        """方案 4.4: 指标当日无得分时，用最近 MISSING_DAY_LIMIT 个交易日内
+        最后有效得分填充并标记 'degraded'；超过限值保持 missing。
+
+        注意：填充值只写入内存中的 indicator_results 供当日 FGI 聚合使用，
+        不落库 scores_daily —— 否则次日会把填充值误当真实得分，elapsed 永远
+        重置为 1，「连续缺失 5 日剔除」永不触发。degraded 状态仍写 daily_status。"""
+        from datetime import datetime, timedelta
+        start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=MISSING_DAY_LIMIT * 3 + 10)).strftime("%Y-%m-%d")
+        history = self._db.get_scores(start, date)
+        if history is None or history.empty:
+            return
+        trade_days = sorted(history["date"].tolist())
+        for name, result in indicator_results.items():
+            if self._extract_score(result, name) is not None:
+                continue
+            if name not in history.columns:
+                continue
+            valid = history[history["date"] < date][["date", name]].dropna()
+            if valid.empty:
+                continue
+            last_date = valid["date"].iloc[-1]
+            last_score = float(valid[name].iloc[-1])
+            elapsed = sum(1 for d in trade_days if last_date < d <= date)
+            if date not in trade_days:
+                elapsed += 1
+            if not (1 <= elapsed <= MISSING_DAY_LIMIT):
+                continue
+            result["score"] = last_score
+            result["status"] = "degraded"
+            # 填充值不落库 scores_daily（见 docstring），仅记录 degraded 状态
+            self._db.upsert_status(date, name.lower(), "degraded", "forward_fill",
+                                   f"filled from {last_date}")
+        self._db.commit()
+
     def run(self, date: str) -> dict:
         indicator_results = self.run_all_indicators(date)
+        self._apply_forward_fill(indicator_results, date)
 
         m1s3_corr = self._check_m1s3_correlation(date)
-        original_weights = dict(INDICATOR_WEIGHTS)
+        weights = copy.deepcopy(INDICATOR_WEIGHTS)
         if m1s3_corr is not None and m1s3_corr > 0.85:
-            INDICATOR_WEIGHTS["sentiment"] = {"S1": 0.4167, "S2": 0.4167, "S3": 0.1666}
+            weights["sentiment"] = {"S2": 0.75, "S3": 0.25}
             print(f"  [corr] M1/S3 corr={m1s3_corr:.2f}>0.85, halving S3 weight")
-        else:
-            INDICATOR_WEIGHTS["sentiment"] = original_weights["sentiment"]
 
         dimension_scores = {}
         for dim in DIMENSION_WEIGHTS:
             dimension_scores[dim] = self.calculate_dimension_score(
-                indicator_results, dim
+                indicator_results, dim, weights
             )
 
         raw_fgi = calculate_fgi(dimension_scores)
 
         all_scores = []
         for name, r in indicator_results.items():
-            s = r.get(name.lower()) or r.get("score")
+            s = self._extract_score(r, name)
             if s is not None:
                 all_scores.append(float(s))
 
@@ -141,18 +187,15 @@ class FGICalculator:
         self._db.upsert_raw_data(date, "mad", float(mad))
         self._db.commit()
 
-        mad_history = self._db.get_raw_data("mad", "2015-01-01", date)
-        if len(mad_history) > 252:
-            import pandas as pd
-            mad_series = pd.Series(mad_history["value"].values, index=mad_history["date"])
-            mad_pct = rolling_percentile(mad_series, window=1260)
-            mad_pct_val = mad_pct.iloc[-1]
-            if not pd.isna(mad_pct_val):
-                fgi_final = adjust_fgi_with_mad_pct(raw_fgi, mad, float(mad_pct_val))
-            else:
-                fgi_final = raw_fgi
-        else:
-            fgi_final = raw_fgi
+        fgi_final = raw_fgi
+        if raw_fgi is not None:
+            mad_history = self._db.get_raw_data("mad", "2015-01-01", date)
+            if len(mad_history) > 252:
+                mad_series = pd.Series(mad_history["value"].values, index=mad_history["date"])
+                mad_pct = rolling_percentile(mad_series, window=1260)
+                mad_pct_val = mad_pct.iloc[-1]
+                if not pd.isna(mad_pct_val):
+                    fgi_final = adjust_fgi_with_mad_pct(raw_fgi, mad, float(mad_pct_val))
 
         health = self.calculate_health(indicator_results, date)
 

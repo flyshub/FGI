@@ -25,6 +25,12 @@ class TestRollingPercentile:
         result = rolling_percentile(series, window=252)
         assert pd.isna(result.iloc[0])
 
+    def test_lowest_value_scores_zero(self):
+        """(rank-1)/(N-1)：历史最低值应得 0 分"""
+        series = pd.Series(range(300, 0, -1))  # 末位为窗口最低
+        result = rolling_percentile(series, window=252)
+        assert result.iloc[-1] == 0.0
+
 
 class TestZscore:
     def test_basic(self):
@@ -61,6 +67,16 @@ class TestCalculateFgi:
     def test_extreme_greed(self):
         scores = {"momentum": 100, "sentiment": 100, "valuation": 100, "funding": 100}
         assert calculate_fgi(scores) == 100
+
+    def test_missing_dimension_renormalized(self):
+        """维度整体缺失时不计入，其余维度权重按比例放大（不默认 50）"""
+        scores = {"momentum": 80, "sentiment": None, "valuation": 20, "funding": 40}
+        result = calculate_fgi(scores)
+        assert result == pytest.approx((80 + 20 + 40) / 3, abs=0.01)
+
+    def test_all_dimensions_missing_returns_none(self):
+        scores = {"momentum": None, "sentiment": None, "valuation": None, "funding": None}
+        assert calculate_fgi(scores) is None
 
 
 class TestApplyConsistencyAdjustment:

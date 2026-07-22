@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 from typing import Optional
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
@@ -24,12 +26,11 @@ class S3Calculator:
         )
 
     def calculate_zt_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["zt_ratio"] = df["seal_fund_sum"]
+        # 统一单位为亿元（与 raw_data 的 s3_seal_fund 一致）
+        df["zt_ratio"] = pd.to_numeric(df["seal_fund_sum"], errors="coerce") / 1e8
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
-        if df is None:
-            df = pd.DataFrame({"zt_ratio": [0.1]})
         df["percentile"] = rolling_percentile(df["zt_ratio"], window=self._window)
         return df
 
@@ -43,7 +44,7 @@ class S3Calculator:
                 self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(row["seal_fund_sum"]) / 1e8)
             self._db.commit()
             df = result.data
-            df["zt_ratio"] = df["seal_fund_sum"]
+            df["zt_ratio"] = pd.to_numeric(df["seal_fund_sum"], errors="coerce") / 1e8
             df = df[df["date"] >= start_date].copy()
             return df
         return None

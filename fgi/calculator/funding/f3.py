@@ -45,6 +45,23 @@ class F3Calculator:
     def calculate_score(self, percentile: float) -> float:
         return percentile * 100
 
+    def splice_real_proxy(self, proxy_df: pd.DataFrame, real_data: pd.DataFrame) -> pd.DataFrame:
+        """方案 2.4: 真实行业资金流与 proxy 历史拼接——有真实数据的日期用
+        真实净流入（带符号，大幅净流出=恐慌），其余日期用 proxy 幅度。"""
+        df = proxy_df[["date", "flow_magnitude"]].copy()
+        if real_data is not None and not real_data.empty:
+            real_dates = set(real_data["date"])
+            df = df[~df["date"].isin(real_dates)]
+            real_df = pd.DataFrame({
+                "date": real_data["date"],
+                "flow_magnitude": real_data["value"],
+            })
+            df = pd.concat([df, real_df], ignore_index=True)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date").reset_index(drop=True)
+        df["date"] = df["date"].dt.strftime("%Y-%m-%d")
+        return df
+
     def run(self, date: str, lookback_days: int = None) -> dict:
         if lookback_days is None:
             lookback_days = self._window + 60
@@ -53,7 +70,7 @@ class F3Calculator:
         start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
         start_date = start_date.strftime("%Y-%m-%d")
 
-        # Track real industry fund flow (accumulate for future use)
+        # Track real industry fund flow (accumulate daily)
         real_flow_result = self.fetch_industry_fund_flow(date)
         if real_flow_result.status == DataSourceStatus.HEALTHY and \
            real_flow_result.data is not None and not real_flow_result.data.empty:
@@ -61,43 +78,38 @@ class F3Calculator:
             self._db.upsert_raw_data(date, "f3_industry_net_flow", float(net_flow))
             self._db.commit()
 
-        # Check if we have enough accumulated real data
         real_data = self._db.get_raw_data("f3_industry_net_flow", start_date, end_date)
-        use_real_data = len(real_data) >= self._window
 
-        source = "proxy"
-        if use_real_data:
-            df = pd.DataFrame({
-                "date": real_data["date"],
-                "flow_magnitude": real_data["value"].abs(),
-            })
-            source = "real"
+        proxy_result = self.fetch_index_proxy(start_date, end_date)
+        if proxy_result.status == DataSourceStatus.HEALTHY and proxy_result.data is not None:
+            proxy_df = self.calculate_flow_proxy(proxy_result.data)
+        elif real_data is not None and not real_data.empty:
+            proxy_df = pd.DataFrame({"date": [], "flow_magnitude": []})
         else:
-            proxy_result = self.fetch_index_proxy(start_date, end_date)
-            if proxy_result.status != DataSourceStatus.HEALTHY:
-                self._db.upsert_status(date, "f3", "missing",
-                                       proxy_result.source, proxy_result.error or "Unknown error")
-                return {"f3": None, "status": "missing"}
-            df = proxy_result.data
-            df = self.calculate_flow_proxy(df)
+            self._db.upsert_status(date, "f3", "missing",
+                                   proxy_result.source, proxy_result.error or "Unknown error")
+            return {"f3": None, "status": "missing"}
 
+        df = self.splice_real_proxy(proxy_df, real_data)
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
         if today.empty:
-            self._db.upsert_status(date, "f3", "missing", source, "No data for date")
+            self._db.upsert_status(date, "f3", "missing", "splice", "No data for date")
             return {"f3": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "f3", "missing", source, "Insufficient data")
+            self._db.upsert_status(date, "f3", "missing", "splice", "Insufficient data")
             return {"f3": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
-        source = "real" if use_real_data else "proxy"
+        today_is_real = not real_data.empty and date in real_data["date"].values
+        source = "real" if today_is_real else "proxy"
+        status = "normal" if today_is_real else "substituted"
 
         self._db.upsert_raw_data(date, "f3_percentile", percentile)
         self._db.upsert_score(date, {"F3": score})
-        self._db.upsert_status(date, "f3", "normal", source)
+        self._db.upsert_status(date, "f3", status, source)
 
-        return {"f3": score, "status": "normal", "percentile": percentile}
+        return {"f3": score, "status": status, "percentile": percentile}

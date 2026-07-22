@@ -1,4 +1,6 @@
 """PushPlus (pushplus.plus) push notification for daily FGI reports."""
+from __future__ import annotations
+
 import os
 import logging
 import requests
@@ -9,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 INDICATOR_NAMES = {
     "M1": "涨停家数", "M2": "散户意愿", "M3": "均线偏离", "M4": "创业换手",
-    "S1": "涨跌比", "S2": "股吧热度", "S3": "涨停封单",
+    "S2": "股吧热度", "S3": "涨停封单",
     "V1": "沪深300·ERP", "V2": "ΔERP",
     "F1": "融资占比", "F2": "基金仓位", "F3": "主力资金",
 }
@@ -61,24 +63,16 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     return "\n".join(lines)
 
 
-def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
-                    health: float, *, date_str: str = None) -> bool:
-    """Send FGI daily report via PushPlus.
-
-    Returns True on success, False otherwise.
-    """
+def _post(title: str, content: str) -> bool:
+    """Common PushPlus send: token lookup → payload → post → 200 check. Returns True on success."""
     token = os.getenv("FGI_PUSHPLUS_TOKEN", "")
     if not token:
         logger.info("FGI_PUSHPLUS_TOKEN not configured, skipping push")
         return False
 
-    if date_str is None:
-        date_str = datetime.now().strftime("%Y-%m-%d")
-
-    content = _build_fgi_markdown(fgi_raw, dimension_scores, indicator_results, health, date_str)
     payload = {
         "token": token,
-        "title": f" A股恐贪指数 · {date_str}",
+        "title": title,
         "content": content,
         "template": "markdown",
     }
@@ -86,10 +80,28 @@ def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: d
     try:
         resp = requests.post("http://www.pushplus.plus/send", json=payload, timeout=10)
         if resp.status_code == 200 and resp.json().get("code") == 200:
-            logger.info(f"PushPlus sent: FGI={fgi_raw:.1f}")
+            logger.info(f"PushPlus sent: {title}")
             return True
         logger.error(f"PushPlus error: {resp.text}")
         return False
     except Exception as e:
         logger.error(f"PushPlus push failed: {e}")
         return False
+
+
+def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
+                    health: float, *, date_str: str | None = None) -> bool:
+    """Send FGI daily report via PushPlus.
+
+    Returns True on success, False otherwise.
+    """
+    if date_str is None:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+
+    content = _build_fgi_markdown(fgi_raw, dimension_scores, indicator_results, health, date_str)
+    return _post(f" A股恐贪指数 · {date_str}", content)
+
+
+def send_alert(title: str, content: str) -> bool:
+    """Send an alert message via PushPlus. Returns True on success."""
+    return _post(title, content)

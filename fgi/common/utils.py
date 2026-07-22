@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 
@@ -5,7 +7,14 @@ import pandas as pd
 def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     def percentile_rank(x):
         current = x.iloc[-1]
-        return np.sum(x <= current) / len(x)
+        if pd.isna(current):
+            return np.nan
+        x = x.dropna()
+        n = len(x)
+        if n < 2:
+            return np.nan
+        rank = np.sum(x <= current)
+        return (rank - 1) / (n - 1)
 
     return series.rolling(window=window, min_periods=252).apply(percentile_rank, raw=False)
 
@@ -38,10 +47,20 @@ def mad_filter(series: pd.Series, threshold: float = 5.0) -> pd.Series:
     return series[np.abs(modified_z) < threshold]
 
 
-def calculate_fgi(dimension_scores: dict) -> float:
+def calculate_fgi(dimension_scores: dict):
+    """Weighted composite. Dimensions whose score is None (fully missing) are
+    excluded and the remaining dimension weights renormalized proportionally.
+    Returns None when every dimension is missing."""
     weights = {"momentum": 0.25, "sentiment": 0.25, "valuation": 0.25, "funding": 0.25}
-    raw_fgi = sum(dimension_scores[dim] * weights[dim] for dim in weights)
-    return raw_fgi
+    available = [
+        (dim, dimension_scores[dim])
+        for dim in weights
+        if dimension_scores.get(dim) is not None and not pd.isna(dimension_scores[dim])
+    ]
+    if not available:
+        return None
+    total_weight = sum(weights[dim] for dim, _ in available)
+    return sum(score * weights[dim] / total_weight for dim, score in available)
 
 
 def apply_consistency_adjustment(fgi_raw: float, indicator_scores: list) -> tuple[float, float]:
@@ -84,7 +103,7 @@ def calculate_correlation_exceed_rate(db, date: str, lookback: int = 60) -> floa
     import numpy as np
     dims = {
         "momentum": ["M1", "M2", "M3", "M4"],
-        "sentiment": ["S1", "S2", "S3"],
+        "sentiment": ["S2", "S3"],
         "valuation": ["V1", "V2"],
         "funding": ["F1", "F2", "F3"],
     }

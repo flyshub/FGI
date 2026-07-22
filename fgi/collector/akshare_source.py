@@ -17,10 +17,11 @@ def _retry(fn, retries=5, delay=3):
 
 
 class AKShareSource(DataSource):
-    _shared_cache = {}
-
-    def __init__(self):
+    def __init__(self, cache_ttl: float = 6 * 3600, cache_max: int = 500):
         self._client = None
+        self._cache = {}
+        self._cache_ttl = cache_ttl
+        self._cache_max = cache_max
 
     def _get_client(self):
         if self._client is None:
@@ -29,17 +30,28 @@ class AKShareSource(DataSource):
         return self._client
 
     def _cached(self, key, fn):
-        if key in AKShareSource._shared_cache:
-            return AKShareSource._shared_cache[key]
+        """实例级缓存：TTL 过期、条数上限（超了清最旧）、失败/空结果不缓存。"""
+        now = time.time()
+        entry = self._cache.get(key)
+        if entry is not None and now - entry[0] < self._cache_ttl:
+            return entry[1]
         result = fn()
-        AKShareSource._shared_cache[key] = result
+        if result is None:
+            return None
+        if isinstance(result, (pd.DataFrame, list, dict)) and len(result) == 0:
+            return result
+        self._cache[key] = (now, result)
+        if len(self._cache) > self._cache_max:
+            oldest = min(self._cache, key=lambda k: self._cache[k][0])
+            del self._cache[oldest]
         return result
 
     def fetch_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.stock_zh_index_daily(
-                symbol=f"sh{symbol}" if symbol.startswith("6") else f"sz{symbol}"))
+            full_symbol = f"sh{symbol}" if symbol.startswith("6") else f"sz{symbol}"
+            df = self._cached(("index", full_symbol),
+                              lambda: _retry(lambda: ak.stock_zh_index_daily(symbol=full_symbol)))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
@@ -52,7 +64,8 @@ class AKShareSource(DataSource):
     def fetch_index_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.stock_zh_index_daily(symbol=symbol))
+            df = self._cached(("index", symbol),
+                              lambda: _retry(lambda: ak.stock_zh_index_daily(symbol=symbol)))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
@@ -148,18 +161,23 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_cyb_daily(self, start_date: str, end_date: str) -> DataSourceResult:
+        """创业板指数换手率（%）。东财 index_zh_a_hist 接口自带真实换手率字段，
+        全区间一次拉取 + 本地切片（stock_zh_index_daily 无换手率字段）。"""
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.stock_zh_index_daily(symbol="sz399006"), retries=3, delay=2)
+            df = self._cached(("cyb",), lambda: _retry(lambda: ak.index_zh_a_hist(
+                symbol="399006", period="daily", start_date="19900101", end_date="20500101"),
+                retries=3, delay=2))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
+            df = df.rename(columns={"日期": "date", "换手率": "turnover_rate"}).copy()
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            df["turnover_rate"] = pd.to_numeric(df["turnover_rate"], errors="coerce")
+            df = df.dropna(subset=["turnover_rate"])
             mask = (df["date"] >= start_date) & (df["date"] <= end_date)
-            df = df.loc[mask].copy()
-            if df.empty:
+            result_df = df.loc[mask, ["date", "turnover_rate"]].copy()
+            if result_df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data in range")
-            df["turnover_rate"] = df["volume"].astype(float)
-            result_df = df[["date", "turnover_rate"]].copy()
             return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
@@ -212,7 +230,8 @@ class AKShareSource(DataSource):
     def fetch_pe_data(self, start_date: str, end_date: str) -> DataSourceResult:
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.stock_index_pe_lg(symbol="沪深300"))
+            df = self._cached(("pe", "沪深300"),
+                              lambda: _retry(lambda: ak.stock_index_pe_lg(symbol="沪深300")))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PE data")
             df = df.rename(columns={"日期": "date"})
@@ -237,7 +256,8 @@ class AKShareSource(DataSource):
         """Fetch 基金股票仓位 (weekly data, forward-filled to daily)."""
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.fund_stock_position_lg())
+            df = self._cached(("fund_position",),
+                              lambda: _retry(lambda: ak.fund_stock_position_lg()))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund position data")
             df = df.rename(columns={"date": "date", "position": "position"})
@@ -272,7 +292,8 @@ class AKShareSource(DataSource):
         """Fetch 上证总市值 (monthly, from macro_china_stock_market_cap)."""
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.macro_china_stock_market_cap())
+            df = self._cached(("market_cap",),
+                              lambda: _retry(lambda: ak.macro_china_stock_market_cap()))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No market cap data")
             df["date"] = df["数据日期"].str.extract(r"(\d{4})年(\d{2})月份") \
@@ -291,7 +312,8 @@ class AKShareSource(DataSource):
         """Fetch 中国10年期国债收益率 (daily, from bond_zh_us_rate)."""
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.bond_zh_us_rate())
+            df = self._cached(("bond_yield",),
+                              lambda: _retry(lambda: ak.bond_zh_us_rate()))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No bond yield data")
             df["date"] = pd.to_datetime(df["日期"]).dt.strftime("%Y-%m-%d")

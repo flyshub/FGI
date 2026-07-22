@@ -64,6 +64,15 @@ class V1Calculator:
             return {"v1": None, "status": "missing"}
 
         df = self.calculate_erp(pe_result.data, bond_result.data)
+
+        # 回写完整 ERP 历史序列（幂等 upsert），供 V2 的 250 日 ΔERP 窗口使用
+        erp_history = pd.DataFrame({
+            "date": df["date"].astype(str),
+            "value": df["erp"],
+        }).dropna()
+        self._db.upsert_raw_data_batch(erp_history, "v1_erp")
+        self._db.commit()
+
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
@@ -78,7 +87,6 @@ class V1Calculator:
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "v1_erp", today["erp"].iloc[0])
         self._db.upsert_raw_data(date, "v1_percentile", percentile)
         self._db.upsert_score(date, {"V1": score})
         self._db.upsert_status(date, "v1", "normal", "akshare")
