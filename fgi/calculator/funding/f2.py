@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -10,8 +12,8 @@ class F2Calculator:
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
         self._db = db
-        # Weekly data: 5 years ≈ 260 weeks
-        self._window = PERCENTILE_WINDOW_YEARS * 52
+        # 周频仓位 ffill 到日频后按日频窗口做滚动百分位
+        self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
@@ -22,9 +24,21 @@ class F2Calculator:
         )
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["fund_position"] = pd.to_numeric(df["position"], errors="coerce")
-        df["percentile"] = rolling_percentile(df["fund_position"], window=self._window)
-        return df
+        if "fund_position" in df.columns:
+            df["fund_position"] = pd.to_numeric(df["fund_position"], errors="coerce")
+        else:
+            df["fund_position"] = pd.to_numeric(df["position"], errors="coerce")
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date").drop_duplicates(subset=["date"], keep="last")
+        # 周频 → 日频（交易日）前向填充后再做滚动百分位
+        daily = pd.DataFrame({
+            "date": pd.date_range(df["date"].min(), df["date"].max(), freq="B")
+        })
+        daily = daily.merge(df[["date", "fund_position"]], on="date", how="left")
+        daily["fund_position"] = daily["fund_position"].ffill()
+        daily["percentile"] = rolling_percentile(daily["fund_position"], window=self._window)
+        daily["date"] = daily["date"].dt.strftime("%Y-%m-%d")
+        return daily
 
     def calculate_score(self, percentile: float) -> float:
         return percentile * 100
@@ -97,7 +111,7 @@ class F2Calculator:
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "f2_fund_position", today["fund_position"].iloc[0])
+        # 不把"最近一周值"以当日日期写回 f2_fund_position，避免污染自身百分位窗口
         self._db.upsert_raw_data(date, "f2_percentile", percentile)
         self._db.upsert_score(date, {"F2": score})
         self._db.upsert_status(date, "f2", "normal", "database")

@@ -78,6 +78,17 @@ class TestV1Calculator:
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
 
+    def test_run_writes_full_erp_history(self, v1_calculator, db):
+        """每次计算回写完整 ERP 历史（而非仅当日一条），让 V2 的 250 日 ΔERP 窗口可冷启动"""
+        v1_calculator.run("2024-01-10", lookback_days=300)
+        history = db.get_raw_data("v1_erp", "2000-01-01", "2024-01-10")
+        assert len(history) > 250
+
+        # 幂等：重复运行不产生额外行
+        v1_calculator.run("2024-01-10", lookback_days=300)
+        history2 = db.get_raw_data("v1_erp", "2000-01-01", "2024-01-10")
+        assert len(history2) == len(history)
+
 
 class TestV2Calculator:
     """V3.8: ΔERP Z-score (250-day, negative sigmoid). Reads v1_erp from DB."""

@@ -4,9 +4,10 @@ from fgi.config.settings import LOOKBACK_START
 from fgi.storage.database import Database
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.akshare_source import AKShareSource
-from fgi.collector.mock_source import MockSource
 from fgi.collector.zzshare_source import ZZShareSource
+from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.collector.base import DataSourceStatus
+from fgi.output.status import record_indicator_status
 
 
 def is_trading_day(date_str: str) -> bool:
@@ -36,9 +37,10 @@ def backfill_indicator(db: Database, calculator, indicator: str, dates: List[str
 
 
 def setup_data_manager() -> DataSourceManager:
+    """生产回填只用真实数据源；任何失败记 missing，绝不写 mock 假数据。
+    MockSource 仅供测试使用。"""
     manager = DataSourceManager()
     manager.register_source("akshare", AKShareSource())
-    manager.register_source("mock", MockSource())
     zzshare_ok = False
     try:
         manager.register_source("zzshare", ZZShareSource())
@@ -46,36 +48,16 @@ def setup_data_manager() -> DataSourceManager:
     except Exception:
         pass
     for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
-                       "s1_sentiment_zz", "s3_sentiment", "s4_zt_daily",
+                       "s3_sentiment", "s4_zt_daily",
                        "v1_pe", "v1_bond", "v2_index",
                        "f1_margin", "f1_market_cap", "f2_fund_position", "f3_index", "f3_industry_flow"]:
         sources = []
-        if indicator in ("s1_sentiment_zz", "m2_sentiment", "s3_sentiment") and zzshare_ok:
+        if indicator in ("m2_sentiment", "s3_sentiment") and zzshare_ok:
             sources.append("zzshare")
         sources.append("akshare")
-        sources.append("mock")
         if sources:
             manager.configure_chain(indicator, sources)
     return manager
-
-
-def get_trading_days(start_date: str, end_date: str) -> List[str]:
-    import akshare as ak
-    try:
-        df = ak.tool_trade_date_hist_sina()
-        df = df[df["trade_date"] >= start_date]
-        df = df[df["trade_date"] <= end_date]
-        return sorted(df["trade_date"].tolist())
-    except Exception:
-        start = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
-        dates = []
-        current = start
-        while current <= end:
-            if current.weekday() < 5:
-                dates.append(current.strftime("%Y-%m-%d"))
-            current += timedelta(days=1)
-        return dates
 
 
 def store_indicator_data(db, indicator_key, df, value_col, date_col="date"):
@@ -104,9 +86,9 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     indicators_config = [
         ("M3 上证指数", "m3_index", "fetch_index_daily", ("sh000001", full_start, today), "close", "date", "m3_close"),
         ("M4 创业板", "m4_cyb_turnover", "fetch_cyb_daily", (full_start, today), "turnover_rate", "date", "m4_turnover"),
-        ("V1 PE-TTM", "v1_pe", "fetch_pe_data", (full_start, today), "滚动市盈率", "date", "v1_pe_ttm"),
-        ("V1 国债收益", "v1_bond", "fetch_bond_yield", (full_start, today), "yield_10y", "date", "v1_bond_yield"),
-        ("F1 融资余额", "f1_margin", "fetch_margin_data", (full_start, today), "融资余额", "信用交易日期", "f1_margin_balance"),
+        ("V1 PE-TTM", "v1_pe", "fetch_pe_data", ("2014-01-01", today), "滚动市盈率", "date", "v1_pe_ttm"),
+        ("V1 国债收益", "v1_bond", "fetch_bond_yield", ("2014-01-01", today), "yield_10y", "date", "v1_bond_yield"),
+        ("F1 融资余额", "f1_margin", "fetch_margin_data", (full_start, today), "融资余额", "date", "f1_margin_balance"),
         ("F1 总市值", "f1_market_cap", "fetch_market_cap", (full_start, today), "market_cap", "date", "f1_market_cap"),
         ("F2 基金仓位", "f2_fund_position", "fetch_fund_position", (full_start, today), "position", "date", "f2_position"),
         ("F3 上证代理", "f3_index", "fetch_index_daily", ("sh000001", full_start, today), "close", "date", "f3_proxy_close"),
@@ -118,7 +100,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
         try:
             result = data_manager.fetch(chain, method, *args)
             if result.status != DataSourceStatus.HEALTHY or result.data is None:
-                print(f"FAIL ({result.error})")
+                print(f"FAIL ({result.error}) — 该指标记 missing，不写假数据")
                 continue
             n = store_indicator_data(db, key, result.data, val_col, date_col)
             print(f"OK ({n} records)")
@@ -141,23 +123,20 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     except Exception as e:
         print(f"ERR: {e}")
 
-    # Sentiment indicators from zzshare
-    print(f"\n  [S1/M2 sentiment] zzshare...", end=" ")
+    # M2 sentiment from zzshare（S1 指标已删除，不再写 s1_* 键）
+    print(f"\n  [M2 sentiment] zzshare...", end=" ")
     try:
-        result = data_manager.fetch("s1_sentiment_zz", "fetch_open_sentiment", "2020-01-01", today)
-        if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+        result = data_manager.fetch("m2_sentiment", "fetch_open_sentiment", "2020-01-01", today)
+        if result.status in (DataSourceStatus.HEALTHY, DataSourceStatus.DEGRADED) \
+                and result.data is not None:
             for _, row in result.data.iterrows():
                 ds = str(row["date"])
-                up = float(row.get("up_num", 0))
-                dn = float(row.get("down_num", 0))
-                db.upsert_raw_data(ds, "m2_up_num", up)
-                db.upsert_raw_data(ds, "m2_down_num", dn)
-                db.upsert_raw_data(ds, "s1_up_num", up)
-                db.upsert_raw_data(ds, "s1_down_num", dn)
+                db.upsert_raw_data(ds, "m2_up_num", float(row["up_num"]))
+                db.upsert_raw_data(ds, "m2_down_num", float(row["down_num"]))
             db.commit()
             print(f"OK ({len(result.data)} records)")
         else:
-            print(f"FAIL ({result.error})")
+            print(f"FAIL ({result.error}) — 该指标记 missing，不写假数据")
     except Exception as e:
         print(f"ERR: {e}")
 
@@ -186,6 +165,7 @@ def compute_fgi_daily(calculator, db, dates: List[str]):
     for i, date in enumerate(dates):
         try:
             result = calculator.run(date)
+            record_indicator_status(db, date, result.get("indicator_results", {}))
             fgi = result.get("fgi_final", None)
             if isinstance(fgi, (int, float)):
                 print(f"[{i+1}/{total}] {date}: FGI={fgi:.1f}")
@@ -215,7 +195,7 @@ def backfill(start_date: Optional[str] = None, end_date: Optional[str] = None):
     backfill_raw_all(db, data_manager)
 
     print(f"\n--- Phase 2: FGI daily computation ---")
-    dates = get_trading_days(start_date, end_date)
+    dates = resolve_trading_days(start_date, end_date, db=db)
     print(f"Trading days: {len(dates)}")
 
     from fgi.calculator.fgi import FGICalculator

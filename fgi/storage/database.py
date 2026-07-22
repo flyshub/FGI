@@ -10,6 +10,11 @@ class Database:
         self._path = db_path or DB_PATH
         self._conn: Optional[sqlite3.Connection] = None
 
+    @property
+    def path(self) -> Path:
+        """数据库文件路径（公开只读接口）。"""
+        return self._path
+
     def connect(self):
         self._conn = sqlite3.connect(str(self._path))
         self._conn.execute("PRAGMA journal_mode=WAL")
@@ -95,6 +100,10 @@ class Database:
     def upsert_score(self, date: str, scores: dict):
         if self._conn is None:
             raise RuntimeError("Database not connected")
+        scores = dict(scores)
+        scores.pop("FGI_legacy", None)  # FGI_legacy 保持 NULL（回滚字段，由版本切换流程写）
+        if "FGI_current" not in scores and scores.get("FGI_final") is not None:
+            scores["FGI_current"] = scores["FGI_final"]
         fields = list(scores.keys())
         values = [scores[f] for f in fields]
         placeholders = ", ".join(["?"] * len(fields))
@@ -120,6 +129,7 @@ class Database:
     def upsert_status(self, date: str, indicator: str, status: str, source: str = "", error: str = ""):
         if self._conn is None:
             raise RuntimeError("Database not connected")
+        indicator = indicator.lower()  # 统一小写，避免大小写双写
         self._conn.execute("""
             INSERT INTO daily_status (date, indicator, status, source, error)
             VALUES (?, ?, ?, ?, ?)
@@ -142,16 +152,24 @@ class Database:
         row = cursor.fetchone()
         return row[0] if row else None
 
-    def get_missing_dates(self, indicator: str, start_date: str, end_date: str) -> list:
+    def get_missing_dates(self, indicator: str, start_date: str, end_date: str,
+                          trading_days: Optional[list] = None) -> list:
+        """trading_days 传入真实交易日历；缺省回退 m3_close 已有日期，再回退工作日。"""
         query = """
             SELECT date FROM raw_data
             WHERE indicator = ? AND date >= ? AND date <= ?
             ORDER BY date
         """
         df = pd.read_sql_query(query, self._conn, params=(indicator, start_date, end_date))
-        all_dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        if trading_days is None:
+            m3 = self.get_raw_data("m3_close", start_date, end_date)
+            trading_days = m3["date"].tolist() if not m3.empty else None
+        if trading_days is None:
+            all_dates = [d.strftime("%Y-%m-%d") for d in pd.date_range(start=start_date, end=end_date, freq="B")]
+        else:
+            all_dates = [str(d) for d in trading_days]
         existing = set(df["date"].tolist())
-        return [d.strftime("%Y-%m-%d") for d in all_dates if d.strftime("%Y-%m-%d") not in existing]
+        return [d for d in all_dates if d not in existing]
 
     def commit(self):
         self._conn.commit()

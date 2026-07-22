@@ -75,6 +75,15 @@ class TestStatus:
         assert len(df) == 2
         assert df.iloc[0]["status"] == "normal"
 
+    def test_indicator_case_normalized(self, db):
+        # 大写写入归一化为小写，避免 (date, indicator) 大小写双写
+        db.upsert_status("2024-01-01", "M1", "missing", "", "No data")
+        db.upsert_status("2024-01-01", "m1", "normal", "database")
+        df = db.get_status("2024-01-01")
+        assert len(df) == 1
+        assert df.iloc[0]["indicator"] == "m1"
+        assert df.iloc[0]["status"] == "normal"
+
 
 class TestUtilities:
     def test_get_latest_score_date(self, db):
@@ -90,3 +99,40 @@ class TestUtilities:
         assert "2024-01-02" in missing
         assert "2024-01-04" in missing
         assert "2024-01-01" not in missing
+
+
+class TestFgiCurrentFill:
+    def test_fgi_current_filled_from_final(self, db):
+        db.upsert_score("2024-01-01", {"FGI_final": 61.5})
+        df = db.get_scores("2024-01-01", "2024-01-01")
+        assert df.iloc[0]["FGI_current"] == 61.5
+
+    def test_fgi_legacy_stays_null(self, db):
+        db.upsert_score("2024-01-01", {"FGI_final": 60.0, "FGI_legacy": 55.0})
+        df = db.get_scores("2024-01-01", "2024-01-01")
+        assert pd.isna(df.iloc[0]["FGI_legacy"])
+
+    def test_explicit_fgi_current_not_overwritten(self, db):
+        db.upsert_score("2024-01-01", {"FGI_final": 60.0, "FGI_current": 58.0})
+        df = db.get_scores("2024-01-01", "2024-01-01")
+        assert df.iloc[0]["FGI_current"] == 58.0
+
+
+class TestGetMissingDatesCalendar:
+    def test_with_explicit_trading_days(self, db):
+        db.upsert_raw_data("2024-01-01", "m3", 0.5)
+        missing = db.get_missing_dates("m3", "2024-01-01", "2024-01-05",
+                                       trading_days=["2024-01-01", "2024-01-03"])
+        assert missing == ["2024-01-03"]
+
+    def test_m3_close_fallback(self, db):
+        # 无显式日历时用 raw_data 中 m3_close 已有日期作为日历
+        db.upsert_raw_data("2024-01-02", "m3_close", 3000.0)
+        db.upsert_raw_data("2024-01-03", "m3_close", 3001.0)
+        missing = db.get_missing_dates("m3", "2024-01-01", "2024-01-05")
+        assert missing == ["2024-01-02", "2024-01-03"]
+
+    def test_business_day_fallback(self, db):
+        # 日历与 m3_close 都不可用时回退工作日
+        missing = db.get_missing_dates("m3", "2024-01-06", "2024-01-08")
+        assert missing == ["2024-01-08"]  # 01-06/07 是周末

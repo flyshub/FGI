@@ -24,12 +24,11 @@ class S2Calculator:
         )
 
     def calculate_heat(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["heat"] = pd.to_numeric(df["p_close"], errors="coerce").fillna(100.0)
+        # 热度缺失保持 NaN，由后续流程判 missing/degraded，不填充满分值
+        df["heat"] = pd.to_numeric(df["p_close"], errors="coerce")
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
-        if df is None:
-            df = pd.DataFrame({"heat": [1000000]})
         df["percentile"] = rolling_percentile(df["heat"], window=self._window)
         return df
 
