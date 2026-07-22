@@ -37,8 +37,9 @@ class F1Calculator:
             margin_df["date"] = pd.to_datetime(raw_date, errors="coerce").dt.strftime("%Y-%m-%d")
         else:
             margin_df["date"] = raw_date
+        margin_df = margin_df.sort_values("date").reset_index(drop=True)
         margin_df["margin_balance"] = pd.to_numeric(margin_df["融资余额"], errors="coerce")
-        cap_df = cap_df.copy()
+        cap_df = cap_df.copy().sort_values("date").reset_index(drop=True)
         cap_df["market_cap"] = pd.to_numeric(cap_df["market_cap"], errors="coerce")
         merged = pd.merge(margin_df[["date", "margin_balance"]], cap_df, on="date", how="left")
         merged["market_cap"] = merged["market_cap"].ffill()
