@@ -24,3 +24,6 @@ __pycache__/
 
 # Environment
 .env
+
+# Runtime cache
+data/cache/

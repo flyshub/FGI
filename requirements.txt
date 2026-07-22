@@ -1,5 +1,6 @@
 akshare>=1.5.0
 levistock>=0.1.0
+zzshare>=0.4.8
 pandas>=2.0.0
 numpy>=1.24.0
 requests>=2.31.0

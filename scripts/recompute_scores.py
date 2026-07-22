@@ -33,6 +33,7 @@ def main(start="2015-01-01", end=None):
     db.commit()
 
     dm = setup_data_manager()
+    dm.set_db(db)  # 注入 DB 用于 offline 模式从 raw_data 重构 DataFrame
     calc = FGICalculator(dm, db)
     dates = resolve_trading_days(start, end, db=db)
     print(f"Trading days: {len(dates)}", flush=True)
