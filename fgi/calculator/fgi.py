@@ -62,9 +62,12 @@ class FGICalculator:
         for name, calc in self._calculators.items():
             try:
                 result = calc.run(date)
+                # 正常计算成功时，source_date 就是当天
+                if "source_date" not in result:
+                    result["source_date"] = date
                 results[name] = result
             except Exception as e:
-                results[name] = {"score": None, "status": "missing"}
+                results[name] = {"score": None, "status": "missing", "source_date": None}
         return results
 
     @staticmethod
@@ -125,12 +128,13 @@ class FGICalculator:
         return calculate_health_score(pd.DataFrame(statuses), exceed_rate)
 
     def _apply_forward_fill(self, indicator_results: dict, date: str):
-        """方案 4.4: 指标当日无得分时，用最近 MISSING_DAY_LIMIT 个交易日内
-        最后有效得分填充并标记 'degraded'；超过限值保持 missing。
+        """指标当日无得分时，用最近 MISSING_DAY_LIMIT 个交易日内
+        最后有效得分填充。elapsed=1 时（T+1 延迟）标记 'normal'（数据尚未发布），
+        elapsed>=2 且 <=MISSING_DAY_LIMIT 时标记 'degraded'（数据源故障或长期缺失）。
 
         注意：填充值只写入内存中的 indicator_results 供当日 FGI 聚合使用，
         不落库 scores_daily —— 否则次日会把填充值误当真实得分，elapsed 永远
-        重置为 1，「连续缺失 5 日剔除」永不触发。degraded 状态仍写 daily_status。"""
+        重置为 1，「连续缺失 5 日剔除」永不触发。"""
         from datetime import datetime, timedelta
         start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=MISSING_DAY_LIMIT * 3 + 10)).strftime("%Y-%m-%d")
         history = self._db.get_scores(start, date)
@@ -153,11 +157,33 @@ class FGICalculator:
             if not (1 <= elapsed <= MISSING_DAY_LIMIT):
                 continue
             result["score"] = last_score
-            result["status"] = "degraded"
-            # 填充值不落库 scores_daily（见 docstring），仅记录 degraded 状态
-            self._db.upsert_status(date, name.lower(), "degraded", "forward_fill",
-                                   f"filled from {last_date}")
+            result["source_date"] = self._resolve_source_date(name, last_date, date)
+            result["status"] = "normal" if elapsed == 1 else "degraded"
+            self._db.upsert_status(date, name.lower(), result["status"], "forward_fill",
+                                   f"filled from {last_date} (elapsed={elapsed})")
         self._db.commit()
+
+    def _resolve_source_date(self, indicator: str, last_score_date: str, target_date: str) -> str:
+        """traces one hop back from the last score date to the actual raw-data date."""
+        mapping = {
+            "M1": "m1_zt_count", "M2": "m2_up_num", "M3": "m3_close",
+            "M4": "m4_volume", "S2": "s2_heat", "S3": "s3_seal_fund",
+            "V1": "v1_pe_ttm", "V2": "v1_erp",
+            "F1": "f1_margin_ratio", "F2": "f2_position", "F3": "f3_industry_net_flow",
+        }
+        raw_key = mapping.get(indicator)
+        if raw_key is None:
+            return last_score_date
+        try:
+            row = self._db._conn.execute(
+                "SELECT date FROM raw_data WHERE indicator=? AND date <= ? ORDER BY date DESC LIMIT 1",
+                [raw_key, last_score_date]
+            ).fetchone()
+            if row:
+                return row[0]
+        except Exception:
+            pass
+        return last_score_date
 
     def run(self, date: str) -> dict:
         indicator_results = self.run_all_indicators(date)

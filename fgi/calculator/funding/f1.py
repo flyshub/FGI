@@ -76,6 +76,18 @@ class F1Calculator:
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
+        # 融资余额有 T+1 上报延迟；当天数据不可用时用最近一天代替
+        if today.empty and not df.empty:
+            last_row = df.iloc[-1]
+            today_val = {
+                "date": date,
+                "margin_balance": last_row["margin_balance"],
+                "market_cap": last_row["market_cap"],
+                "margin_ratio": last_row["margin_ratio"],
+                "percentile": last_row["percentile"],
+            }
+            import pandas as _pd
+            today = _pd.DataFrame([today_val])
         if today.empty:
             self._db.upsert_status(date, "f1", "missing", "akshare", "No data for date")
             return {"f1": None, "status": "missing"}

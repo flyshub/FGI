@@ -87,15 +87,24 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_margin_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 融资融券余额 via Eastmoney (沪+深合计), 比 SSE API 更稳定."""
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.stock_margin_sse(
-                start_date=start_date.replace("-", ""),
-                end_date=end_date.replace("-", "")))
+            # 东财 API 返回全量历史，_cached 节省重复请求。
+            # 融资余额单位：亿元（与 market_cap 一致）。
+            df = self._cached(("margin_em",), lambda: _retry(lambda: ak.stock_margin_account_info()))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
-            df = df.rename(columns={"信用交易日期": "date"})
-            df["date"] = pd.to_datetime(df["date"], format="%Y%m%d").dt.strftime("%Y-%m-%d")
+            df = df.rename(columns={"日期": "date", "融资余额": "融资余额"})
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            # 东财融资余额单位已是亿元；但原 SSE 返回元，历史代码 /1e8。
+            # 这里将东财的亿元值转换为 SSE 等效的"元"表示以保持 F1 公式兼容。
+            import numpy as np
+            df["融资余额"] = pd.to_numeric(df["融资余额"], errors="coerce") * 1e8
+            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
+            df = df.loc[mask].copy()
+            if df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data in range")
             return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
@@ -339,35 +348,42 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch daily 涨停板 summary via levistock (supports today's date with per-day error handling)."""
+        """Fetch daily 涨停板 summary via levistock."""
         try:
             import levistock as lk
             import time
             dates = pd.date_range(start=start_date, end=end_date, freq="B")
             frames = []
+            last_seal_fund = 0.0  # 跨日备用
             for i, d in enumerate(dates):
                 ds = d.strftime("%Y-%m-%d")
+                if i % 20 == 0 and i > 0:
+                    time.sleep(0.5)
                 try:
-                    if i % 20 == 0 and i > 0:
-                        time.sleep(0.5)
                     emotion = self._cached(("mph", ds), lambda ds=ds: lk.market_emotion_kph(date=ds))
-                    if not isinstance(emotion, dict):
-                        continue
-                    zt_count = emotion.get("sjzt", emotion.get("zt", 0))
-                    zt_count = int(zt_count) if zt_count else 0
-
-                    limit_up_list = self._cached(("zs", ds), lambda ds=ds: lk.limit_up_his_kph(date=ds))
-                    seal_fund = 0.0
-                    if isinstance(limit_up_list, list):
-                        seal_fund = sum(item.get("seal_money", 0) for item in limit_up_list)
-
-                    frames.append({
-                        "date": ds,
-                        "limit_up_count": int(zt_count),
-                        "seal_fund_sum": float(seal_fund),
-                    })
                 except Exception:
                     continue
+                if not isinstance(emotion, dict):
+                    continue
+                zt_count = emotion.get("sjzt", emotion.get("zt", 0))
+                zt_count = int(zt_count) if zt_count else 0
+
+                # seal_fund 来自 limit_up_his_kph：当天 API 会拒绝（"日期必须小于今天"），
+                # 回退到昨天（T+1 延迟）而非 0，避免情绪维度被错误压低。
+                seal_fund = 0.0
+                try:
+                    limit_up_list = self._cached(("zs", ds), lambda ds=ds: lk.limit_up_his_kph(date=ds))
+                except Exception:
+                    limit_up_list = None
+                if isinstance(limit_up_list, list):
+                    seal_fund = sum(item.get("seal_money", 0) for item in limit_up_list)
+                    last_seal_fund = seal_fund
+
+                frames.append({
+                    "date": ds,
+                    "limit_up_count": int(zt_count),
+                    "seal_fund_sum": float(seal_fund if seal_fund > 0 else last_seal_fund),
+                })
             if not frames:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "levistock", "No zt data for any date")
             result_df = pd.DataFrame(frames)
