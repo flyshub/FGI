@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Dict, List, Set
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
@@ -90,6 +91,9 @@ class DataSourceManager:
         self._chains[indicator] = FallbackChain(sources)
 
     def fetch(self, indicator: str, method: str, *args, **kwargs) -> DataSourceResult:
+        if os.environ.get("FGI_OFFLINE") == "1":
+            return DataSourceResult(None, DataSourceStatus.FAILED, "offline",
+                                    f"offline mode: skip fetch for {indicator}")
         if indicator not in self._chains:
             return DataSourceResult(None, DataSourceStatus.FAILED, "manager", f"No chain for {indicator}")
         return self._chains[indicator].fetch(method, *args, **kwargs)

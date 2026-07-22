@@ -1,10 +1,16 @@
+import socket
 import time
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 
+# 默认 socket 超时（秒）。akshare 内部走 requests 不透传 timeout 时，
+# socket.setdefaulttimeout 仍能兜底，避免单条 TCP 连接永久挂起。
+DEFAULT_SOCKET_TIMEOUT = 30
+
+
 def _retry(fn, retries=5, delay=3):
-    """Retry decorator with exponential backoff."""
+    """Retry with exponential backoff. socket.setdefaulttimeout bounds each call."""
     last_err = None
     for i in range(retries):
         try:
@@ -13,7 +19,12 @@ def _retry(fn, retries=5, delay=3):
             last_err = e
             if i < retries - 1:
                 time.sleep(delay * (2 ** i))
+    assert last_err is not None
     raise last_err
+
+
+# 给 requests/socket 设全局默认超时，避免单条 TCP 连接永久挂起
+socket.setdefaulttimeout(DEFAULT_SOCKET_TIMEOUT)
 
 
 class AKShareSource(DataSource):
@@ -167,7 +178,7 @@ class AKShareSource(DataSource):
             ak = self._get_client()
             df = self._cached(("cyb",), lambda: _retry(lambda: ak.index_zh_a_hist(
                 symbol="399006", period="daily", start_date="19900101", end_date="20500101"),
-                retries=3, delay=2))
+                retries=2, delay=1))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
             df = df.rename(columns={"日期": "date", "换手率": "turnover_rate"}).copy()
