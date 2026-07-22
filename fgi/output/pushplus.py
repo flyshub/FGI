@@ -225,9 +225,12 @@ def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: d
     """
     if date_str is None:
         date_str = datetime.now().strftime("%Y-%m-%d")
+    ts = datetime.now().strftime("%H:%M:%S")
 
     content = _build_fgi_markdown(fgi_raw, dimension_scores, indicator_results, health, date_str)
-    return _post(f"📊 A股恐贪指数 · {date_str}", content)
+    content += f"\n\n---\n`{date_str} {ts}`"
+
+    return _post(f"📊 A股恐贪指数 · {date_str} {ts}", content)
 
 
 def send_alert(title: str, content: str) -> bool:
