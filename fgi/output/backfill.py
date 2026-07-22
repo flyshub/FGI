@@ -47,7 +47,7 @@ def setup_data_manager() -> DataSourceManager:
         zzshare_ok = True
     except Exception:
         pass
-    for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_turnover",
+    for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_volume",
                        "s3_sentiment", "s4_zt_daily",
                        "v1_pe", "v1_bond", "v2_index",
                        "f1_margin", "f1_market_cap", "f2_fund_position", "f3_index", "f3_industry_flow"]:
@@ -85,7 +85,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
 
     indicators_config = [
         ("M3 上证指数", "m3_index", "fetch_index_daily", ("sh000001", full_start, today), "close", "date", "m3_close"),
-        ("M4 创业板", "m4_cyb_turnover", "fetch_cyb_daily", (full_start, today), "turnover_rate", "date", "m4_turnover"),
+        ("M4 创业板", "m4_cyb_volume", "fetch_cyb_daily", (full_start, today), "volume", "date", "m4_volume"),
         ("V1 PE-TTM", "v1_pe", "fetch_pe_data", ("2014-01-01", today), "滚动市盈率", "date", "v1_pe_ttm"),
         ("V1 国债收益", "v1_bond", "fetch_bond_yield", ("2014-01-01", today), "yield_10y", "date", "v1_bond_yield"),
         ("F1 融资余额", "f1_margin", "fetch_margin_data", (full_start, today), "融资余额", "date", "f1_margin_balance"),

@@ -78,30 +78,26 @@ class TestInstanceCache:
 def _cyb_hist_df():
     dates = pd.date_range("2024-01-01", "2024-01-10", freq="B")
     return pd.DataFrame({
-        "日期": dates.strftime("%Y-%m-%d"),
-        "开盘": [1800.0] * len(dates),
-        "收盘": [1810.0] * len(dates),
-        "成交量": [1e8] * len(dates),
-        "换手率": [3.5 + i * 0.1 for i in range(len(dates))],
+        "date": dates.strftime("%Y-%m-%d"),
+        "volume": [1e8] * len(dates),
     })
 
 
 class TestFetchCybDaily:
-    def test_uses_turnover_column(self, fake_ak, fast_retry):
-        fake_ak.index_zh_a_hist = lambda **kwargs: _cyb_hist_df()
+    def test_uses_volume_column(self, fake_ak, fast_retry):
+        fake_ak.stock_zh_index_daily = lambda **kwargs: _cyb_hist_df()
         src = AKShareSource()
         result = src.fetch_cyb_daily("2024-01-02", "2024-01-05")
         assert result.status == DataSourceStatus.HEALTHY
         df = result.data
-        assert list(df.columns) == ["date", "turnover_rate"]
+        assert list(df.columns) == ["date", "volume"]
         assert df["date"].min() >= "2024-01-02"
         assert df["date"].max() <= "2024-01-05"
-        # 换手率单位 %，不是成交量
-        assert df["turnover_rate"].max() < 10.0
-
+        # 成交量量级 > 1
+        assert df["volume"].min() > 1e6
     def test_full_range_cached_and_sliced(self, fake_ak, fast_retry):
         calls = []
-        fake_ak.index_zh_a_hist = lambda **kwargs: calls.append(kwargs) or _cyb_hist_df()
+        fake_ak.stock_zh_index_daily = lambda **kwargs: calls.append(kwargs) or _cyb_hist_df()
         src = AKShareSource()
         r1 = src.fetch_cyb_daily("2024-01-02", "2024-01-03")
         r2 = src.fetch_cyb_daily("2024-01-04", "2024-01-05")
@@ -109,7 +105,7 @@ class TestFetchCybDaily:
         assert r2.status == DataSourceStatus.HEALTHY
         assert len(calls) == 1
         # 一次拉取全区间（不随请求区间变化）
-        assert calls[0]["start_date"] == "19900101"
+        assert calls[0]["symbol"] == "sz399006"
 
     def test_no_data_failed(self, fake_ak, fast_retry):
         fake_ak.index_zh_a_hist = lambda **kwargs: pd.DataFrame()

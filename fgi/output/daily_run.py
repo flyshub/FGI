@@ -51,7 +51,7 @@ def setup_data_manager() -> DataSourceManager:
         "m1_zt_stats": ["zzshare"],
         "m2_sentiment": ["zzshare"],
         "m3_index": ["akshare"],
-        "m4_cyb_turnover": ["akshare"],
+        "m4_cyb_volume": ["akshare"],
         "s3_sentiment": ["zzshare"],
         "s4_zt_daily": ["zzshare"],
         "v1_pe": ["akshare"],
