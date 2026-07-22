@@ -1,6 +1,8 @@
 import argparse
 import logging
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+load_dotenv()
 from fgi.collector.fallback import DataSourceManager, FallbackChain
 from fgi.collector.akshare_source import AKShareSource
 from fgi.collector.mootdx_source import MootdxSource
@@ -65,7 +67,9 @@ def setup_data_manager() -> DataSourceManager:
     }
 
     for indicator, sources in chain_configs.items():
-        if indicator in ("m2_market_overview", "s2_sentiment") and zzshare_ok:
+        # main 已统一 chain 名（#30）+ PR 加 m1_zt_stats/s3_zt_daily 备份
+        if indicator in ("m1_zt_stats", "m2_market_overview", "s2_sentiment", "s3_zt_daily") and zzshare_ok:
+            sources = sources + ["akshare"]
             sources = sources + ["akshare"]
         # mootdx/tencent 作为兜底追加；不支持的方法会被 FallbackChain 安全剔除
         sources = sources + ["mootdx", "tencent"]
