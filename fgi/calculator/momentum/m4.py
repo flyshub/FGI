@@ -1,4 +1,5 @@
 import pandas as pd
+from typing import Optional
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
@@ -47,6 +48,16 @@ class M4Calculator:
             self._db.upsert_raw_data(d, "m4_turnover", float(row["turnover_rate"]))
         self._db.commit()
 
+    def _get_last_good_turnover(self, date: str) -> Optional[float]:
+        """取最近一个非 NaN 的 m4_turnover 值（用于 last-good-value 回退）。"""
+        df = self._db.get_raw_data("m4_turnover", "2015-01-01", date)
+        if df.empty:
+            return None
+        df = df[df["value"].notna()]
+        if df.empty:
+            return None
+        return float(df["value"].iloc[-1])
+
     def run(self, date: str, lookback_days: int = None) -> dict:
         if lookback_days is None:
             lookback_days = self._window + self.ZSCORE_WINDOW + 60
@@ -68,10 +79,20 @@ class M4Calculator:
         if db_data.empty:
             result = self.fetch_data(start_date, end_date)
             if result.status != DataSourceStatus.HEALTHY or result.data is None or result.data.empty:
-                self._db.upsert_status(date, "m4", "missing", result.source or "", result.error or "No data collected")
-                return {"m4": None, "status": "missing"}
-            self._persist_source_data(result)
-            db_data = self._db.get_raw_data("m4_turnover", start_date, end_date)
+                # last-good-value 回退：换手率是慢变指标，当日拉不到时用最近非 NaN 值
+                fallback_val = self._get_last_good_turnover(date)
+                if fallback_val is not None:
+                    self._db.upsert_raw_data(date, "m4_turnover", fallback_val)
+                    db_data = self._db.get_raw_data("m4_turnover", start_date, end_date)
+                    self._db.upsert_status(date, "m4", "degraded", result.source or "fallback",
+                                           f"fetch failed, used last-good-value: {result.error or 'No data'}")
+                    self._db.commit()
+                else:
+                    self._db.upsert_status(date, "m4", "missing", result.source or "", result.error or "No data collected")
+                    return {"m4": None, "status": "missing"}
+            else:
+                self._persist_source_data(result)
+                db_data = self._db.get_raw_data("m4_turnover", start_date, end_date)
 
         df = pd.DataFrame({
             "date": db_data["date"],

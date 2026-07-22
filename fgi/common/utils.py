@@ -50,14 +50,15 @@ def mad_filter(series: pd.Series, threshold: float = 5.0) -> pd.Series:
 def calculate_fgi(dimension_scores: dict):
     """Weighted composite. Dimensions whose score is None (fully missing) are
     excluded and the remaining dimension weights renormalized proportionally.
-    Returns None when every dimension is missing."""
+    Returns None when every dimension is missing, or when available dimensions
+    carry less than 50% of total weight (insufficient coverage for a meaningful composite)."""
     weights = {"momentum": 0.25, "sentiment": 0.25, "valuation": 0.25, "funding": 0.25}
     available = [
         (dim, dimension_scores[dim])
         for dim in weights
         if dimension_scores.get(dim) is not None and not pd.isna(dimension_scores[dim])
     ]
-    if not available:
+    if not available or len(available) < 2:
         return None
     total_weight = sum(weights[dim] for dim, _ in available)
     return sum(score * weights[dim] / total_weight for dim, score in available)
