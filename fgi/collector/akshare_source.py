@@ -172,21 +172,21 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_cyb_daily(self, start_date: str, end_date: str) -> DataSourceResult:
-        """创业板指数换手率（%）。东财 index_zh_a_hist 接口自带真实换手率字段，
-        全区间一次拉取 + 本地切片（stock_zh_index_daily 无换手率字段）。"""
+        """创业板指成交量（股）。新浪 stock_zh_index_daily 稳定可用；
+        东财 index_zh_a_hist 自 2026-07 起对指数行情接口全面反爬，不可用。"""
         try:
             ak = self._get_client()
-            df = self._cached(("cyb",), lambda: _retry(lambda: ak.index_zh_a_hist(
-                symbol="399006", period="daily", start_date="19900101", end_date="20500101"),
-                retries=2, delay=1))
+            df = self._cached(("cyb",), lambda: _retry(lambda: ak.stock_zh_index_daily(
+                symbol="sz399006")))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
-            df = df.rename(columns={"日期": "date", "换手率": "turnover_rate"}).copy()
+            df = df.copy()
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
-            df["turnover_rate"] = pd.to_numeric(df["turnover_rate"], errors="coerce")
-            df = df.dropna(subset=["turnover_rate"])
+            df["volume"] = pd.to_numeric(df["volume"], errors="coerce")
+            df = df.dropna(subset=["volume"])
+            df = df[df["volume"] > 0]
             mask = (df["date"] >= start_date) & (df["date"] <= end_date)
-            result_df = df.loc[mask, ["date", "turnover_rate"]].copy()
+            result_df = df.loc[mask, ["date", "volume"]].copy()
             if result_df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data in range")
             return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")

@@ -29,7 +29,7 @@ def data_manager():
     # 为每个指标配置 chain
     manager.configure_chain("m1_zt_stats", ["mock"])
     manager.configure_chain("m2_sentiment", ["mock"])
-    manager.configure_chain("m4_cyb_turnover", ["mock"])
+    manager.configure_chain("m4_cyb_volume", ["mock"])
     return manager
 
 
@@ -122,16 +122,16 @@ class TestM2Calculator:
 class TestM4Calculator:
     """V3.8 2.1: M4 = 创业板换手率 60 日 Z-score 的滚动百分位"""
 
-    def test_calculate_turnover_zscore(self, m4_calculator):
+    def test_calculate_volume_zscore(self, m4_calculator):
         df = pd.DataFrame({
             "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "turnover_rate": [3.0 + (i % 10) * 0.1 for i in range(100)]
+            "volume": [1e9 + (i % 10) * 1e7 for i in range(100)]
         })
-        result = m4_calculator.calculate_turnover_zscore(df)
-        assert "turnover_zscore" in result.columns
+        result = m4_calculator.calculate_volume_zscore(df)
+        assert "volume_zscore" in result.columns
         # 前 59 行不足 60 日窗口为 NaN，之后为有效 Z-score
-        assert pd.isna(result["turnover_zscore"].iloc[58])
-        assert not pd.isna(result["turnover_zscore"].iloc[-1])
+        assert pd.isna(result["volume_zscore"].iloc[58])
+        assert not pd.isna(result["volume_zscore"].iloc[-1])
 
     def test_calculate_score(self, m4_calculator):
         score = m4_calculator.calculate_score(0.5)
@@ -143,16 +143,16 @@ class TestM4Calculator:
         score = m4_calculator.calculate_score(1.0)
         assert score == 100.0
 
-    def _seed_turnover_history(self, db, end_date="2024-01-10"):
+    def _seed_volume_history(self, db, end_date="2024-01-10"):
         dates = pd.bdate_range("2022-01-03", end_date)
         for i, d in enumerate(dates):
-            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_turnover",
-                               float(3.0 + (i % 20) * 0.1))
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume",
+                               float(1e9 + (i % 20) * 1e7))
         db.commit()
 
-    def test_run_with_db_turnover(self, m4_calculator, db):
-        """raw_data 有足量 m4_turnover（%）时正常计算"""
-        self._seed_turnover_history(db)
+    def test_run_with_db_volume(self, m4_calculator, db):
+        """raw_data 有足量 m4_volume（成交量）时正常计算"""
+        self._seed_volume_history(db)
         result = m4_calculator.run("2024-01-10", lookback_days=600)
         assert result["status"] == "normal"
         assert result["m4"] is not None
@@ -169,8 +169,8 @@ class TestM4Calculator:
         z = db.get_raw_data("m4_zscore", "2024-01-10", "2024-01-10")
         assert len(z) == 1
 
-    def test_run_constant_turnover_missing(self, m4_calculator, db):
-        """mock 常数换手率 std=0 → Z-score 无效 → missing，不得编造得分"""
+    def test_run_constant_volume_missing(self, m4_calculator, db):
+        """mock 常数成交量 std=0 → Z-score 无效 → missing，不得编造得分"""
         result = m4_calculator.run("2024-01-10", lookback_days=300)
         assert result["status"] == "missing"
         assert result["m4"] is None

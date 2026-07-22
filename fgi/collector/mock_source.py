@@ -51,7 +51,7 @@ class MockSource(DataSource):
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
         df = pd.DataFrame({
             "date": dates.strftime("%Y-%m-%d"),
-            "turnover_rate": [0.5] * len(dates),
+            "volume": [1e8] * len(dates),
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
