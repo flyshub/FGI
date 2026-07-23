@@ -282,12 +282,13 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         parts.append("")
         parts.append("### 📈 最大变动")
         parts.append("")
-        parts.append("| 指标 | 变动 | 昨日→今日 | 口径 |")
-        parts.append("|------|------|----------|------|")
+        mhtml = ['<table style="width:100%">', '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">指标</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">变动</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">昨日→今日</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">口径</th></tr>']
         for diff, _name, label, delta, yesterday, today in movers:
             arrow = "🔼" if delta > 0 else "🔽"
             defn = _CHANGE_DEFS.get(label, "")
-            parts.append(f"| {label} | {arrow} {diff:.0f} | {yesterday:.0f}→{today:.0f} | {defn} |")
+            mhtml.append(f'<tr><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{label}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#222;font-weight:600;white-space:nowrap">{arrow} {diff:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;white-space:nowrap">{yesterday:.0f}→{today:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{defn}</td></tr>')
+        mhtml.append("</table>")
+        parts.append("\n".join(mhtml))
 
     # --- 当日总结 ---
     level = _fgi_level(fgi_raw)
