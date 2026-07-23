@@ -1,3 +1,4 @@
+from datetime import datetime
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -65,6 +66,7 @@ class M3Calculator:
         self._db.upsert_raw_data(date, "m3_deviation", today["deviation"].iloc[0])
         self._db.upsert_raw_data(date, "m3_percentile", percentile)
         self._db.upsert_score(date, {"M3": score})
-        self._db.upsert_status(date, "m3", "normal", result.source)
+        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self._db.upsert_status(date, "m3", "normal", result.source, f"fetched_at={ts}")
 
         return {"m3": score, "status": "normal", "percentile": percentile}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -55,10 +56,12 @@ class M1Calculator:
 
         db_data = self._db.get_raw_data("m1_zt_count", start_date, end_date)
 
+        fetched_freshly = False
         today_in_db = not db_data.empty and date in db_data["date"].values
         if not today_in_db:
             result = self.fetch_data(date, date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+                fetched_freshly = True
                 for _, row in result.data.iterrows():
                     self._db.upsert_raw_data(str(row["date"]), "m1_zt_count", float(row["limit_up_count"]))
                 self._db.commit()
@@ -101,6 +104,10 @@ class M1Calculator:
         self._db.upsert_raw_data(date, "m1_zt_count", today["zt_count"].iloc[0])
         self._db.upsert_raw_data(date, "m1_percentile", percentile)
         self._db.upsert_score(date, {"M1": score})
-        self._db.upsert_status(date, "m1", "normal", "database")
+        if fetched_freshly:
+            ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            self._db.upsert_status(date, "m1", "normal", "database", f"fetched_at={ts}")
+        else:
+            self._db.upsert_status_keep_source(date, "m1", "normal")
 
         return {"m1": score, "status": "normal", "percentile": percentile}

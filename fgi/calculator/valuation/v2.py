@@ -1,3 +1,4 @@
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from fgi.collector.base import DataSourceResult, DataSourceStatus
@@ -56,8 +57,9 @@ class V2Calculator:
             return {"v2": None, "status": "missing"}
 
         self._db.upsert_raw_data(date, "v2_score", float(score))
-        self._db.upsert_raw_data(date, "v2_percentile", float(score) / 100.0)
+        self._db.upsert_raw_data(date, "v2_sigmoid_fraction", float(score) / 100.0)
         self._db.upsert_score(date, {"V2": float(score)})
-        self._db.upsert_status(date, "v2", "normal", "database")
+        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self._db.upsert_status(date, "v2", "normal", "database", f"calculated_at={ts}")
 
         return {"v2": float(score), "status": "normal"}

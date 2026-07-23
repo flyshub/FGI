@@ -150,17 +150,17 @@ def adjust_fgi_with_mad_pct(fgi_raw: float, mad: float, mad_pct: float) -> float
 
 
 def calculate_health_score(status_df: pd.DataFrame, correlation_exceed_rate: float = 0.0) -> float:
-    total_indicators = len(status_df)
-    if total_indicators == 0:
+    total = len(status_df)
+    if total == 0:
         return 0
 
     normal_count = len(status_df[status_df["status"] == "normal"])
-    degraded_count = len(status_df[status_df["status"] == "degraded"])
+    impaired_count = len(status_df[status_df["status"].isin(["degraded", "substituted", "missing", "error"])])
 
-    normal_ratio = normal_count / total_indicators
-    degraded_ratio = degraded_count / total_indicators
+    normal_ratio = normal_count / total
+    impaired_ratio = impaired_count / total
 
-    health_score = (normal_ratio * 50) + ((1 - degraded_ratio) * 30) + ((1 - correlation_exceed_rate) * 20)
+    health_score = (normal_ratio * 40) + ((1 - impaired_ratio) * 40) + ((1 - correlation_exceed_rate) * 20)
     return min(100, max(0, health_score))
 
 
