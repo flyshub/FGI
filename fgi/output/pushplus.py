@@ -286,7 +286,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         for diff, _name, label, delta, yesterday, today in movers:
             arrow = "🔼" if delta > 0 else "🔽"
             defn = _CHANGE_DEFS.get(label, "")
-            mhtml.append(f'<tr style="background:#fff"><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{label}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#222;font-weight:600;white-space:nowrap">{arrow} {diff:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;white-space:nowrap">{yesterday:.0f}→{today:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{defn}</td></tr>')
+            mhtml.append(f'<tr style="background:#fff"><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{label}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#222;font-weight:600;white-space:nowrap">{arrow} {diff:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333;white-space:nowrap">{yesterday:.0f}→{today:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{defn}</td></tr>')
         mhtml.append("</table>")
         parts.append("\n".join(mhtml))
 
