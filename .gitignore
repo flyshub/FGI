@@ -24,6 +24,12 @@ __pycache__/
 
 # Environment
 .env
+.venv/
+venv/
 
 # Runtime cache
 data/cache/
+
+# Database WAL files
+data/*.db-shm
+data/*.db-wal
