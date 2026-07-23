@@ -120,6 +120,34 @@ python scripts/recompute_health.py
 
 支持离线重建模式（`FGI_OFFLINE=1`）：从 `raw_data` 数据库直接加载，无需网络。
 
+## GitHub Actions 自动运行
+
+项目包含 GitHub Actions 工作流，每日自动计算 FGI 并推送手机。
+
+### 工作流配置
+
+`.github/workflows/daily_fgi.yml`：
+
+- **触发**：交易日 18:00（北京时间，`0 10 * * 1-5` UTC）
+- **步骤**：安装依赖 → 运行 `python -m fgi.output.daily_run` → 上传 SQLite 数据库为构建产物
+- **手动触发**：仓库 Actions 页面点击 "Run workflow"
+
+### 配置步骤
+
+1. 在 GitHub 仓库 → **Settings → Secrets and variables → Actions** 添加：
+   - `FGI_PUSHPLUS_TOKEN`：你的 PushPlus 推送令牌
+
+2. 工作流会在每个交易日下午 6 点自动运行并推送手机。
+
+3. 如需调试，每次运行后可在 Actions 页面下载 `fgi-data` artifact（含完整 `fgi_data.db`）。
+
+### 本地测试 CI
+
+```bash
+# 模拟 CI 环境运行（仅当前日期）
+python -m fgi.output.daily_run
+```
+
 ## 测试
 
 ```bash
