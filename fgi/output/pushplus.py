@@ -202,7 +202,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     parts.append("### 🔍 各维度指标明细")
     parts.append("")
 
-    html = ['<table>', '<tr><th>维度</th><th>名称</th><th>得分</th><th>数据</th><th>状态</th></tr>']
+    html = ['<table>']
     for dim, ilist in DIMENSION_INDICATORS.items():
         bg = f' style="background:{_DIM_COLORS[dim]}"'
         dim_label = DIMENSION_NAMES[dim]
@@ -215,7 +215,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
             tag = STATUS_LABELS.get(status, "")
             dim_cell = f"<b>{dim_label}</b>" if i == 0 else ""
             data_cell = _data_cell(src_date, status)
-            html.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;font-weight:700">{dim_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555">{INDICATOR_NAMES[name]}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#777;font-size:0.9em">{data_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center">{tag}</td></tr>')
+            html.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;font-weight:700;color:#222">{dim_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{INDICATOR_NAMES[name]}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{data_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center">{tag}</td></tr>')
     html.append("</table>")
     parts.append("\n".join(html))
 
@@ -223,11 +223,11 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     parts.append("")
     parts.append("### 📐 维度汇总")
     parts.append("")
-    dhtml = ['<table>', '<tr><th>维度</th><th>得分</th><th>权重</th></tr>']
+    dhtml = ['<table>']
     for dim in DIMENSION_INDICATORS:
         score = dimension_scores.get(dim)
         s_str = f"{score:.1f}" if score is not None else '<span style="color:#999">—</span>'
-        dhtml.append(f'<tr><td>{DIMENSION_NAMES[dim]}</td><td style="text-align:center;font-weight:600">{s_str}</td><td style="text-align:center">25%</td></tr>')
+        dhtml.append(f'<tr><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333;font-weight:700">{DIMENSION_NAMES[dim]}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333">25%</td></tr>')
     dhtml.append("</table>")
     parts.append("\n".join(dhtml))
 
