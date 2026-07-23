@@ -74,6 +74,9 @@ class F1Calculator:
             return {"f1": None, "status": "missing"}
 
         df = self.calculate_margin_ratio(margin_result.data, cap_result.data)
+        for _, row in df.iterrows():
+            self._db.upsert_raw_data(str(row["date"]), "f1_margin_balance", float(row["margin_balance"]))
+        self._db.commit()
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
