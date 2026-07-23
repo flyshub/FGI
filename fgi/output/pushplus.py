@@ -5,7 +5,7 @@ import os
 import sqlite3
 import logging
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fgi.common.utils import extract_indicator_score
 from fgi.config.settings import DB_PATH, HEALTHY_THRESHOLD
@@ -51,6 +51,33 @@ def _fgi_level(fgi: float) -> str:
     return "极度贪婪"
 
 
+def _get_prev_scores(date_str: str) -> dict | None:
+    try:
+        db = sqlite3.connect(str(DB_PATH))
+        prev = (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+        cursor = db.execute("SELECT * FROM scores_daily WHERE date = ?", (prev,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        cols = [d[0] for d in cursor.description]
+        return dict(zip(cols, row))
+    except Exception:
+        return None
+
+
+def _fgi_trend(fgi: float, date_str: str) -> str:
+    prev = _get_prev_scores(date_str)
+    prev_fgi = prev.get("FGI_final") if prev else None
+    if prev_fgi is None:
+        return ""
+    delta = fgi - prev_fgi
+    if abs(delta) < 0.5:
+        return f"→ 持平（{prev_fgi:.1f} → {fgi:.1f}）"
+    arrow = "🔼" if delta > 0 else "🔽"
+    dir_label = "贪婪" if delta > 0 else "恐惧"
+    return f"{arrow} {delta:+.1f}（{dir_label}加深）"
+
+
 def _score_bar(score: float, width: int = 8) -> str:
     """mini bar chart for score (0-100)."""
     filled = max(1, round(score / 100 * width))
@@ -90,6 +117,21 @@ def _fgi_percentile(fgi: float) -> str:
         return "暂无历史参考"
 
 
+def _most_changed_indicators(indicator_results: dict, date_str: str) -> list:
+    prev = _get_prev_scores(date_str)
+    if not prev:
+        return []
+    changes = []
+    for name, label in INDICATOR_NAMES.items():
+        today = extract_indicator_score(indicator_results.get(name, {}), name)
+        yesterday = prev.get(name)
+        if today is not None and yesterday is not None:
+            changes.append((abs(today - yesterday), label, today - yesterday, yesterday, today))
+    changes.sort(reverse=True)
+    # ponytail: top 3, add when scrolling matters
+    return [c for c in changes[:3] if c[0] >= 5]
+
+
 def _fgi_header(fgi: float, health: float, date_str: str) -> str:
     """Build the FGI hero section with gauge, bar, health, and historical context.
 
@@ -98,9 +140,20 @@ def _fgi_header(fgi: float, health: float, date_str: str) -> str:
     level = _fgi_level(fgi)
     bar = _score_bar(fgi, 20)
     pos = _fgi_percentile(fgi)
+    trend = _fgi_trend(fgi, date_str)
     health_label = f"**{health:.0f}** / 100"
     if health < HEALTHY_THRESHOLD:
         health_label += " ⚠️ 数据质量异常，仅供参考"
+
+    rows = [
+        f"| 当前情绪 | **{level}** |",
+    ]
+    if trend:
+        rows.append(f"| 趋势 | {trend} |")
+    rows += [
+        f"| 健康度 | {health_label} |",
+        f"| 历史位置 | {pos} |",
+    ]
 
     return "\n".join([
         f"## 📊 A股恐贪指数 · {date_str}",
@@ -111,9 +164,7 @@ def _fgi_header(fgi: float, health: float, date_str: str) -> str:
         "",
         f"| 项目 | 值 |",
         f"|------|----|",
-        f"| 当前情绪 | **{level}** |",
-        f"| 健康度 | {health_label} |",
-        f"| 历史位置 | {pos} |",
+        *rows,
     ])
 
 
@@ -181,6 +232,17 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
             lines.append(f"🔴 **极度贪婪**: {' · '.join(extreme_high)}")
         if extreme_low:
             lines.append(f"🟢 **极度恐惧**: {' · '.join(extreme_low)}")
+
+    movers = _most_changed_indicators(indicator_results, date_str)
+    if movers:
+        lines.append("")
+        lines.append("### 📈 最大变动")
+        lines.append("")
+        lines.append("| 指标 | 变动 | 昨日 → 今日 |")
+        lines.append("|------|------|-------------|")
+        for diff, label, delta, yesterday, today in movers:
+            arrow = "🔼" if delta > 0 else "🔽"
+            lines.append(f"| {label} | {arrow} {diff:.0f} | {yesterday:.0f} → {today:.0f} |")
 
     return "\n".join(lines)
 
