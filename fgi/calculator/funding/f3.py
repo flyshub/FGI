@@ -13,7 +13,7 @@ class F3Calculator:
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_industry_fund_flow(self, date: str) -> DataSourceResult:
-        """Fetch 行业资金流汇总 (real-time daily data)."""
+        """Fetch 主力净流入 (120 天历史数据)."""
         return self._data_manager.fetch(
             "f3_industry_flow",
             "fetch_industry_fund_flow",

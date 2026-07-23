@@ -60,7 +60,6 @@ class M2Calculator:
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "m2_bullish_ratio", today["bullish_ratio"].iloc[0])
         self._db.upsert_raw_data(date, "m2_percentile", percentile)
         self._db.upsert_score(date, {"M2": score})
         self._db.upsert_status(date, "m2", "normal", result.source or "")
