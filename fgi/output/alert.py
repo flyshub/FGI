@@ -37,6 +37,7 @@ class Alert:
         return True
 
     def _is_anomaly(self, date: str, fgi_result: Dict[str, Any]) -> bool:
+        """spec line 263: |ΔFGI| over rolling 5y 99-percentile = anomaly → suppress push."""
         try:
             db_path = self.db_path or DB_PATH
             with Database(db_path) as db:
@@ -52,11 +53,6 @@ class Alert:
                     if abs(today_fgi - prev_fgi) > threshold:
                         return True
 
-            dimension_scores = fgi_result.get("dimension_scores", {})
-            for dim, score in dimension_scores.items():
-                if score is not None and (score > 85 or score < 15):
-                    return True
-
             return False
         except Exception:
             return False
@@ -64,21 +60,12 @@ class Alert:
     def _build_alert_message(self, date: str, fgi_result: Dict[str, Any]) -> str:
         fgi_final = fgi_result.get("fgi_final", 0)
         health_score = fgi_result.get("health_score", 0)
-        dimension_scores = fgi_result.get("dimension_scores", {})
 
-        anomaly_indicators = []
-        for dim, score in dimension_scores.items():
-            if score is not None and (score > 85 or score < 15):
-                anomaly_indicators.append(f"{dim}: {score:.1f}")
-
-        message = f"FGI Alert for {date}\n"
+        message = f"FGI anomaly alert for {date}\n"
+        message += f"|ΔFGI| exceeded the rolling 5y 99-percentile.\n"
         message += f"FGI Final: {fgi_final:.2f}\n"
         message += f"Health Score: {health_score:.2f}\n"
-
-        if anomaly_indicators:
-            message += "Anomaly Indicators:\n"
-            for indicator in anomaly_indicators:
-                message += f"  - {indicator}\n"
+        message += f"\nPush suppressed, manual review required (spec line 262)."
 
         return message.strip()
 
