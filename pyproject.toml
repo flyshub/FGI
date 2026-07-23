@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "fgi"
@@ -23,6 +23,9 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["fgi*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

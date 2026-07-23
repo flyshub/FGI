@@ -92,8 +92,8 @@ class M1Calculator:
             return {"m1": None, "status": "missing"}
 
         raw_value = today["zt_count"].iloc[0]
-        if pd.isna(raw_value) or raw_value == 0:
-            self._db.upsert_status(date, "m1", "missing", "database", "Raw value is 0 (likely missing source coverage)")
+        if pd.isna(raw_value):
+            self._db.upsert_status(date, "m1", "missing", "database", "Raw value is NaN")
             return {"m1": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
