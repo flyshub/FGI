@@ -22,7 +22,7 @@ OFFLINE_RAW_MAPPING: Dict[str, tuple] = {
     "fetch_market_cap": (("f1_market_cap",), ("market_cap",)),
     "fetch_fund_position": (("f2_fund_position",), ("position",)),
     "fetch_market_hot_sentiment": (("s2_heat",), ("p_close",)),
-    "fetch_zt_daily_summary": (("s3_seal_fund",), ("seal_fund_sum",)),
+    "fetch_zt_daily_summary": (("m1_zt_count", "s3_seal_fund"), ("limit_up_count", "seal_fund_sum")),
     "fetch_pe_data": (("v1_pe_ttm",), ("滚动市盈率",)),
     "fetch_bond_yield": (("v1_bond_yield",), ("yield_10y",)),
     "fetch_open_sentiment": (("m2_up_num", "m2_down_num"), ("up_num", "down_num")),

@@ -31,6 +31,20 @@ class TestRollingPercentile:
         result = rolling_percentile(series, window=252)
         assert result.iloc[-1] == 0.0
 
+    def test_degenerate_window_returns_nan(self):
+        """窗口内全为相同值（典型污染：M1/S3 raw 全 0）时返回 NaN，不退化到 1.0"""
+        series = pd.Series([0.0] * 300)
+        result = rolling_percentile(series, window=252)
+        assert pd.isna(result.iloc[-1])
+
+    def test_degenerate_with_one_outlier(self):
+        """窗口内除一个值外全相同，应能正常计分（非退化）"""
+        # 252 个 0 后加一个 50：50 那天的窗口全 0 + 自己
+        series = pd.Series([0.0] * 252 + [50.0])
+        result = rolling_percentile(series, window=252)
+        # 50 那天：窗口 251 个 0 + 1 个 50，nunique=2 非退化，rank=252, (252-1)/(252-1)=1.0
+        assert result.iloc[-1] == 1.0
+
 
 class TestZscore:
     def test_basic(self):
