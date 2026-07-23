@@ -5,6 +5,7 @@ from fgi.storage.database import Database
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.akshare_source import AKShareSource
 from fgi.collector.zzshare_source import ZZShareSource
+from fgi.collector.chains import configure_manager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.collector.base import DataSourceStatus
 from fgi.output.status import record_indicator_status
@@ -41,22 +42,11 @@ def setup_data_manager() -> DataSourceManager:
     MockSource 仅供测试使用。"""
     manager = DataSourceManager()
     manager.register_source("akshare", AKShareSource())
-    zzshare_ok = False
     try:
         manager.register_source("zzshare", ZZShareSource())
-        zzshare_ok = True
     except Exception:
         pass
-    for indicator in ["m1_zt_stats", "m2_market_overview", "m3_index", "m4_cyb_volume",
-                       "s2_sentiment", "s3_zt_daily",
-                       "v1_pe", "v1_bond", "v2_index",
-                       "f1_margin", "f1_market_cap", "f2_fund_position", "f3_index", "f3_industry_flow"]:
-        sources = []
-        if indicator in ("m2_market_overview", "s2_sentiment") and zzshare_ok:
-            sources.append("zzshare")
-        sources.append("akshare")
-        if sources:
-            manager.configure_chain(indicator, sources)
+    configure_manager(manager)
     return manager
 
 
