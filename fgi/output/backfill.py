@@ -90,7 +90,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
         ("V1 国债收益", "v1_bond", "fetch_bond_yield", ("2014-01-01", today), "yield_10y", "date", "v1_bond_yield"),
         ("F1 融资余额", "f1_margin", "fetch_margin_data", (full_start, today), "融资余额", "date", "f1_margin_balance"),
         ("F1 总市值", "f1_market_cap", "fetch_market_cap", (full_start, today), "market_cap", "date", "f1_market_cap"),
-        ("F2 基金仓位", "f2_fund_position", "fetch_fund_position", (full_start, today), "position", "date", "f2_position"),
+        ("F2 基金仓位", "f2_fund_position", "fetch_fund_position", (full_start, today), "position", "date", "f2_fund_position"),
         ("F3 上证代理", "f3_index", "fetch_index_daily", ("sh000001", full_start, today), "close", "date", "f3_proxy_close"),
         ("F3 成交额", "f3_index", "fetch_index_daily", ("sh000001", full_start, today), "volume", "date", "f3_proxy_volume"),
     ]

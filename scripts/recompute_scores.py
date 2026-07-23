@@ -23,7 +23,7 @@ from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.common.utils import calculate_health_score, calculate_correlation_exceed_rate
 
 
-def main(start="2015-01-01", end=None, include_today=False):
+def main(start="2015-01-01", end=None, include_today=False, resume=False):
     if end is None:
         # 默认 T+1 模式：end = 昨日（避免当日数据未入库导致全 missing）
         end = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -39,16 +39,27 @@ def main(start="2015-01-01", end=None, include_today=False):
     db.init_schema()
 
     print(f"=== Recompute FGI scores: {start} -> {end} ===", flush=True)
-    print("Clearing scores_daily and daily_status...", flush=True)
-    db._conn.execute("DELETE FROM scores_daily")
-    db._conn.execute("DELETE FROM daily_status")
-    db.commit()
+    if resume:
+        # resume 模式：跳过已完成的日期（FGI_final 非空），不清理数据
+        done = {row[0] for row in db._conn.execute(
+            "SELECT date FROM scores_daily WHERE FGI_final IS NOT NULL"
+        )}
+        all_dates = resolve_trading_days(start, end, db=db)
+        dates = [d for d in all_dates if d not in done]
+        done_n = len(done)
+        total = len(all_dates)
+        print(f"RESUME mode: done={done_n}/{total}, remaining={len(dates)}", flush=True)
+    else:
+        print("Clearing scores_daily and daily_status...", flush=True)
+        db._conn.execute("DELETE FROM scores_daily")
+        db._conn.execute("DELETE FROM daily_status")
+        db.commit()
+        dates = resolve_trading_days(start, end, db=db)
+    print(f"Trading days to process: {len(dates)}", flush=True)
 
     dm = setup_data_manager()
     dm.set_db(db)  # 注入 DB 用于 offline 模式从 raw_data 重构 DataFrame
     calc = FGICalculator(dm, db)
-    dates = resolve_trading_days(start, end, db=db)
-    print(f"Trading days: {len(dates)}", flush=True)
 
     ok = miss = err = 0
     t0 = time.time()
@@ -112,5 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("end", nargs="?", default=None, help="end date (default: yesterday)")
     parser.add_argument("--include-today", action="store_true",
                         help="include today in recompute (default excludes today for T+1 mode)")
+    parser.add_argument("--resume", action="store_true",
+                        help="resume mode: skip dates where FGI_final already exists, keep existing data")
     args = parser.parse_args()
-    main(args.start, args.end, include_today=args.include_today)
+    main(args.start, args.end, include_today=args.include_today, resume=args.resume)

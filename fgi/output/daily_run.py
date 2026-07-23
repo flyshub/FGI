@@ -70,7 +70,6 @@ def setup_data_manager() -> DataSourceManager:
         # main 已统一 chain 名（#30）+ PR 加 m1_zt_stats/s3_zt_daily 备份
         if indicator in ("m1_zt_stats", "m2_market_overview", "s2_sentiment", "s3_zt_daily") and zzshare_ok:
             sources = sources + ["akshare"]
-            sources = sources + ["akshare"]
         # mootdx/tencent 作为兜底追加；不支持的方法会被 FallbackChain 安全剔除
         sources = sources + ["mootdx", "tencent"]
         sources = [s for s in sources if manager.has_source(s)]
