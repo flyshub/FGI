@@ -118,3 +118,48 @@ class TestFetchCybDaily:
         src = AKShareSource()
         result = src.fetch_cyb_daily("2025-01-01", "2025-01-10")
         assert result.status == DataSourceStatus.FAILED
+
+
+def _market_fund_flow_df():
+    """模拟 ak.stock_market_fund_flow() 返回格式：120 天历史主力净流入。"""
+    dates = pd.date_range("2024-01-01", periods=120, freq="B")
+    return pd.DataFrame({
+        "日期": dates.strftime("%Y-%m-%d"),
+        "主力净流入-净额": [-1e10 + i * 1e8 for i in range(120)],
+    })
+
+
+class TestFetchIndustryFundFlow:
+    """Issue #42: fetch_industry_fund_flow 必须使用 stock_market_fund_flow（历史接口），
+    不再使用 stock_fund_flow_industry(symbol='即时')（实时接口）。"""
+
+    def test_uses_historical_endpoint_returns_full_range(self, fake_ak, fast_retry):
+        """fetch_industry_fund_flow 应返回 120 天历史数据，而非单一当日快照。"""
+        fake_ak.stock_market_fund_flow = lambda **kwargs: _market_fund_flow_df()
+        src = AKShareSource()
+        result = src.fetch_industry_fund_flow("2024-01-01", "2024-06-30")
+        assert result.status == DataSourceStatus.HEALTHY
+        df = result.data
+        # 必须返回多日历史，而非只有一行当日快照
+        assert len(df) == 120
+        assert list(df.columns) == ["date", "net_flow"]
+        assert df["date"].min() == "2024-01-01"
+        assert df["date"].max() >= "2024-06-01"
+        # net_flow 应为数值类型
+        assert df["net_flow"].dtype.kind in "iuf"
+
+    def test_no_data_failed(self, fake_ak, fast_retry):
+        fake_ak.stock_market_fund_flow = lambda **kwargs: pd.DataFrame()
+        src = AKShareSource()
+        result = src.fetch_industry_fund_flow("2024-01-01", "2024-06-30")
+        assert result.status == DataSourceStatus.FAILED
+
+    def test_filters_by_date_range(self, fake_ak, fast_retry):
+        """请求窗口外的数据应被过滤。"""
+        fake_ak.stock_market_fund_flow = lambda **kwargs: _market_fund_flow_df()
+        src = AKShareSource()
+        result = src.fetch_industry_fund_flow("2024-01-15", "2024-01-25")
+        assert result.status == DataSourceStatus.HEALTHY
+        df = result.data
+        assert df["date"].min() >= "2024-01-15"
+        assert df["date"].max() <= "2024-01-25"

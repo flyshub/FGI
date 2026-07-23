@@ -295,19 +295,22 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_industry_fund_flow(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch 行业资金流汇总 (daily, real-time)."""
+        """Fetch 主力净流入历史 (daily, 120 天历史, via stock_market_fund_flow).
+
+        单位：元（正值=主力净流入，负值=主力净流出）。
+        """
         try:
             ak = self._get_client()
-            df = _retry(lambda: ak.stock_fund_flow_industry(symbol="即时"))
+            df = _retry(lambda: ak.stock_market_fund_flow())
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No industry fund flow data")
-            # Sum net flow across all industries
-            df["净额"] = pd.to_numeric(df["净额"], errors="coerce")
-            total_net = df["净额"].sum()
-            result_df = pd.DataFrame([{
-                "date": pd.Timestamp.now().strftime("%Y-%m-%d"),
-                "net_flow": float(total_net),
-            }])
+            result_df = pd.DataFrame({
+                "date": df["日期"].astype(str),
+                "net_flow": pd.to_numeric(df["主力净流入-净额"], errors="coerce"),
+            })
+            result_df = result_df.dropna(subset=["net_flow"])
+            mask = (result_df["date"] >= start_date) & (result_df["date"] <= end_date)
+            result_df = result_df.loc[mask].copy().reset_index(drop=True)
             return DataSourceResult(result_df, DataSourceStatus.HEALTHY, "akshare")
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
