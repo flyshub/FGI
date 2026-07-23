@@ -2,7 +2,7 @@ name: FGI Daily Update
 
 on:
   schedule:
-    - cron: '0 20 * * 1-5'
+    - cron: '0 11 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
@@ -12,8 +12,12 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,3 +50,16 @@ jobs:
           path: |
             data/fgi.db
             output/
+
+      - name: Commit updated DB back to repo
+        if: github.event_name == 'schedule'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/fgi.db
+          if git diff --cached --quiet; then
+            echo "No DB changes to commit"
+          else
+            git commit -m "chore(db): daily update for ${{ steps.date.outputs.target_date }} [skip ci]"
+            git push
+          fi
