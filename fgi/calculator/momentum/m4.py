@@ -71,6 +71,7 @@ class M4Calculator:
 
         db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
 
+        is_degraded = False
         today_in_db = not db_data.empty and date in db_data["date"].values
         if not today_in_db:
             recent_start = pd.Timestamp(date) - pd.Timedelta(days=30)
@@ -90,6 +91,7 @@ class M4Calculator:
                     self._db.upsert_status(date, "m4", "degraded", result.source or "fallback",
                                            f"fetch failed, used last-good-value: {result.error or 'No data'}")
                     self._db.commit()
+                    is_degraded = True
                 else:
                     self._db.upsert_status(date, "m4", "missing", result.source or "", result.error or "No data collected")
                     return {"m4": None, "status": "missing"}
@@ -119,6 +121,7 @@ class M4Calculator:
         self._db.upsert_raw_data(date, "m4_zscore", today["volume_zscore"].iloc[0])
         self._db.upsert_raw_data(date, "m4_percentile", percentile)
         self._db.upsert_score(date, {"M4": score})
-        self._db.upsert_status(date, "m4", "normal", "database")
+        if not is_degraded:
+            self._db.upsert_status(date, "m4", "normal", "database")
 
-        return {"m4": score, "status": "normal", "percentile": percentile}
+        return {"m4": score, "status": "degraded" if is_degraded else "normal", "percentile": percentile}

@@ -142,6 +142,27 @@ class Database:
                 error = excluded.error
         """, (date, indicator, status, source, error or ""))
 
+    def upsert_status_keep_source(self, date: str, indicator: str, status: str, error: str = ""):
+        """同 upsert_status 但不覆盖已存在的 source 字段（#51）；error 为空时也不覆盖（保留 forward-fill elapsed 轨迹）。"""
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        indicator = indicator.lower()
+        # 第一次插入：source/error 初始空
+        self._connection.execute("""
+            INSERT OR IGNORE INTO daily_status (date, indicator, status, source, error)
+            VALUES (?, ?, ?, '', '')
+        """, (date, indicator, status))
+        # 更新 status；source/error 仅在传入非空时更新（保留 forward_fill 写入的 elapsed 轨迹）
+        self._connection.execute("""
+            UPDATE daily_status SET status = ?
+            WHERE date = ? AND indicator = ?
+        """, (status, date, indicator))
+        if error:
+            self._connection.execute("""
+                UPDATE daily_status SET error = ?
+                WHERE date = ? AND indicator = ?
+            """, (error, date, indicator))
+
     def get_status(self, date: str) -> pd.DataFrame:
         query = """
             SELECT * FROM daily_status WHERE date = ? ORDER BY indicator

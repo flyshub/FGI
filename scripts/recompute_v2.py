@@ -36,7 +36,7 @@ from fgi.output.backfill import setup_data_manager
 from fgi.calculator.fgi import FGICalculator
 from fgi.output.status import record_indicator_status
 from fgi.collector.trading_calendar import resolve_trading_days
-from fgi.common.utils import calculate_health_score, calculate_correlation_exceed_rate
+from fgi.common.utils import calculate_health_score
 
 HEARTBEAT_FILE = Path("/tmp/fgi_recompute_heartbeat.txt")
 PROGRESS_FILE = Path("/tmp/fgi_recompute_progress.json")
@@ -167,8 +167,8 @@ def main(start: str = "2015-01-01", end: str | None = None,
             if not rows:
                 continue
             status_df = pd.DataFrame(rows, columns=["indicator", "status"])
-            exceed_rate = calculate_correlation_exceed_rate(db, d)
-            health = calculate_health_score(status_df, exceed_rate)
+            # #49: correlation_exceed_rate deprecated (M1/S3 高相关已静态降权), 恒为 0
+            health = calculate_health_score(status_df, 0.0)
             db.update_score_field(d, "health_score", health)
             updated += 1
         except Exception as e:

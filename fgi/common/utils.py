@@ -131,7 +131,6 @@ def extract_indicator_score(result: dict, name: str):
 
 
 def apply_consistency_adjustment(fgi_raw: float, indicator_scores: list) -> tuple[float, float]:
-    import numpy as np
     if len(indicator_scores) < 4:
         return fgi_raw, 0.0
     arr = np.array(indicator_scores, dtype=float)
@@ -166,37 +165,6 @@ def calculate_health_score(status_df: pd.DataFrame, correlation_exceed_rate: flo
 
 
 def calculate_correlation_exceed_rate(db, date: str, lookback: int = 60) -> float:
-    """Compute fraction of within-dimension indicator-score pairs exceeding 0.75 correlation."""
-    import numpy as np
-    dims = {
-        "momentum": ["M1", "M2", "M3", "M4"],
-        "sentiment": ["S2", "S3"],
-        "valuation": ["V1", "V2"],
-        "funding": ["F1", "F2", "F3"],
-    }
-    try:
-        from datetime import datetime, timedelta
-        start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=lookback * 2)).strftime("%Y-%m-%d")
-        scores = db.get_scores(start, date)
-        if scores is None or len(scores) < 20:
-            return 0.0
-        total_pairs = 0
-        exceeding = 0
-        for cols in dims.values():
-            available = [c for c in cols if c in scores.columns]
-            for i in range(len(available)):
-                for j in range(i + 1, len(available)):
-                    a = scores[available[i]].dropna()
-                    b = scores[available[j]].dropna()
-                    common = a.index.intersection(b.index)
-                    if len(common) < 20:
-                        continue
-                    corr = abs(a.loc[common].corr(b.loc[common]))
-                    total_pairs += 1
-                    if corr > 0.75:
-                        exceeding += 1
-        if total_pairs == 0:
-            return 0.0
-        return exceeding / total_pairs
-    except Exception:
-        return 0.0
+    """#49 (deprecated 2026-07-23): M1/S3 高相关已通过 INDICATOR_WEIGHTS 静态降权解决。
+    保留函数签名仅为兼容旧调用方；返回常数 0.0，不再参与 health_score 计算。"""
+    return 0.0

@@ -78,6 +78,23 @@ class TestS2Calculator:
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
 
+    def test_calculate_zscore_degradation_fix(self, s2_calculator):
+        """#45: 带强上升趋势的 heat 不应让 percentile 退化为 0.99+
+        log + Z-score 应捕捉短期热度偏离，而非长期绝对水平"""
+        # 模拟长期上升趋势的 heat（每年翻倍）
+        n = 500
+        heat = [1000 * (1.005 ** i) + (i % 20) * 50 for i in range(n)]
+        df = pd.DataFrame({
+            "date": pd.date_range("2022-01-03", periods=n).strftime("%Y-%m-%d"),
+            "p_close": heat
+        })
+        df = s2_calculator.calculate_heat(df)
+        df = s2_calculator.calculate_zscore(df)
+        # Z-score 应有正常分布（std > 0.5，不应为常数）
+        valid_zscore = df["heat_zscore"].dropna()
+        assert valid_zscore.std() > 0.1, \
+            f"Z-score std={valid_zscore.std():.3f} 太低，趋势未被对冲"
+
 
 class TestS3Calculator:
     """V3.8: 涨停封单量 (formerly S4) - levistock/AKShare zt_daily_summary"""

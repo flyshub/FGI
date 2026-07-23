@@ -111,9 +111,19 @@ class F2Calculator:
 
         score = self.calculate_score(percentile)
 
+        # #50: F2 是周频数据。ffill 到日频后多数日期是重复值（spec 设计），
+        # 但 status 应诚实反映：最近 raw_data 距 target_date 超过 7 个日历日
+        # 说明周频尚未更新，标 'degraded' 而非 'normal'，避免 health_score 失真。
+        latest_raw_date = pd.to_datetime(today["date"].iloc[0])
+        target_dt = pd.to_datetime(date)
+        staleness_days = (target_dt - latest_raw_date).days
+        is_degraded = staleness_days > 7
+
         # 不把"最近一周值"以当日日期写回 f2_fund_position，避免污染自身百分位窗口
         self._db.upsert_raw_data(date, "f2_percentile", percentile)
         self._db.upsert_score(date, {"F2": score})
-        self._db.upsert_status(date, "f2", "normal", "database")
+        status = "degraded" if is_degraded else "normal"
+        source_note = f"ffill from {today['date'].iloc[0]} (staleness={staleness_days}d)" if is_degraded else "database"
+        self._db.upsert_status(date, "f2", status, "database", source_note)
 
-        return {"f2": score, "status": "normal", "percentile": percentile}
+        return {"f2": score, "status": status, "percentile": percentile}

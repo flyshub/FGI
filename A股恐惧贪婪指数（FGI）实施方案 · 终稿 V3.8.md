@@ -1,8 +1,19 @@
 # A股恐惧贪婪指数（FGI）实施方案 · 终稿 V3.8
 
-**版本**：V3.8.4（F3 数据源修复版）  
+**版本**：V3.8.5（审计 Issue #44~#54 修复版）  
 **更新日期**：2026年7月23日  
 **设计原则**：数据免费、逻辑稳健、每日自动更新、可解释  
+
+> **V3.8.5 修订**（2026-07-23，3 轴审计修复）：
+> - **P0 #44 修复**：M1/S3 三层缺陷链修齐。① levistock API 在 2017-06-02 前无数据覆盖（CONSTRAINTS #64），该区间 raw_data 标记 NULL；② `zt_backfill` 把空列表误写成 0，改为 skip；③ `rolling_percentile` 在窗口全同值时退化到 1.0，加 NaN guard。历史 2015 股灾 / 2016 熔断 / 2020 疫情等极端事件的 FGI 方向纠正（如 2016-01-04 熔断日从 ~88 → 12.7）。
+> - **#45 S2 退化修复**：原滚动 5 年 rank percentile 在 long-term uptrend 数据上退化为常数（中位数 99.4，std=0.008）。改用 log + Z-score + percentile（与 M4 同方法），分布恢复健康（中位数 52.9，std=0.199）。
+> - **#46 M4 degraded 状态覆写修复**：M4 calculator 用 last-good-value fallback 时，run() 末尾的无条件 `upsert_status("normal")` 会覆盖 `degraded` 标记。加 `is_degraded` flag 跳过覆写。
+> - **#49 MAD 0.85 阈值退化修复**：M1/S3 corr 在 5 年滚动窗口内长期 > 0.85（57% 时间触发动态降权），不再是保险丝而是常数。改为静态权重 S2=0.75/S3=0.25，删除 `_check_m1s3_correlation` 调用与 `correlation_exceed_rate` 健康度惩罚。
+> - **#50 F2 周频 stale 修复**：F2 fund_position 是 weekly 数据，但 forward-fill > 30 天仍标 `normal` 是 bug。加 `>7 天` 阈值标 `degraded`，提示数据陈旧。
+> - **#51 daily_status.source 覆写修复**：`record_indicator_status` 用 `r.get("source", "")` 覆写 calculator 内部 `upsert_status` 写入的正确 source。改为 `upsert_status_keep_source`（只更新 status/error，不清空 source）。
+> - **#52 substituted 状态 spec 定义**：补充 status 枚举语义表，明确 `substituted` 用于 F3 120 天外的 proxy 窗口。
+> - **#54 raw_data 残留清理**：删除 f1_margin_growth / f3_large_single_inflow / s3_volume / f2_position（旧 chain 名残留）。
+> - **recompute 性能优化**：rolling_percentile vectorized 实现（5.5s/d → 0.16s/d），全量重算时间从 47min+ → 15min。
 
 > **V3.8.4 修订**（2026-07-23，数据准确性审计）：
 > - **F3 数据源修复（审计 Issue #42）**：原 `stock_fund_flow_industry(symbol='即时')` 是实时快照接口，仅返回当日数据，导致 2808 天历史回填被同一个值污染（只有 2 个 distinct value）。改用 `stock_market_fund_flow` 返回 120 天历史窗口的主力净流入-净额数据。
@@ -256,6 +267,16 @@ CREATE TABLE daily_status (
     PRIMARY KEY (date, indicator)
 );
 ```
+
+**状态枚举语义（V3.8.5 补充）**：
+
+| status      | 含义                                                                     | 示例                                |
+|-------------|--------------------------------------------------------------------------|-------------------------------------|
+| `normal`    | 当日真实数据获取成功，得分可信                                           | 各 calculator 主数据源正常返回      |
+| `missing`   | 当日无有效数据（API 失败 + 无 DB 兜底）                                  | 早期历史段缺失；当日 API 异常       |
+| `degraded`  | 数据质量下降但仍参与计算（last-good-value、weekly 数据向前填充>7 天等）  | M4 用 last-good-value；F2 周频滞后  |
+| `substituted` | 当日使用替代代理公式计算（非主数据源）                                 | F3 120 天外用 `price_change×volume` |
+| `error`     | calculator 内部异常                                                      | code bug；未来使用的兜底枚举        |
 
 ### 4.3 每日运行流程
 
