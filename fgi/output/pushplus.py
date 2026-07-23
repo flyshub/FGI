@@ -51,11 +51,20 @@ FGI_LEVELS = [
 ]
 
 
-_CHANGE_IPS = {
-    "主力资金板块偏好": "板块资金偏好转强，短期资金面改善",
-    "创业板成交活跃度": "量能骤降至历史极低位，资金从成长股大幅撤退",
-    "ΔERP Z-score": "风险偏好温和回暖，债券性价比相对下降",
+_CHANGE_DEFS = {
+    "主力资金板块偏好": "主力资金在行业板块间净流入的集中度百分位。读数高=集中布局；读数低=分散或收缩。",
+    "创业板成交活跃度": "创业板成交量占全市场成交量的滚动百分位。读数高=资金集中于创业板；读数低=流出。",
+    "ΔERP Z-score": "ERP的Z-score，衡量股债性价比偏离历史均值程度。正值=股票性价比偏强。",
 }
+
+_SUBSTITUTE_DESC = {
+    "F3": "用上证指数当日涨跌幅 × 成交量估算主力资金净流向，替代 AKShare stock_market_fund_flow 的真实资金流数据",
+}
+
+_INDICATOR_DIM = {}
+for _dim, _inds in DIMENSION_INDICATORS.items():
+    for _name in _inds:
+        _INDICATOR_DIM[_name] = DIMENSION_NAMES[_dim]
 
 
 def _data_cell(source_date: str, status: str) -> str:
@@ -98,10 +107,9 @@ def _fgi_trend(fgi: float, date_str: str) -> str:
         return ""
     delta = fgi - prev_fgi
     if abs(delta) < 0.5:
-        return f"→ 持平（{prev_fgi:.1f} → {fgi:.1f}）"
+        return f"→ {prev_fgi:.1f} → {fgi:.1f}（持平）"
     arrow = "🔼" if delta > 0 else "🔽"
-    dir_label = "贪婪" if delta > 0 else "恐惧"
-    return f"{arrow} {delta:+.1f}（{dir_label}加深）"
+    return f"{arrow} {delta:+.1f}（昨日: {prev_fgi:.1f} · 今日: {fgi:.1f}）"
 
 
 def _score_bar(score: float, width: int = 8) -> str:
@@ -232,28 +240,30 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     dhtml.append("</table>")
     parts.append("\n".join(dhtml))
 
-    # --- 极端信号 + 解读 ---
+    # --- 极端信号 + 说明 ---
     extreme_high = []
     extreme_low = []
     for name, label in INDICATOR_NAMES.items():
         s = extract_indicator_score(indicator_results.get(name, {}), name)
         if s is not None:
             if s >= 85:
-                extreme_high.append((label, s))
+                extreme_high.append((name, label, s))
             elif s <= 15:
-                extreme_low.append((label, s))
+                extreme_low.append((name, label, s))
 
     if extreme_high or extreme_low:
         parts.append("")
         parts.append("### ⚡ 极端信号")
         parts.append("")
         if extreme_high:
-            parts.append("🔴 **极度贪婪**: " + " · ".join(f"{n}（{s:.0f}）" for n, s in extreme_high))
+            parts.append("🔴 **极度贪婪（≥85）**: " + " · ".join(f"{l}（{s:.0f}）" for _, l, s in extreme_high))
         if extreme_low:
-            parts.append("🟢 **极度恐惧**: " + " · ".join(f"{n}（{s:.0f}）" for n, s in extreme_low))
-        if extreme_high and extreme_low:
-            parts.append("")
-            parts.append('两组指标严重背离：资金面持续贪婪而价格指标普遍恐惧。历史上\u201c聪明钱贪婪 + 价格恐惧\u201d组合通常意味着回调接近尾声、短期反转概率上升。')
+            parts.append("🟢 **极度恐惧（≤15）**: " + " · ".join(f"{l}（{s:.0f}）" for _, l, s in extreme_low))
+        parts.append("")
+        parts.append("**说明：** " + "；".join([
+            "、".join(f"{l}" for _, l, _ in extreme_high) + "高于 85 分阈值，属于" + "、".join(sorted(set(_INDICATOR_DIM[n] for n, _, _ in extreme_high))) + "历史高位区间" if extreme_high else "",
+            "、".join(f"{l}" for _, l, _ in extreme_low) + "低于 15 分阈值，属于" + "、".join(sorted(set(_INDICATOR_DIM[n] for n, _, _ in extreme_low))) + "历史低位区间" if extreme_low else "",
+        ]))
 
     # --- 最大变动 ---
     movers = _most_changed_indicators(indicator_results, date_str)
@@ -261,12 +271,52 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         parts.append("")
         parts.append("### 📈 最大变动")
         parts.append("")
-        parts.append("| 指标 | 变动 | 昨日 → 今日 | 解读 |")
-        parts.append("|------|------|-------------|------|")
+        parts.append("| 指标 | 变动 | 昨日→今日 | 口径 |")
+        parts.append("|------|------|----------|------|")
         for diff, _name, label, delta, yesterday, today in movers:
             arrow = "🔼" if delta > 0 else "🔽"
-            interp = _CHANGE_IPS.get(label, "")
-            parts.append(f"| {label} | {arrow} {diff:.0f} | {yesterday:.0f} → {today:.0f} | {interp} |")
+            defn = _CHANGE_DEFS.get(label, "")
+            parts.append(f"| {label} | {arrow} {diff:.0f} | {yesterday:.0f}→{today:.0f} | {defn} |")
+
+    # --- 当日总结 ---
+    level = _fgi_level(fgi_raw)
+    pct_str = _fgi_percentile(fgi_raw)
+    # extract pct number from percentile string
+    import re
+    pct_m = re.search(r"(\d+)%", pct_str)
+    pct_short = f"低于历史上 {100-int(pct_m.group(1))}% 的交易日" if pct_m else pct_str
+
+    dim_avgs = {}
+    for dim in DIMENSION_INDICATORS:
+        vals = [extract_indicator_score(indicator_results.get(n, {}), n) for n in DIMENSION_INDICATORS[dim]]
+        vals_clean = [v for v in vals if v is not None]
+        dim_avgs[dim] = sum(vals_clean) / len(vals_clean) if vals_clean else None
+
+    parts.append("")
+    parts.append("### 📝 当日总结")
+    parts.append("")
+    dim_line = " · ".join(f"{DIMENSION_NAMES[d]} {dim_avgs[d]:.0f}" for d in DIMENSION_INDICATORS if dim_avgs[d] is not None)
+    parts.append(f"- FGI {fgi_raw:.1f}（{level}），{pct_short}")
+    parts.append(f"- 维度：{dim_line}")
+
+    movers = _most_changed_indicators(indicator_results, date_str)
+    if movers:
+        mover_str = " · ".join(f"{_name} {'🔼' if d>0 else '🔽'}{abs(d):.0f}" for _, _name, _, d, _, _ in movers)
+        parts.append(f"- 最大变动：{mover_str}")
+
+    parts.append(f"- 极端指标：🔴极度贪婪 {len(extreme_high)}个 · 🟢极度恐惧 {len(extreme_low)}个")
+
+    degraded_inds = [(n, indicator_results.get(n, {})) for n in INDICATOR_NAMES]
+    degraded = [(INDICATOR_NAMES[n], r.get("source_date", "")) for n, r in degraded_inds if r.get("status") == "degraded"]
+    if degraded:
+        for name, sd in degraded:
+            parts.append(f"- 前向填充：{name}（源数据至 {sd}）")
+
+    substituted = [(INDICATOR_NAMES[n], n) for n, r in degraded_inds if r.get("status") == "substituted"]
+    if substituted:
+        for name, code in substituted:
+            desc = _SUBSTITUTE_DESC.get(code, "代理估算")
+            parts.append(f"- 替代指标：{name}：{desc}")
 
     return "\n".join(parts)
 
