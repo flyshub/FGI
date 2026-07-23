@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import logging
 import requests
 from datetime import datetime
+
+from fgi.common.utils import extract_indicator_score
+from fgi.config.settings import DB_PATH, HEALTHY_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -53,25 +57,9 @@ def _score_bar(score: float, width: int = 8) -> str:
     return "█" * filled + "░" * (width - filled)
 
 
-def _extract_score(r: dict, name: str):
-    """从指标结果中提取分数，None/NaN 视为缺失。"""
-    for key in ("score", name, name.lower()):
-        s = r.get(key)
-        if s is not None:
-            try:
-                if s != s:  # NaN
-                    continue
-            except (TypeError, ValueError):
-                pass
-            return s
-    return None
-
-
 def _fgi_percentile(fgi: float) -> str:
     """return a human-friendly historical-position label."""
     try:
-        import sqlite3, os
-        from fgi.config.settings import DB_PATH
         db = sqlite3.connect(str(DB_PATH))
         # Use a single query that counts "below" vs total from scores_daily
         below = db.execute(
@@ -103,10 +91,16 @@ def _fgi_percentile(fgi: float) -> str:
 
 
 def _fgi_header(fgi: float, health: float, date_str: str) -> str:
-    """Build the FGI hero section with gauge, bar, health, and historical context."""
+    """Build the FGI hero section with gauge, bar, health, and historical context.
+
+    When health_score < 60, append a "数据质量异常，仅供参考" warning per spec §质量监控.
+    """
     level = _fgi_level(fgi)
     bar = _score_bar(fgi, 20)
     pos = _fgi_percentile(fgi)
+    health_label = f"**{health:.0f}** / 100"
+    if health < HEALTHY_THRESHOLD:
+        health_label += " ⚠️ 数据质量异常，仅供参考"
 
     return "\n".join([
         f"## 📊 A股恐贪指数 · {date_str}",
@@ -118,7 +112,7 @@ def _fgi_header(fgi: float, health: float, date_str: str) -> str:
         f"| 项目 | 值 |",
         f"|------|----|",
         f"| 当前情绪 | **{level}** |",
-        f"| 健康度 | **{health:.0f}** / 100 |",
+        f"| 健康度 | {health_label} |",
         f"| 历史位置 | {pos} |",
     ])
 
@@ -141,7 +135,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         first = True
         for name in indicator_list:
             r = indicator_results.get(name, {})
-            score = _extract_score(r, name)
+            score = extract_indicator_score(r, name)
             source_date = r.get("source_date")
             status = r.get("status", "?")
 
@@ -171,7 +165,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     extreme_low = []
     for name in INDICATOR_NAMES:
         r = indicator_results.get(name, {})
-        s = _extract_score(r, name)
+        s = extract_indicator_score(r, name)
         if s is not None:
             label = INDICATOR_NAMES.get(name, name)
             if s >= 85:

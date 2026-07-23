@@ -41,9 +41,8 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
     print(f"=== Recompute FGI scores: {start} -> {end} ===", flush=True)
     if resume:
         # resume 模式：跳过已完成的日期（FGI_final 非空），不清理数据
-        done = {row[0] for row in db._conn.execute(
-            "SELECT date FROM scores_daily WHERE FGI_final IS NOT NULL"
-        )}
+        scores_all = db.get_scores("1900-01-01", "2999-12-31")
+        done = set(scores_all.loc[scores_all["FGI_final"].notna(), "date"].tolist())
         all_dates = resolve_trading_days(start, end, db=db)
         dates = [d for d in all_dates if d not in done]
         done_n = len(done)
@@ -51,8 +50,8 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
         print(f"RESUME mode: done={done_n}/{total}, remaining={len(dates)}", flush=True)
     else:
         print("Clearing scores_daily and daily_status...", flush=True)
-        db._conn.execute("DELETE FROM scores_daily")
-        db._conn.execute("DELETE FROM daily_status")
+        db.clear_table("scores_daily")
+        db.clear_table("daily_status")
         db.commit()
         dates = resolve_trading_days(start, end, db=db)
     print(f"Trading days to process: {len(dates)}", flush=True)
@@ -80,9 +79,9 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
             print(f"  [{i+1}/{len(dates)}] ok={ok} miss={miss} err={err} ({time.time()-t0:.0f}s)", flush=True)
 
     db.commit()
-    n = db._conn.execute("SELECT COUNT(*) FROM scores_daily").fetchone()[0]
-    nonnull = db._conn.execute("SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL").fetchone()[0]
-    status_n = db._conn.execute("SELECT COUNT(*) FROM daily_status").fetchone()[0]
+    n = db.count_rows("scores_daily")
+    nonnull = db.count_rows("scores_daily", "FGI_final IS NOT NULL")
+    status_n = db.count_rows("daily_status")
     print(f"DONE ok={ok} miss={miss} err={err} in {time.time()-t0:.0f}s", flush=True)
     print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
     print(f"daily_status: {status_n} rows", flush=True)
@@ -93,19 +92,13 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
     updated = health_err = 0
     for d in dates:
         try:
-            # 从 daily_status 取当日所有 indicator 状态
-            rows = db._conn.execute(
-                "SELECT indicator, status FROM daily_status WHERE date = ?", (d,)
-            ).fetchall()
+            rows = db.get_indicator_status(d)
             if not rows:
                 continue
             status_df = pd.DataFrame(rows, columns=["indicator", "status"])
             exceed_rate = calculate_correlation_exceed_rate(db, d)
             health = calculate_health_score(status_df, exceed_rate)
-            db._conn.execute(
-                "UPDATE scores_daily SET health_score = ? WHERE date = ?",
-                (health, d),
-            )
+            db.update_score_field(d, "health_score", health)
             updated += 1
         except Exception as e:
             health_err += 1

@@ -154,7 +154,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
 
     db.commit()
     print(f"\n  Raw data summary:")
-    count = db._conn.execute("SELECT COUNT(*) FROM raw_data").fetchone()[0]
+    count = db.count_rows("raw_data")
     print(f"  Total raw_data records: {count}")
 
 
@@ -203,7 +203,7 @@ def backfill(start_date: Optional[str] = None, end_date: Optional[str] = None):
 
     success, failed = compute_fgi_daily(calculator, db, dates)
 
-    count = db._conn.execute("SELECT COUNT(*) FROM scores_daily").fetchone()[0]
+    count = db.count_rows("scores_daily")
     print(f"\n=== Done: {success} ok, {failed} failed, {count} scores ===")
     db.close()
 

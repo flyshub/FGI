@@ -78,6 +78,19 @@ class TestCalculateFgi:
         scores = {"momentum": None, "sentiment": None, "valuation": None, "funding": None}
         assert calculate_fgi(scores) is None
 
+    def test_single_dimension_returns_none(self):
+        """V3.8.2 修复 FGI=100 bug：仅 1 个有效维度不足以产出可信 FGI，返回 None（防回归）。
+
+        动机：2015 年初仅 M1（涨停池）有数据时，跨维重归一化会给单维度 100% 权重，
+        M1 raw=100 → FGI=100，是误导性极端值。门槛收紧为 ≥2 维度。
+        """
+        scores = {"momentum": 100, "sentiment": None, "valuation": None, "funding": None}
+        assert calculate_fgi(scores) is None
+        # 2 维度应正常产出（renorm 后）
+        scores2 = {"momentum": 80, "sentiment": None, "valuation": 60, "funding": None}
+        result2 = calculate_fgi(scores2)
+        assert result2 == pytest.approx((80 + 60) / 2, abs=0.01)
+
 
 class TestApplyConsistencyAdjustment:
     """V3.8: MAD-based consistency adjustment"""

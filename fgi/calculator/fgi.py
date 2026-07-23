@@ -1,16 +1,15 @@
 import copy
+from datetime import datetime, timedelta
 
 import pandas as pd
 
 from fgi.collector.fallback import DataSourceManager, INDICATOR_RAW_KEY
 from fgi.storage.database import Database
-from fgi.config.settings import (
-    HEALTHY_THRESHOLD, ANOMALY_PERCENTILE,
-    FGI_EXTREME_HIGH, FGI_EXTREME_LOW, MISSING_DAY_LIMIT
-)
+from fgi.config.settings import MISSING_DAY_LIMIT
 from fgi.common.utils import (calculate_fgi, apply_consistency_adjustment,
-                                adjust_fgi_with_mad_pct, rolling_percentile,
-                                calculate_health_score, calculate_correlation_exceed_rate)
+                              adjust_fgi_with_mad_pct, rolling_percentile,
+                              calculate_health_score, calculate_correlation_exceed_rate,
+                              extract_indicator_score)
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m3 import M3Calculator
@@ -67,17 +66,14 @@ class FGICalculator:
                     result["source_date"] = date
                 results[name] = result
             except Exception as e:
-                results[name] = {"score": None, "status": "missing", "source_date": None}
+                print(f"[WARN] calculator {name} failed for {date}: {type(e).__name__}: {e}")
+                results[name] = {"score": None, "status": "error", "source_date": None, "error": str(e)}
         return results
 
     @staticmethod
     def _extract_score(result: dict, name: str):
         """Extract an indicator score; only None/NaN count as missing (0.0 is valid)."""
-        for key in ("score", name, name.lower()):
-            score = result.get(key)
-            if score is not None and not pd.isna(score):
-                return score
-        return None
+        return extract_indicator_score(result, name)
 
     def calculate_dimension_score(self, indicator_results: dict, dimension: str,
                                   weights: dict = None):
@@ -97,7 +93,6 @@ class FGICalculator:
     def _check_m1s3_correlation(self, date: str):
         """Check M1/S3 Pearson correlation from recent scores. Returns corr or None."""
         try:
-            from datetime import datetime, timedelta
             start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=120)).strftime("%Y-%m-%d")
             scores = self._db.get_scores(start, date)
             if scores is None or len(scores) < 20:
@@ -112,7 +107,6 @@ class FGICalculator:
             return None
 
     def calculate_health(self, indicator_results: dict, date: str = None) -> float:
-        import pandas as pd
         statuses = []
         for name in indicator_results:
             r = indicator_results[name]
@@ -134,8 +128,7 @@ class FGICalculator:
 
         注意：填充值只写入内存中的 indicator_results 供当日 FGI 聚合使用，
         不落库 scores_daily —— 否则次日会把填充值误当真实得分，elapsed 永远
-        重置为 1，「连续缺失 5 日剔除」永不触发。"""
-        from datetime import datetime, timedelta
+        重置为 1，「连续缺失 10 日剔除」永不触发。"""
         start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=MISSING_DAY_LIMIT * 3 + 10)).strftime("%Y-%m-%d")
         history = self._db.get_scores(start, date)
         if history is None or history.empty:
@@ -169,12 +162,9 @@ class FGICalculator:
         if raw_key is None:
             return last_score_date
         try:
-            row = self._db._conn.execute(
-                "SELECT date FROM raw_data WHERE indicator=? AND date <= ? ORDER BY date DESC LIMIT 1",
-                [raw_key, last_score_date]
-            ).fetchone()
-            if row:
-                return row[0]
+            d = self._db.get_latest_raw_date(raw_key, last_score_date)
+            if d:
+                return d
         except Exception:
             pass
         return last_score_date

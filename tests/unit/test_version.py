@@ -72,7 +72,7 @@ class TestVersionManager:
     def test_get_display_value(self, db):
         db.upsert_score("2024-01-01", {"FGI_current": 55.0})
         # FGI_legacy 只能由版本切换流程写入，upsert_score 会拦截该字段
-        db._conn.execute("UPDATE scores_daily SET FGI_legacy=? WHERE date=?", (50.0, "2024-01-01"))
+        db._connection.execute("UPDATE scores_daily SET FGI_legacy=? WHERE date=?", (50.0, "2024-01-01"))
         db.commit()
 
         manager = VersionManager(db_path=db._path)

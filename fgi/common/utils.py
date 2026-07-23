@@ -64,6 +64,26 @@ def calculate_fgi(dimension_scores: dict):
     return sum(score * weights[dim] / total_weight for dim, score in available)
 
 
+def extract_indicator_score(result: dict, name: str):
+    """Extract an indicator score from a calculator result dict.
+
+    Looks up keys in order: 'score', canonical name, lower-cased name.
+    None or NaN values count as missing; 0.0 is valid.
+    """
+    for key in ("score", name, name.lower()):
+        score = result.get(key)
+        if score is None:
+            continue
+        try:
+            if pd.isna(score):
+                continue
+        except (TypeError, ValueError):
+            # Non-numeric scalar — accept as-is (caller's responsibility)
+            pass
+        return score
+    return None
+
+
 def apply_consistency_adjustment(fgi_raw: float, indicator_scores: list) -> tuple[float, float]:
     import numpy as np
     if len(indicator_scores) < 4:

@@ -30,13 +30,9 @@ def main():
     db = Database(DB_PATH)
     db.connect()
     # 删除旧 SSE 历史值
-    n_old = db._conn.execute(
-        "SELECT COUNT(*) FROM raw_data WHERE indicator = ?", ("f1_margin_balance",)
-    ).fetchone()[0]
-    db._conn.execute(
-        "DELETE FROM raw_data WHERE indicator = ?", ("f1_margin_balance",)
-    )
-    print(f"Deleted {n_old} old SSE f1_margin_balance rows", flush=True)
+    n_old = db.count_rows("raw_data", "indicator='f1_margin_balance'")
+    deleted = db.delete_raw_data("f1_margin_balance")
+    print(f"Deleted {n_old} old SSE f1_margin_balance rows (rowcount={deleted})", flush=True)
 
     # 写入东财新值
     inserted = 0
@@ -49,14 +45,13 @@ def main():
     db.commit()
 
     # 验证
-    n_new = db._conn.execute(
-        "SELECT COUNT(*) FROM raw_data WHERE indicator = ?", ("f1_margin_balance",)
-    ).fetchone()[0]
-    min_v, max_v, avg_v = db._conn.execute(
-        "SELECT MIN(value), MAX(value), AVG(value) FROM raw_data WHERE indicator = ?",
-        ("f1_margin_balance",),
-    ).fetchone()
-    print(f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}", flush=True)
+    n_new = db.count_rows("raw_data", "indicator='f1_margin_balance'")
+    stats = db.get_raw_value_stats("f1_margin_balance")
+    if stats:
+        min_v, max_v, avg_v = stats
+        print(f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}", flush=True)
+    else:
+        print(f"\nDONE: {n_new} rows, no stats available", flush=True)
     db.close()
 
 
