@@ -1,8 +1,16 @@
 # A股恐惧贪婪指数（FGI）实施方案 · 终稿 V3.8
 
-**版本**：V3.8.2（逻辑修正版）  
-**更新日期**：2026年7月22日  
+**版本**：V3.8.3（PR #31 merge 版）  
+**更新日期**：2026年7月23日  
 **设计原则**：数据免费、逻辑稳健、每日自动更新、可解释  
+
+> **V3.8.3 修订**（2026-07-23，PR #31 合并后）：
+> - **F1 数据源切换**：SSE `stock_margin_sse`（沪市，已不稳定）→ 东财 `stock_margin_account_info`（沪深合计，全历史稳定）。历史 raw_data 已回填东财口径（3352 行，2012-09 至今）。F1 公式 `融资余额 / 全A总市值` 现两段都用沪深合计，量纲一致。
+> - **forward-fill 容错改善**：`MISSING_DAY_LIMIT` 5 → 10（适应 T+1 上报 + 周末 + 节假日的累积延迟）。新增 `elapsed` 字段记录连续 forward-fill 天数：`elapsed=1` 标记 `normal`（仅 T+1 延迟），`elapsed≥2` 标记 `degraded`（真实数据缺口）。`source_date` 字段记录 forward-fill 实际取值日期，便于溯源。
+> - **chain 名统一**：m2_market_overview / s2_sentiment / s3_zt_daily（修复历史命名混乱，详见 #30）。
+> - **recompute_scores.py 增强**：新增 `--resume` 模式（断点续算）和 `--include-today` 模式（默认 T+1，跳过当日未完成数据）。`FGI_OFFLINE=1` 在 `main()` 内自动设置，不依赖外部环境变量。
+> - **F1 公式修正**：`abs()` 反向 bug（审计 H6）—— proxy 与 real data 现都用带符号值，percentile 排序正确反映"大正流入=贪婪 / 大负流出=恐慌"方向。
+> - **F3 历史写入**：calculator 现把 proxy_close / proxy_volume 写入 raw_data，offline recompute 可完整重构。
 
 > **V3.8.2 修订**（2026-07-22，基于 M4 数据源实测不可用）：
 > - M4 数据源从东财 `index_zh_a_hist`（换手率%）切换至新浪 `stock_zh_index_daily`（成交量 volume）。
@@ -248,7 +256,7 @@ CREATE TABLE daily_status (
 1. 确定最近交易日 T。
 2. 逐指标增量更新，写入 `raw_data`，同时更新 `daily_status` 表。
 3. 从 `raw_data` 读取足够历史，计算得分及 FGI，写入 `scores_daily`。
-4. 容错降级：见各指标降级方案；连续缺失 5 日则剔除，权重分配给同维度其他指标。
+4. 容错降级：见各指标降级方案；连续缺失 10 日则剔除，权重分配给同维度其他指标。阈值由 `fgi/config/settings.py:MISSING_DAY_LIMIT` 控制（V3.8.3 起从 5 调至 10，因 T+1 数据延迟 + 周末 + 节假日实际可累积 4-5 自然日，10 个交易日宽容度更符合实际数据上报节奏）。
 5. 异常日志 + 报警（企业微信/钉钉 Webhook）。
 6. **计算并输出指数健康度**（见 4.5 节），健康度低于 60 时推送标注“数据质量异常，仅供参考”。
 7. **FGI 日度变动异常检测**：当日 FGI_final 与前一交易日的绝对差值若超过滚动 5 年日度变动的 99% 分位数，标记“疑似异常”，暂停自动发布，触发人工复核。

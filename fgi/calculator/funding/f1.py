@@ -7,7 +7,7 @@ from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class F1Calculator:
-    """V3.8: 融资余额占比 = 上交所融资余额 / 上证总市值 (月度前向填充)"""
+    """V3.8.3: 融资余额占比 = 沪深合计融资余额 / 全A总市值 (月度前向填充)."""
 
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
@@ -76,18 +76,7 @@ class F1Calculator:
         df = self.calculate_percentile(df)
 
         today = df[df["date"] == date]
-        # 融资余额有 T+1 上报延迟；当天数据不可用时用最近一天代替
-        if today.empty and not df.empty:
-            last_row = df.iloc[-1]
-            today_val = {
-                "date": date,
-                "margin_balance": last_row["margin_balance"],
-                "market_cap": last_row["market_cap"],
-                "margin_ratio": last_row["margin_ratio"],
-                "percentile": last_row["percentile"],
-            }
-            import pandas as _pd
-            today = _pd.DataFrame([today_val])
+        # T+1 延迟统一由 _apply_forward_fill 处理（不在 calculator 层 fallback）
         if today.empty:
             self._db.upsert_status(date, "f1", "missing", "akshare", "No data for date")
             return {"f1": None, "status": "missing"}

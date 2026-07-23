@@ -2,7 +2,7 @@ import copy
 
 import pandas as pd
 
-from fgi.collector.fallback import DataSourceManager
+from fgi.collector.fallback import DataSourceManager, INDICATOR_RAW_KEY
 from fgi.storage.database import Database
 from fgi.config.settings import (
     HEALTHY_THRESHOLD, ANOMALY_PERCENTILE,
@@ -165,13 +165,7 @@ class FGICalculator:
 
     def _resolve_source_date(self, indicator: str, last_score_date: str, target_date: str) -> str:
         """traces one hop back from the last score date to the actual raw-data date."""
-        mapping = {
-            "M1": "m1_zt_count", "M2": "m2_up_num", "M3": "m3_close",
-            "M4": "m4_volume", "S2": "s2_heat", "S3": "s3_seal_fund",
-            "V1": "v1_pe_ttm", "V2": "v1_erp",
-            "F1": "f1_margin_ratio", "F2": "f2_position", "F3": "f3_industry_net_flow",
-        }
-        raw_key = mapping.get(indicator)
+        raw_key = INDICATOR_RAW_KEY.get(indicator)
         if raw_key is None:
             return last_score_date
         try:

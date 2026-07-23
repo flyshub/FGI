@@ -95,11 +95,10 @@ class AKShareSource(DataSource):
             df = self._cached(("margin_em",), lambda: _retry(lambda: ak.stock_margin_account_info()))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data")
-            df = df.rename(columns={"日期": "date", "融资余额": "融资余额"})
+            df = df.rename(columns={"日期": "date"})
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
             # 东财融资余额单位已是亿元；但原 SSE 返回元，历史代码 /1e8。
             # 这里将东财的亿元值转换为 SSE 等效的"元"表示以保持 F1 公式兼容。
-            import numpy as np
             df["融资余额"] = pd.to_numeric(df["融资余额"], errors="coerce") * 1e8
             mask = (df["date"] >= start_date) & (df["date"] <= end_date)
             df = df.loc[mask].copy()
@@ -309,7 +308,7 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_market_cap(self, start_date: str, end_date: str) -> DataSourceResult:
-        """Fetch 上证总市值 (monthly, from macro_china_stock_market_cap)."""
+        """Fetch 全A总市值 (沪+深合计, monthly, from macro_china_stock_market_cap)."""
         try:
             ak = self._get_client()
             df = self._cached(("market_cap",),
@@ -318,7 +317,10 @@ class AKShareSource(DataSource):
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No market cap data")
             df["date"] = df["数据日期"].str.extract(r"(\d{4})年(\d{2})月份") \
                 .apply(lambda x: f"{x[0]}-{x[1]}-01", axis=1)
-            df["market_cap"] = pd.to_numeric(df["市价总值-上海"], errors="coerce")
+            # 沪+深合计总市值（亿元），与 F1 numerator 沪深合计融资余额口径一致
+            sh = pd.to_numeric(df["市价总值-上海"], errors="coerce").fillna(0)
+            sz = pd.to_numeric(df["市价总值-深圳"], errors="coerce").fillna(0)
+            df["market_cap"] = sh + sz
             result_df = df[["date", "market_cap"]].dropna(subset=["market_cap"]).copy()
             mask = (result_df["date"] >= start_date) & (result_df["date"] <= end_date)
             result_df = result_df.loc[mask].copy()

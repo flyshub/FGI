@@ -34,6 +34,22 @@ INDEX_DAILY_CHAINS: Dict[str, tuple] = {
     "f3_index": (("f3_proxy_close", "f3_proxy_volume"), ("close", "volume")),
 }
 
+# Indicator → raw_key 单一来源（用于 forward-fill 溯源到 raw_data 真实日期）。
+# 必须与 OFFLINE_RAW_MAPPING / INDEX_DAILY_CHAINS 的 raw_key 保持一致 — 改 raw_key 时同步。
+INDICATOR_RAW_KEY: Dict[str, str] = {
+    "M1": "m1_zt_count",
+    "M2": "m2_up_num",
+    "M3": "m3_close",
+    "M4": "m4_volume",
+    "S2": "s2_heat",
+    "S3": "s3_seal_fund",
+    "V1": "v1_pe_ttm",
+    "V2": "v1_erp",
+    "F1": "f1_margin_ratio",
+    "F2": "f2_fund_position",
+    "F3": "f3_industry_net_flow",
+}
+
 
 class FallbackChain:
     def __init__(self, sources: List[DataSource]):
