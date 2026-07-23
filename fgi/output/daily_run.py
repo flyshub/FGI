@@ -3,11 +3,12 @@ import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
-from fgi.collector.fallback import DataSourceManager, FallbackChain
+from fgi.collector.fallback import DataSourceManager
 from fgi.collector.akshare_source import AKShareSource
 from fgi.collector.mootdx_source import MootdxSource
 from fgi.collector.tencent_source import TencentSource
 from fgi.collector.zzshare_source import ZZShareSource
+from fgi.collector.chains import configure_manager
 from fgi.collector.trading_calendar import TradingCalendar
 from fgi.calculator.fgi import FGICalculator
 from fgi.storage.database import Database
@@ -49,33 +50,13 @@ def setup_data_manager() -> DataSourceManager:
     if ZZSHARE_ENABLED:
         manager.register_source("zzshare", ZZShareSource())
 
-    zzshare_ok = manager.has_source("zzshare")
-    chain_configs = {
-        "m1_zt_stats": ["zzshare"],
-        "m2_market_overview": ["zzshare"],
-        "m3_index": ["akshare"],
-        "m4_cyb_volume": ["akshare"],
-        "s2_sentiment": ["zzshare"],
-        "s3_zt_daily": ["zzshare"],
-        "v1_pe": ["akshare"],
-        "v1_bond": ["akshare"],
-        "v2_index": ["akshare"],
-        "f1_margin": ["akshare"],
-        "f1_market_cap": ["akshare"],
-        "f2_fund_position": ["akshare"],
-        "f3_industry_flow": ["akshare"],
-        "f3_index": ["akshare"],
-    }
-
-    for indicator, sources in chain_configs.items():
-        # main 已统一 chain 名（#30）+ PR 加 m1_zt_stats/s3_zt_daily 备份
-        if indicator in ("m1_zt_stats", "m2_market_overview", "s2_sentiment", "s3_zt_daily") and zzshare_ok:
-            sources = sources + ["akshare"]
-        # mootdx/tencent 作为兜底追加；不支持的方法会被 FallbackChain 安全剔除
-        sources = sources + ["mootdx", "tencent"]
-        sources = [s for s in sources if manager.has_source(s)]
-        if sources:
-            manager.configure_chain(indicator, sources)
+    # mootdx/tencent 作为兜底追加；不支持的方法会被 FallbackChain 安全剔除
+    extra = []
+    if MOOTDX_ENABLED:
+        extra.append("mootdx")
+    if TENCENT_ENABLED:
+        extra.append("tencent")
+    configure_manager(manager, extra_fallbacks=extra or None)
 
     return manager
 
