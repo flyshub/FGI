@@ -75,7 +75,8 @@ class TestAlert:
 
             assert not mock_post.called
 
-    def test_alert_anomaly_indicator(self, db):
+    def test_alert_dimension_extreme_does_not_trigger(self, db):
+        """dimension scores > 85 / < 15 no longer trigger anomaly (spec: only |ΔFGI| does)."""
         with patch('fgi.output.alert.WEBHOOK_URL', 'http://test.com'), \
              patch('fgi.output.alert.WEBHOOK_TYPE', 'wecom'), \
              patch('fgi.output.alert.requests.post') as mock_post:
@@ -86,6 +87,7 @@ class TestAlert:
             db.commit()
 
             alert = Alert(db_path=db._path)
+            # ΔFGI = 10 (normal), but dimension extremes should NOT trigger
             alert.check_and_alert("2024-01-02", {"fgi_final": 70.0, "health_score": 75.0, "dimension_scores": {"M1": 90.0, "M2": 10.0}})
 
-            assert mock_post.called
+            assert not mock_post.called
