@@ -33,3 +33,10 @@ data/cache/
 # Database WAL files
 data/*.db-shm
 data/*.db-wal
+# Generated package files
+*.egg-info/
+
+# Database files
+*.db
+*.db-wal
+*.db-shm

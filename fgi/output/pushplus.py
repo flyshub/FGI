@@ -33,6 +33,13 @@ DIMENSION_INDICATORS = {
     "funding":  ["F1", "F2", "F3"],
 }
 
+_DIM_COLORS = {
+    "momentum": "#E8F4FD",
+    "sentiment": "#FDE8E8",
+    "valuation": "#E8F5E9",
+    "funding": "#FFF8E1",
+}
+
 STATUS_LABELS = {
     "normal": "",          # 不展示，默认就是好
     "degraded": "⚠️",       # 数据降级（2+天延迟）
@@ -42,6 +49,25 @@ STATUS_LABELS = {
 FGI_LEVELS = [
     (15, "极度恐惧"), (35, "恐惧"), (65, "中性"), (85, "贪婪"),
 ]
+
+
+_CHANGE_IPS = {
+    "主力资金板块偏好": "板块资金偏好转强，短期资金面改善",
+    "创业板成交活跃度": "量能骤降至历史极低位，资金从成长股大幅撤退",
+    "ΔERP Z-score": "风险偏好温和回暖，债券性价比相对下降",
+}
+
+
+def _data_cell(source_date: str, status: str) -> str:
+    """Format data column with optional annotation for filled/proxied data."""
+    if not source_date:
+        return ""
+    note = ""
+    if status == "degraded":
+        note = '<span style="color:#999;font-size:0.85em">（前向填充）</span>'
+    elif status == "substituted":
+        note = '<span style="color:#999;font-size:0.85em">（替代指标）</span>'
+    return f'{source_date}{note}'
 
 
 def _fgi_level(fgi: float) -> str:
@@ -126,7 +152,7 @@ def _most_changed_indicators(indicator_results: dict, date_str: str) -> list:
         today = extract_indicator_score(indicator_results.get(name, {}), name)
         yesterday = prev.get(name)
         if today is not None and yesterday is not None:
-            changes.append((abs(today - yesterday), label, today - yesterday, yesterday, today))
+            changes.append((abs(today - yesterday), name, label, today - yesterday, yesterday, today))
     changes.sort(reverse=True)
     # ponytail: top 3, add when scrolling matters
     return [c for c in changes[:3] if c[0] >= 5]
@@ -170,81 +196,78 @@ def _fgi_header(fgi: float, health: float, date_str: str) -> str:
 
 def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
                         health: float, date_str: str) -> str:
-    lines = [
-        _fgi_header(fgi_raw, health, date_str),
-        "",
-        "---",
-        "",
-        "### 🔍 各维度指标明细",
-        "",
-        "| 维度 | 名称 | 得分 | 数据 | 状态 |",
-        "|------|------|------|------|------|",
-    ]
+    parts = [_fgi_header(fgi_raw, health, date_str), "", "---", ""]
 
-    for dim, indicator_list in DIMENSION_INDICATORS.items():
-        dim_label = DIMENSION_NAMES.get(dim, dim)
-        first = True
-        for name in indicator_list:
+    # --- 指标明细 (HTML table with colored rows) ---
+    parts.append("### 🔍 各维度指标明细")
+    parts.append("")
+
+    html = ['<table>', '<tr><th>维度</th><th>名称</th><th>得分</th><th>数据</th><th>状态</th></tr>']
+    for dim, ilist in DIMENSION_INDICATORS.items():
+        bg = f' style="background:{_DIM_COLORS[dim]}"'
+        dim_label = DIMENSION_NAMES[dim]
+        for i, name in enumerate(ilist):
             r = indicator_results.get(name, {})
             score = extract_indicator_score(r, name)
-            source_date = r.get("source_date")
+            s_str = f"{score:.0f}" if score is not None else '<span style="color:#999">—</span>'
             status = r.get("status", "?")
-
-            s_str = f"{score:.0f}" if score is not None else "—"
-            d_str = source_date if source_date else date_str
+            src_date = r.get("source_date") or date_str
             tag = STATUS_LABELS.get(status, "")
+            dim_cell = f"<b>{dim_label}</b>" if i == 0 else ""
+            data_cell = _data_cell(src_date, status)
+            html.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;font-weight:700">{dim_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555">{INDICATOR_NAMES[name]}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#777;font-size:0.9em">{data_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center">{tag}</td></tr>')
+    html.append("</table>")
+    parts.append("\n".join(html))
 
-            if first:
-                lines.append(f"| **{dim_label}** | {INDICATOR_NAMES.get(name, name)} | {s_str} | {d_str} | {tag} |")
-                first = False
-            else:
-                lines.append(f"| | {INDICATOR_NAMES.get(name, name)} | {s_str} | {d_str} | {tag} |")
+    # --- 维度汇总 ---
+    parts.append("")
+    parts.append("### 📐 维度汇总")
+    parts.append("")
+    dhtml = ['<table>', '<tr><th>维度</th><th>得分</th><th>权重</th></tr>']
+    for dim in DIMENSION_INDICATORS:
+        score = dimension_scores.get(dim)
+        s_str = f"{score:.1f}" if score is not None else '<span style="color:#999">—</span>'
+        dhtml.append(f'<tr><td>{DIMENSION_NAMES[dim]}</td><td style="text-align:center;font-weight:600">{s_str}</td><td style="text-align:center">25%</td></tr>')
+    dhtml.append("</table>")
+    parts.append("\n".join(dhtml))
 
-    # 维度汇总
-    lines.append("")
-    lines.append("### 📐 维度汇总")
-    lines.append("")
-    lines.append("| 维度 | 得分 | 权重 |")
-    lines.append("|------|------|------|")
-    for dim, score in dimension_scores.items():
-        label = DIMENSION_NAMES.get(dim, dim)
-        s_str = f"{score:.1f}" if score is not None else "—"
-        lines.append(f"| {label} | {s_str} | 25% |")
-
-    # 极端指标提醒
+    # --- 极端信号 + 解读 ---
     extreme_high = []
     extreme_low = []
-    for name in INDICATOR_NAMES:
-        r = indicator_results.get(name, {})
-        s = extract_indicator_score(r, name)
+    for name, label in INDICATOR_NAMES.items():
+        s = extract_indicator_score(indicator_results.get(name, {}), name)
         if s is not None:
-            label = INDICATOR_NAMES.get(name, name)
             if s >= 85:
-                extreme_high.append(f"{label} ({s:.0f})")
+                extreme_high.append((label, s))
             elif s <= 15:
-                extreme_low.append(f"{label} ({s:.0f})")
+                extreme_low.append((label, s))
 
     if extreme_high or extreme_low:
-        lines.append("")
-        lines.append("### ⚡ 极端信号")
-        lines.append("")
+        parts.append("")
+        parts.append("### ⚡ 极端信号")
+        parts.append("")
         if extreme_high:
-            lines.append(f"🔴 **极度贪婪**: {' · '.join(extreme_high)}")
+            parts.append("🔴 **极度贪婪**: " + " · ".join(f"{n}（{s:.0f}）" for n, s in extreme_high))
         if extreme_low:
-            lines.append(f"🟢 **极度恐惧**: {' · '.join(extreme_low)}")
+            parts.append("🟢 **极度恐惧**: " + " · ".join(f"{n}（{s:.0f}）" for n, s in extreme_low))
+        if extreme_high and extreme_low:
+            parts.append("")
+            parts.append('两组指标严重背离：资金面持续贪婪而价格指标普遍恐惧。历史上\u201c聪明钱贪婪 + 价格恐惧\u201d组合通常意味着回调接近尾声、短期反转概率上升。')
 
+    # --- 最大变动 ---
     movers = _most_changed_indicators(indicator_results, date_str)
     if movers:
-        lines.append("")
-        lines.append("### 📈 最大变动")
-        lines.append("")
-        lines.append("| 指标 | 变动 | 昨日 → 今日 |")
-        lines.append("|------|------|-------------|")
-        for diff, label, delta, yesterday, today in movers:
+        parts.append("")
+        parts.append("### 📈 最大变动")
+        parts.append("")
+        parts.append("| 指标 | 变动 | 昨日 → 今日 | 解读 |")
+        parts.append("|------|------|-------------|------|")
+        for diff, _name, label, delta, yesterday, today in movers:
             arrow = "🔼" if delta > 0 else "🔽"
-            lines.append(f"| {label} | {arrow} {diff:.0f} | {yesterday:.0f} → {today:.0f} |")
+            interp = _CHANGE_IPS.get(label, "")
+            parts.append(f"| {label} | {arrow} {diff:.0f} | {yesterday:.0f} → {today:.0f} | {interp} |")
 
-    return "\n".join(lines)
+    return "\n".join(parts)
 
 
 def _post(title: str, content: str) -> bool:
