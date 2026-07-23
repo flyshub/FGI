@@ -49,11 +49,11 @@ def setup_data_manager() -> DataSourceManager:
     zzshare_ok = manager.has_source("zzshare")
     chain_configs = {
         "m1_zt_stats": ["zzshare"],
-        "m2_sentiment": ["zzshare"],
+        "m2_market_overview": ["zzshare"],
         "m3_index": ["akshare"],
         "m4_cyb_volume": ["akshare"],
-        "s3_sentiment": ["zzshare"],
-        "s4_zt_daily": ["zzshare"],
+        "s2_sentiment": ["zzshare"],
+        "s3_zt_daily": ["zzshare"],
         "v1_pe": ["akshare"],
         "v1_bond": ["akshare"],
         "v2_index": ["akshare"],
@@ -65,7 +65,7 @@ def setup_data_manager() -> DataSourceManager:
     }
 
     for indicator, sources in chain_configs.items():
-        if indicator in ("m2_sentiment", "s3_sentiment") and zzshare_ok:
+        if indicator in ("m2_market_overview", "s2_sentiment") and zzshare_ok:
             sources = sources + ["akshare"]
         # mootdx/tencent 作为兜底追加；不支持的方法会被 FallbackChain 安全剔除
         sources = sources + ["mootdx", "tencent"]

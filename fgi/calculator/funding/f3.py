@@ -32,10 +32,11 @@ class F3Calculator:
         )
 
     def calculate_flow_proxy(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate proxy: close * volume as rough money flow."""
+        """Calculate proxy: price_change * volume as signed money flow.
+        大幅上涨日 → 大正值（贪婪）；大幅下跌日 → 大负值（恐慌）。"""
         df["price_change"] = df["close"].diff()
         df["flow_proxy"] = df["price_change"] * df["volume"]
-        df["flow_magnitude"] = df["flow_proxy"].abs()
+        df["flow_magnitude"] = df["flow_proxy"]  # 保留符号：净流入越大 → 高分
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -83,6 +84,13 @@ class F3Calculator:
         proxy_result = self.fetch_index_proxy(start_date, end_date)
         if proxy_result.status == DataSourceStatus.HEALTHY and proxy_result.data is not None:
             proxy_df = self.calculate_flow_proxy(proxy_result.data)
+            # 写入最后一行 proxy raw（用其自身的日期，避免节假日数据错配）
+            last = proxy_result.data.iloc[-1]
+            raw_date = last["date"] if isinstance(last["date"], str) else str(last["date"].strftime("%Y-%m-%d"))
+            if not pd.isna(last.get("close")):
+                self._db.upsert_raw_data(raw_date, "f3_proxy_close", float(last["close"]))
+            if not pd.isna(last.get("volume")):
+                self._db.upsert_raw_data(raw_date, "f3_proxy_volume", float(last["volume"]))
         elif real_data is not None and not real_data.empty:
             proxy_df = pd.DataFrame({"date": [], "flow_magnitude": []})
         else:

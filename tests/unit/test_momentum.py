@@ -28,7 +28,7 @@ def data_manager():
     manager.register_source("mock", mock)
     # 为每个指标配置 chain
     manager.configure_chain("m1_zt_stats", ["mock"])
-    manager.configure_chain("m2_sentiment", ["mock"])
+    manager.configure_chain("m2_market_overview", ["mock"])
     manager.configure_chain("m4_cyb_volume", ["mock"])
     return manager
 

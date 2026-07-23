@@ -2,11 +2,16 @@
 
 - 清空 scores_daily 和 daily_status（避免旧公式残留）
 - 用 trading_calendar 解析交易日，逐日跑 FGICalculator.run(date)
-- 纯 DB 读，无网络依赖（除非 calculator 内部当日 fetch，如 M4 last-good-value）
+- 自动设 FGI_OFFLINE=1，强制从 raw_data 重构，无网络依赖
+- 默认 T+1 模式（end=昨日），避免当日数据未入库；--include-today 包含今日
 """
+import os
 import sys
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
+
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -15,12 +20,19 @@ from fgi.output.backfill import setup_data_manager
 from fgi.calculator.fgi import FGICalculator
 from fgi.output.status import record_indicator_status
 from fgi.collector.trading_calendar import resolve_trading_days
+from fgi.common.utils import calculate_health_score, calculate_correlation_exceed_rate
 
 
-def main(start="2015-01-01", end=None):
-    from datetime import datetime
+def main(start="2015-01-01", end=None, include_today=False):
     if end is None:
+        # 默认 T+1 模式：end = 昨日（避免当日数据未入库导致全 missing）
+        end = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    if include_today:
+        # 显式覆盖 end（无论是否传入）
         end = datetime.now().strftime("%Y-%m-%d")
+
+    # 强制 offline 模式，杜绝 calculator 内部 fetch 触发网络
+    os.environ["FGI_OFFLINE"] = "1"
 
     db = Database()
     db.connect()
@@ -63,10 +75,42 @@ def main(start="2015-01-01", end=None):
     print(f"DONE ok={ok} miss={miss} err={err} in {time.time()-t0:.0f}s", flush=True)
     print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
     print(f"daily_status: {status_n} rows", flush=True)
+
+    # Phase 2.5: 二次扫描重算 health_score（依赖完整的 scores_daily 历史）
+    print("=== Recompute health_score (phase 2.5) ===", flush=True)
+    t1 = time.time()
+    updated = health_err = 0
+    for d in dates:
+        try:
+            # 从 daily_status 取当日所有 indicator 状态
+            rows = db._conn.execute(
+                "SELECT indicator, status FROM daily_status WHERE date = ?", (d,)
+            ).fetchall()
+            if not rows:
+                continue
+            status_df = pd.DataFrame(rows, columns=["indicator", "status"])
+            exceed_rate = calculate_correlation_exceed_rate(db, d)
+            health = calculate_health_score(status_df, exceed_rate)
+            db._conn.execute(
+                "UPDATE scores_daily SET health_score = ? WHERE date = ?",
+                (health, d),
+            )
+            updated += 1
+        except Exception as e:
+            health_err += 1
+            if health_err <= 5:
+                print(f"  HEALTH ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
+    db.commit()
+    print(f"Health updated: {updated} rows, errors: {health_err} in {time.time()-t1:.0f}s", flush=True)
     db.close()
 
 
 if __name__ == "__main__":
-    start = sys.argv[1] if len(sys.argv) > 1 else "2015-01-01"
-    end = sys.argv[2] if len(sys.argv) > 2 else None
-    main(start, end)
+    import argparse
+    parser = argparse.ArgumentParser(description="Offline FGI score recompute")
+    parser.add_argument("start", nargs="?", default="2015-01-01")
+    parser.add_argument("end", nargs="?", default=None, help="end date (default: yesterday)")
+    parser.add_argument("--include-today", action="store_true",
+                        help="include today in recompute (default excludes today for T+1 mode)")
+    args = parser.parse_args()
+    main(args.start, args.end, include_today=args.include_today)

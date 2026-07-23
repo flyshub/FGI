@@ -18,6 +18,7 @@ LONG_COOLDOWN = 3600    # 长禁用秒数
 # 多字段: 从多个 raw_key 拼接，按 date 对齐
 # 未列入的 method 在 offline 模式下保持原 FAILED 行为。
 OFFLINE_RAW_MAPPING: Dict[str, tuple] = {
+    "fetch_margin_data": (("f1_margin_balance",), ("融资余额",)),
     "fetch_market_cap": (("f1_market_cap",), ("market_cap",)),
     "fetch_fund_position": (("f2_fund_position",), ("position",)),
     "fetch_market_hot_sentiment": (("s2_heat",), ("p_close",)),

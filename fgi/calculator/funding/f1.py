@@ -87,6 +87,9 @@ class F1Calculator:
 
         score = self.calculate_score(percentile)
 
+        # 写入原始数据（margin_balance/market_cap）支持 offline recompute 重构
+        self._db.upsert_raw_data(date, "f1_margin_balance", today["margin_balance"].iloc[0])
+        self._db.upsert_raw_data(date, "f1_market_cap", today["market_cap"].iloc[0])
         self._db.upsert_raw_data(date, "f1_margin_ratio", today["margin_ratio"].iloc[0])
         self._db.upsert_raw_data(date, "f1_percentile", percentile)
         self._db.upsert_score(date, {"F1": score})
