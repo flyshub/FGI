@@ -63,10 +63,12 @@ class S3Calculator:
         if not today_in_db:
             result = self.fetch_data(date, date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
-                for _, row in result.data.iterrows():
-                    self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(row["seal_fund_sum"]) / 1e8)
-                self._db.commit()
-                db_data = self._db.get_raw_data("s3_seal_fund", start_date, end_date)
+                valid = result.data[result.data["seal_fund_sum"].fillna(0).astype(float) > 0]
+                if not valid.empty:
+                    for _, row in valid.iterrows():
+                        self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(row["seal_fund_sum"]) / 1e8)
+                    self._db.commit()
+                    db_data = self._db.get_raw_data("s3_seal_fund", start_date, end_date)
 
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date)
@@ -96,8 +98,8 @@ class S3Calculator:
             return {"s3": None, "status": "missing"}
 
         raw_value = today["zt_ratio"].iloc[0]
-        if pd.isna(raw_value) or raw_value == 0:
-            self._db.upsert_status(date, "s3", "missing", "database", "Raw value is 0 (likely missing source coverage)")
+        if pd.isna(raw_value):
+            self._db.upsert_status(date, "s3", "missing", "database", "Raw value is NaN")
             return {"s3": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
