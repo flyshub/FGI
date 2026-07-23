@@ -8,7 +8,7 @@ from fgi.storage.database import Database
 from fgi.config.settings import MISSING_DAY_LIMIT
 from fgi.common.utils import (calculate_fgi, apply_consistency_adjustment,
                               adjust_fgi_with_mad_pct, rolling_percentile,
-                              calculate_health_score, calculate_correlation_exceed_rate,
+                              calculate_health_score,
                               extract_indicator_score)
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
@@ -25,7 +25,9 @@ from fgi.calculator.funding.f3 import F3Calculator
 
 INDICATOR_WEIGHTS = {
     "momentum": {"M1": 0.25, "M2": 0.25, "M3": 0.25, "M4": 0.25},
-    "sentiment": {"S2": 0.50, "S3": 0.50},
+    # #49: M1/S3 长期结构性高相关（同源涨停家数/封单），原 0.85 动态阈值 57% 触发，
+    # 退化为抖动开关造成 FGI 因权重切换跳变。改静态 S2=0.75/S3=0.25。
+    "sentiment": {"S2": 0.75, "S3": 0.25},
     "valuation": {"V1": 0.50, "V2": 0.50},
     "funding": {"F1": 0.3333, "F2": 0.3333, "F3": 0.3334},
 }
@@ -90,22 +92,6 @@ class FGICalculator:
         weighted_sum = sum(s * w for s, w in scores)
         return weighted_sum / total_weight
 
-    def _check_m1s3_correlation(self, date: str):
-        """Check M1/S3 Pearson correlation from recent scores. Returns corr or None."""
-        try:
-            start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=120)).strftime("%Y-%m-%d")
-            scores = self._db.get_scores(start, date)
-            if scores is None or len(scores) < 20:
-                return None
-            if "M1" not in scores.columns or "S3" not in scores.columns:
-                return None
-            valid = scores[["M1", "S3"]].dropna()
-            if len(valid) < 20:
-                return None
-            return float(valid["M1"].corr(valid["S3"]))
-        except Exception:
-            return None
-
     def calculate_health(self, indicator_results: dict, date: str = None) -> float:
         statuses = []
         for name in indicator_results:
@@ -116,10 +102,9 @@ class FGICalculator:
             })
         if not statuses:
             return 0
-        exceed_rate = 0.0
-        if date is not None:
-            exceed_rate = calculate_correlation_exceed_rate(self._db, date)
-        return calculate_health_score(pd.DataFrame(statuses), exceed_rate)
+        # #49: correlation_exceed_rate 已废弃 — M1/S3 高相关是同源结构性事实，
+        # 已通过 INDICATOR_WEIGHTS 静态降权解决，不再惩罚 health_score。
+        return calculate_health_score(pd.DataFrame(statuses), 0.0)
 
     def _apply_forward_fill(self, indicator_results: dict, date: str):
         """指标当日无得分时，用最近 MISSING_DAY_LIMIT 个交易日内
@@ -165,19 +150,17 @@ class FGICalculator:
             d = self._db.get_latest_raw_date(raw_key, last_score_date)
             if d:
                 return d
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[WARN] _resolve_source_date failed for {indicator} ({raw_key}): {e}", flush=True)
         return last_score_date
 
     def run(self, date: str) -> dict:
         indicator_results = self.run_all_indicators(date)
         self._apply_forward_fill(indicator_results, date)
 
-        m1s3_corr = self._check_m1s3_correlation(date)
+        # #49: 删除 M1/S3 动态 corr 检查 — 同源结构性高相关，0.85 阈值 57% 触发不稳定
+        # INDICATOR_WEIGHTS 已静态化为 S2=0.75/S3=0.25
         weights = copy.deepcopy(INDICATOR_WEIGHTS)
-        if m1s3_corr is not None and m1s3_corr > 0.85:
-            weights["sentiment"] = {"S2": 0.75, "S3": 0.25}
-            print(f"  [corr] M1/S3 corr={m1s3_corr:.2f}>0.85, halving S3 weight")
 
         dimension_scores = {}
         for dim in DIMENSION_WEIGHTS:

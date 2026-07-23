@@ -174,3 +174,46 @@ class TestM4Calculator:
         result = m4_calculator.run("2024-01-10", lookback_days=300)
         assert result["status"] == "missing"
         assert result["m4"] is None
+
+    def test_degraded_status_not_overwritten(self, m4_calculator, db, monkeypatch):
+        """#46: last-good-value 触发的 degraded 状态不应被 run() 末尾的 normal 覆写"""
+        # 灌入历史 volume（不含当日，让 today_in_db=False）
+        dates = pd.bdate_range("2022-01-03", "2024-01-09")
+        for i, d in enumerate(dates):
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume",
+                               float(1e9 + (i % 20) * 1e7))
+        db.commit()
+        # 让 fetch_data 返回失败（触发 db_data.empty → last-good-value 路径）
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        def fake_fetch(*args, **kwargs):
+            return DataSourceResult(
+                status=DataSourceStatus.FAILED, data=None, source="mock", error="simulated"
+            )
+        monkeypatch.setattr(m4_calculator, "fetch_data", fake_fetch)
+        # 让 _get_last_good_volume 返回有效值（绕过 db_data.empty 但触发 last-good）
+        monkeypatch.setattr(m4_calculator, "_get_last_good_volume", lambda date: 1.5e9)
+        # 让 db_data 第一次为空（触发 fetch 路径），但写入 last-good 后再次 read 仍有历史
+        # 直接 patch 两次连续调用：第一次返回空（让 db_data.empty=True），第二次返回历史
+        original_get = db.get_raw_data
+        call_count = {"n": 0}
+
+        def patched_get(indicator, start, end):
+            call_count["n"] += 1
+            # 第 1 次（M4.run 初始 db_data）返回空 → 进入 fetch 分支
+            if call_count["n"] == 1:
+                import pandas as _pd
+                return _pd.DataFrame(columns=["date", "value"])
+            return original_get(indicator, start, end)
+        monkeypatch.setattr(db, "get_raw_data", patched_get)
+        monkeypatch.setattr(m4_calculator._db, "get_raw_data", patched_get)
+
+        result = m4_calculator.run("2024-01-10", lookback_days=600)
+        # last-good-value 应触发 degraded
+        assert result["status"] == "degraded", f"expected degraded, got {result['status']}"
+        # DB 中状态必须是 degraded，不能被覆写为 normal
+        status = db.get_status("2024-01-10")
+        m4_status = status[status["indicator"] == "m4"]
+        assert len(m4_status) == 1
+        assert m4_status.iloc[0]["status"] == "degraded", \
+            f"#46 regression: degraded overwritten to {m4_status.iloc[0]['status']}"
