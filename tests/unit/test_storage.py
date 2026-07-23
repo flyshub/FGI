@@ -18,7 +18,7 @@ def db():
 
 class TestDatabaseInit:
     def test_init_schema(self, db):
-        cursor = db._conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        cursor = db._connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = {row[0] for row in cursor.fetchall()}
         assert "raw_data" in tables
         assert "scores_daily" in tables

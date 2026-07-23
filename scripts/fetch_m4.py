@@ -17,6 +17,7 @@ def main():
     src = AKShareSource()
 
     print("=== Fetching m4_volume (创业板指成交量) 2015-至今 ===", flush=True)
+    # 新浪源对 sz399006 实际数据 2016 起；20150101 是脚本拉取起点，最早行不足会自动落入空集。
     r = src.fetch_cyb_daily("20150101", "20260722")
     if r.status.name != "HEALTHY" or r.data is None:
         print(f"FAIL: {r.error}", flush=True)
@@ -31,10 +32,12 @@ def main():
         db.upsert_raw_data(d, "m4_volume", float(row["volume"]))
     db.commit()
 
-    after = db._conn.execute(
-        "SELECT COUNT(*), MIN(date), MAX(date) FROM raw_data WHERE indicator='m4_volume'"
-    ).fetchone()
-    print(f"m4_volume in DB: {after[0]} rows, range {after[1]} ~ {after[2]}", flush=True)
+    after_n = db.count_rows("raw_data", "indicator='m4_volume'")
+    after_range = db.get_raw_date_range("m4_volume")
+    if after_range:
+        print(f"m4_volume in DB: {after_n} rows, range {after_range[0]} ~ {after_range[1]}", flush=True)
+    else:
+        print(f"m4_volume in DB: 0 rows", flush=True)
     return 0
 
 

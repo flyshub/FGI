@@ -22,6 +22,7 @@ except ImportError:
     ZZSHARE_ENABLED = False
 from fgi.output.pushplus import send_fgi_report
 from fgi.output.status import record_indicator_status
+from fgi.output.alert import Alert
 
 logger = logging.getLogger(__name__)
 
@@ -107,16 +108,19 @@ def main():
         print(f"Indicator Status: {result['indicator_results']}")
 
         try:
-            from fgi.output.alert import Alert
-            Alert(db_path=db.path).check_and_alert(target_date, result)
+            anomaly_detected = Alert(db_path=db.path).check_and_alert(target_date, result)
         except Exception as e:
             print(f"Anomaly check skipped: {e}")
+            anomaly_detected = False
 
-        ok = send_fgi_report(
-            result["fgi_raw"], result["dimension_scores"],
-            result["indicator_results"], result["health_score"],
-            date_str=target_date)
-        print(f"PushPlus: {'OK' if ok else 'skipped'}")
+        if anomaly_detected:
+            print("Anomaly detected — suspending daily FGI push, manual review required (spec line 262).")
+        else:
+            ok = send_fgi_report(
+                result["fgi_final"], result["dimension_scores"],
+                result["indicator_results"], result["health_score"],
+                date_str=target_date)
+            print(f"PushPlus: {'OK' if ok else 'skipped'}")
 
 
 if __name__ == "__main__":

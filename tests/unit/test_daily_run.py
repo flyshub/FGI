@@ -44,3 +44,48 @@ class TestSetupDataManager:
     def test_no_mock_source(self):
         manager = setup_data_manager()
         assert "mock" not in manager._sources
+
+
+class TestAnomalyGating:
+    """#34: 当 is_anomaly=True 时 daily_run 不调用 send_fgi_report（spec line 262）"""
+
+    def _patch_run_path(self, monkeypatch, anomaly_detected: bool, calls: dict):
+        """Patch calculator.run / Alert.check_and_alert / send_fgi_report / record_indicator_status."""
+        monkeypatch.setattr(daily_run, "is_trading_day", lambda d: True)
+        monkeypatch.setattr(daily_run, "setup_data_manager", lambda: object())
+
+        class _FakeDb:
+            path = ":memory:"
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+            def init_schema(self):
+                pass
+
+        monkeypatch.setattr(daily_run, "Database", lambda *a, **k: _FakeDb())
+        monkeypatch.setattr(daily_run, "FGICalculator", lambda *a, **k: type("C", (), {
+            "run": staticmethod(lambda d: {
+                "fgi_final": 70.0, "fgi_raw": 70.0, "health_score": 80.0,
+                "dimension_scores": {}, "indicator_results": {},
+            })
+        }))
+        monkeypatch.setattr(daily_run, "record_indicator_status", lambda *a, **k: None)
+        monkeypatch.setattr("fgi.output.alert.Alert.check_and_alert",
+                            lambda self, d, r: anomaly_detected)
+        monkeypatch.setattr(daily_run, "send_fgi_report",
+                            lambda *a, **k: calls.setdefault("pushed", True) or True)
+        monkeypatch.setattr("sys.argv", ["daily_run", "--date", "2024-01-02"])
+
+    def test_no_anomaly_sends_push(self, monkeypatch, capsys):
+        calls = {}
+        self._patch_run_path(monkeypatch, anomaly_detected=False, calls=calls)
+        daily_run.main()
+        assert calls.get("pushed") is True
+
+    def test_anomaly_blocks_push(self, monkeypatch, capsys):
+        calls = {}
+        self._patch_run_path(monkeypatch, anomaly_detected=True, calls=calls)
+        daily_run.main()
+        assert "pushed" not in calls
+        assert "manual review required" in capsys.readouterr().out

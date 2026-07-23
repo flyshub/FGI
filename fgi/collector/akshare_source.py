@@ -8,6 +8,10 @@ from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 # socket.setdefaulttimeout 仍能兜底，避免单条 TCP 连接永久挂起。
 DEFAULT_SOCKET_TIMEOUT = 30
 
+# 防止在模块 import 时产生全局副作用：socket.setdefaulttimeout 改为
+# 在 AKShareSource 首次实例化时设置（同一进程多次实例化只设一次）。
+_SOCKET_TIMEOUT_APPLIED = False
+
 
 def _retry(fn, retries=5, delay=3):
     """Retry with exponential backoff. socket.setdefaulttimeout bounds each call."""
@@ -23,12 +27,14 @@ def _retry(fn, retries=5, delay=3):
     raise last_err
 
 
-# 给 requests/socket 设全局默认超时，避免单条 TCP 连接永久挂起
-socket.setdefaulttimeout(DEFAULT_SOCKET_TIMEOUT)
-
-
 class AKShareSource(DataSource):
     def __init__(self, cache_ttl: float = 6 * 3600, cache_max: int = 500):
+        global _SOCKET_TIMEOUT_APPLIED
+        if not _SOCKET_TIMEOUT_APPLIED:
+            # 给 requests/socket 设全局默认超时，避免单条 TCP 连接永久挂起。
+            # 放在 __init__ 而非模块顶层，避免 import 时的全局副作用。
+            socket.setdefaulttimeout(DEFAULT_SOCKET_TIMEOUT)
+            _SOCKET_TIMEOUT_APPLIED = True
         self._client = None
         self._cache = {}
         self._cache_ttl = cache_ttl
@@ -279,7 +285,6 @@ class AKShareSource(DataSource):
                               lambda: _retry(lambda: ak.fund_stock_position_lg()))
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No fund position data")
-            df = df.rename(columns={"date": "date", "position": "position"})
             df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
             mask = (df["date"] >= start_date) & (df["date"] <= end_date)
             df = df.loc[mask].copy()

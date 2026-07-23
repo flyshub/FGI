@@ -1,10 +1,12 @@
-"""Test PushPlus push with 2026-07-21 data.
+"""Test PushPlus push with a given date's data.
 
-Uses daily_run flow (real fetch, not offline) to compute 2026-07-21 FGI,
-then sends via PushPlus.
+Uses daily_run flow (real fetch, not offline) to compute FGI for the target date,
+then sends via PushPlus. Default target date is yesterday (T+1 convention).
 """
+import argparse
 import os
 import sys
+from datetime import date, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,21 +19,28 @@ from fgi.output.pushplus import send_fgi_report
 from fgi.storage.database import Database
 from fgi.config.settings import DB_PATH
 
-TARGET_DATE = "2026-07-21"
-
 
 def main():
+    parser = argparse.ArgumentParser(description="Push a test FGI report via PushPlus.")
+    parser.add_argument(
+        "--date",
+        default=(date.today() - timedelta(days=1)).strftime("%Y-%m-%d"),
+        help="Target date (YYYY-MM-DD); default yesterday (T+1 convention).",
+    )
+    args = parser.parse_args()
+    target_date = args.date
+
     if not os.getenv("FGI_PUSHPLUS_TOKEN"):
         print("ERROR: FGI_PUSHPLUS_TOKEN not set")
         sys.exit(1)
 
-    print(f"Computing FGI for {TARGET_DATE} (real fetch, not offline)")
+    print(f"Computing FGI for {target_date} (real fetch, not offline)")
     data_manager = setup_data_manager()
 
     with Database(DB_PATH) as db:
         db.init_schema()
         calc = FGICalculator(data_manager, db)
-        result = calc.run(TARGET_DATE)
+        result = calc.run(target_date)
 
     print(f"FGI_raw:    {result['fgi_raw']}")
     print(f"FGI_final:  {result['fgi_final']}")
@@ -49,7 +58,7 @@ def main():
         result["dimension_scores"],
         result["indicator_results"],
         result["health_score"],
-        date_str=TARGET_DATE,
+        date_str=target_date,
     )
     print(f"PushPlus: {'OK' if ok else 'FAILED'}")
 
