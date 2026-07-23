@@ -118,11 +118,10 @@ def _score_bar(score: float, width: int = 8) -> str:
     return "█" * filled + "░" * (width - filled)
 
 
-def _fgi_percentile(fgi: float) -> str:
-    """return a human-friendly historical-position label."""
+def _fgi_percentile(fgi: float) -> tuple[str, str]:
+    """return (human-friendly label, short note for extreme)."""
     try:
         db = sqlite3.connect(str(DB_PATH))
-        # Use a single query that counts "below" vs total from scores_daily
         below = db.execute(
             "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL AND FGI_final < ?",
             (fgi,)
@@ -132,23 +131,23 @@ def _fgi_percentile(fgi: float) -> str:
         ).fetchone()[0]
         db.close()
         if total == 0:
-            return "无历史数据"
+            return "无历史数据", ""
         pct = below / total * 100
         if pct <= 10:
-            return f"低于历史上 {100-pct:.0f}% 的日子（极低）"
+            return f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"
         if pct <= 25:
-            return f"低于历史上 {100-pct:.0f}% 的日子（偏低）"
+            return f"低于历史上 {100-pct:.0f}% 的日子（偏低）", ""
         if pct <= 40:
-            return f"位于历史中下区域（{pct:.0f}%分位）"
+            return f"位于历史中下区域（{pct:.0f}%分位）", ""
         if pct <= 60:
-            return f"位于历史中部（{pct:.0f}%分位）"
+            return f"位于历史中部（{pct:.0f}%分位）", ""
         if pct <= 75:
-            return f"位于历史中上区域（{pct:.0f}%分位）"
+            return f"位于历史中上区域（{pct:.0f}%分位）", ""
         if pct <= 90:
-            return f"高于历史上 {pct:.0f}% 的日子（偏高）"
-        return f"高于历史上 {pct:.0f}% 的日子（极高）"
+            return f"高于历史上 {pct:.0f}% 的日子（偏高）", ""
+        return f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"
     except Exception:
-        return "暂无历史参考"
+        return "暂无历史参考", ""
 
 
 def _most_changed_indicators(indicator_results: dict, date_str: str) -> list:
@@ -166,16 +165,26 @@ def _most_changed_indicators(indicator_results: dict, date_str: str) -> list:
     return [c for c in changes[:3] if c[0] >= 5]
 
 
-def _fgi_header(fgi: float, health: float, date_str: str) -> str:
-    """Build the FGI hero section with gauge, bar, health, and historical context.
-
-    When health_score < 60, append a "数据质量异常，仅供参考" warning per spec §质量监控.
-    """
+def _fgi_header(fgi: float, health: float, date_str: str,
+                indicator_results: dict | None = None) -> str:
     level = _fgi_level(fgi)
     bar = _score_bar(fgi, 20)
-    pos = _fgi_percentile(fgi)
+    pos, extreme_note = _fgi_percentile(fgi)
     trend = _fgi_trend(fgi, date_str)
+
+    issues = []
+    if indicator_results:
+        for name, r in indicator_results.items():
+            st = r.get("status") if isinstance(r, dict) else None
+            if st == "degraded":
+                issues.append(f"{INDICATOR_NAMES.get(name, name)} 前向填充")
+            elif st == "missing":
+                issues.append(f"{INDICATOR_NAMES.get(name, name)} 缺失")
+            elif st == "substituted":
+                issues.append(f"{INDICATOR_NAMES.get(name, name)} 替代估算")
     health_label = f"**{health:.0f}** / 100"
+    if issues:
+        health_label += "（" + " · ".join(issues) + "）"
     if health < HEALTHY_THRESHOLD:
         health_label += " ⚠️ 数据质量异常，仅供参考"
 
@@ -188,6 +197,8 @@ def _fgi_header(fgi: float, health: float, date_str: str) -> str:
         f"| 健康度 | {health_label} |",
         f"| 历史位置 | {pos} |",
     ]
+    if extreme_note:
+        rows.append(f"| 注意 | {extreme_note} |")
 
     return "\n".join([
         f"## 📊 A股恐贪指数 · {date_str}",
@@ -204,7 +215,7 @@ def _fgi_header(fgi: float, health: float, date_str: str) -> str:
 
 def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
                         health: float, date_str: str) -> str:
-    parts = [_fgi_header(fgi_raw, health, date_str), "", "---", ""]
+    parts = [_fgi_header(fgi_raw, health, date_str, indicator_results), "", "---", ""]
 
     # --- 指标明细 (HTML table with colored rows) ---
     parts.append("### 🔍 各维度指标明细")
@@ -280,11 +291,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
 
     # --- 当日总结 ---
     level = _fgi_level(fgi_raw)
-    pct_str = _fgi_percentile(fgi_raw)
-    # extract pct number from percentile string
-    import re
-    pct_m = re.search(r"(\d+)%", pct_str)
-    pct_short = f"低于历史上 {100-int(pct_m.group(1))}% 的交易日" if pct_m else pct_str
+    pos_label, _ = _fgi_percentile(fgi_raw)
 
     dim_avgs = {}
     for dim in DIMENSION_INDICATORS:
@@ -296,7 +303,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     parts.append("### 📝 当日总结")
     parts.append("")
     dim_line = " · ".join(f"{DIMENSION_NAMES[d]} {dim_avgs[d]:.0f}" for d in DIMENSION_INDICATORS if dim_avgs[d] is not None)
-    parts.append(f"- FGI {fgi_raw:.1f}（{level}），{pct_short}")
+    parts.append(f"- FGI {fgi_raw:.1f}（{level}），{pos_label}")
     parts.append(f"- 维度：{dim_line}")
 
     movers = _most_changed_indicators(indicator_results, date_str)
