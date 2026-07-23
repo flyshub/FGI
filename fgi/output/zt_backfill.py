@@ -12,18 +12,26 @@ from fgi.collector.trading_calendar import resolve_trading_days
 def fetch_m1_s3(date_str: str) -> Dict:
     """M1/S3 同来源同字段：zt 家数取 market_emotion_kph（sjzt/zt，缺失回退
     limit_up 列表长度），封单额取 limit_up_his_kph 的 seal_money 合计（亿元）。
-    与日线 fetch_zt_daily_summary 路径保持一致。"""
+    与日线 fetch_zt_daily_summary 路径保持一致。
+
+    Issue #44: 当 levistock 数据源对该日无覆盖时（limit_up 为空列表），
+    返回 None 表示"数据源无覆盖"，调用方应跳过 upsert，避免把 0 当合法值写入。
+    """
     emotion = ls.market_emotion_kph(date=date_str)
     limit_up = ls.limit_up_his_kph(date=date_str)
 
     zt_count = emotion.get("sjzt", emotion.get("zt")) if isinstance(emotion, dict) else None
+    has_limit_up_data = bool(limit_up)
     if zt_count is None:
-        zt_count = len(limit_up) if limit_up else 0
+        zt_count = len(limit_up) if has_limit_up_data else None
 
-    seal_fund_sum = sum(item.get("seal_money", 0) for item in (limit_up or [])) / 1e8
+    seal_fund_sum = (
+        sum(item.get("seal_money", 0) for item in limit_up) / 1e8
+        if has_limit_up_data else None
+    )
 
     return {
-        "zt_count": int(zt_count),
+        "zt_count": zt_count,
         "seal_fund_sum": seal_fund_sum,
     }
 
@@ -58,6 +66,7 @@ def zt_backfill(start_date: str, end_date: str, db_path: Optional[Path] = None):
         start_time = time.time()
         fetched = 0
         skipped = 0
+        skipped_no_data = 0
         errors = []
 
         for i, date_str in enumerate(todo):
@@ -70,14 +79,23 @@ def zt_backfill(start_date: str, end_date: str, db_path: Optional[Path] = None):
                 zt_count = result["zt_count"]
                 seal_fund = result["seal_fund_sum"]
 
-                db.upsert_raw_data(date_str, "m1_zt_count", zt_count)
-                db.upsert_raw_data(date_str, "s3_seal_fund", seal_fund)
+                if zt_count is None and seal_fund is None:
+                    skipped_no_data += 1
+                    print(f"  [{i+1:>4}/{len(todo)}] {date_str} | ⚠ no source data, skipped")
+                    continue
+
+                if zt_count is not None:
+                    db.upsert_raw_data(date_str, "m1_zt_count", zt_count)
+                if seal_fund is not None:
+                    db.upsert_raw_data(date_str, "s3_seal_fund", seal_fund)
                 db.commit()
                 fetched += 1
 
+                zt_display = zt_count if zt_count is not None else "-"
+                seal_display = f"{seal_fund:.1f}" if seal_fund is not None else "-"
                 speed = f"{avg:.1f}s/date"
                 eta_str = f"{int(eta // 60)}m{int(eta % 60):02d}s" if eta > 60 else f"{eta:.0f}s"
-                print(f"  [{i+1:>4}/{len(todo)}] {date_str} | ↑{zt_count:>4} ¥{seal_fund:>7.1f}亿 | {speed} | ETA {eta_str}")
+                print(f"  [{i+1:>4}/{len(todo)}] {date_str} | ↑{zt_display:>4} ¥{seal_display:>7}亿 | {speed} | ETA {eta_str}")
 
             except Exception as e:
                 errors.append((date_str, str(e)))
@@ -89,8 +107,9 @@ def zt_backfill(start_date: str, end_date: str, db_path: Optional[Path] = None):
         total_sec = int(total_time % 60)
         print(f"\n{'='*50}")
         print(f"Backfill complete in {total_min}m{total_sec:02d}s")
-        print(f"  Fetched:  {fetched} dates")
-        print(f"  Skipped:  {skipped} dates (errors)")
+        print(f"  Fetched:           {fetched} dates")
+        print(f"  Skipped (errors):  {skipped} dates")
+        print(f"  Skipped (no data): {skipped_no_data} dates")
         if errors:
             print(f"\n  Errors ({len(errors)}):")
             for d, e in errors[:10]:

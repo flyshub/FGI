@@ -202,6 +202,23 @@ class Database:
             raise ValueError(f"unknown table: {table}")
         self._connection.execute(f"DELETE FROM {table}")
 
+    def clear_table_range(self, table: str, start_date: str, end_date: str) -> int:
+        """范围删除指定表的日期分区。返回删除行数。
+
+        table 限 'scores_daily' / 'daily_status'（无 raw_data，raw_data 用 PK 复合键）。
+        用于 recompute 时只清指定范围而非整表，保留历史数据完整性。
+        """
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        if table not in ("scores_daily", "daily_status"):
+            raise ValueError(f"clear_table_range supports scores_daily/daily_status only, got: {table}")
+        cur = self._connection.execute(
+            f"DELETE FROM {table} WHERE date BETWEEN ? AND ?",
+            (start_date, end_date),
+        )
+        return cur.rowcount or 0
+
+
     def update_score_field(self, date: str, field: str, value):
         """更新 scores_daily 单个字段。field 必须是 scores_daily 的合法列名。"""
         if self._connection is None:

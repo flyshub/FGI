@@ -11,13 +11,14 @@ class MockSource(DataSource):
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        n = len(dates)
         df = pd.DataFrame({
             "date": dates.strftime("%Y-%m-%d"),
-            "open": [100.0] * len(dates),
-            "close": [100.0] * len(dates),
-            "high": [100.0] * len(dates),
-            "low": [100.0] * len(dates),
-            "volume": [1000000] * len(dates),
+            "open": [100.0 + i * 0.1 for i in range(n)],
+            "close": [100.0 + i * 0.1 for i in range(n)],
+            "high": [101.0 + i * 0.1 for i in range(n)],
+            "low": [99.0 + i * 0.1 for i in range(n)],
+            "volume": [1000000 + i * 100 for i in range(n)],
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
@@ -132,10 +133,11 @@ class MockSource(DataSource):
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        n = len(dates)
         df = pd.DataFrame({
             "date": dates.strftime("%Y-%m-%d"),
-            "limit_up_count": [50] * len(dates),
-            "seal_fund_sum": [1000000000.0] * len(dates),
+            "limit_up_count": [50 + i for i in range(n)],
+            "seal_fund_sum": [1_000_000_000.0 + i * 10_000_000 for i in range(n)],
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
@@ -188,12 +190,13 @@ class MockSource(DataSource):
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
         dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        n = len(dates)
         df = pd.DataFrame({
             "date": dates.strftime("%Y-%m-%d"),
-            "up_num": [3044] * len(dates),
-            "down_num": [2165] * len(dates),
-            "uplimit_num": [97] * len(dates),
-            "downlimit_num": [20] * len(dates),
+            "up_num": [3044 + i for i in range(n)],
+            "down_num": [2165 + i for i in range(n)],
+            "uplimit_num": [97 + i for i in range(n)],
+            "downlimit_num": [20 + i for i in range(n)],
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 

@@ -95,6 +95,11 @@ class S3Calculator:
             self._db.upsert_status(date, "s3", "missing", "database", "Insufficient data")
             return {"s3": None, "status": "missing"}
 
+        raw_value = today["zt_ratio"].iloc[0]
+        if pd.isna(raw_value) or raw_value == 0:
+            self._db.upsert_status(date, "s3", "missing", "database", "Raw value is 0 (likely missing source coverage)")
+            return {"s3": None, "status": "missing"}
+
         score = self.calculate_score(percentile)
 
         self._db.upsert_raw_data(date, "s3_zt_ratio", today["zt_ratio"].iloc[0])
