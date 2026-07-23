@@ -19,7 +19,7 @@ class S3Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s4_zt_daily",
+            "s3_zt_daily",
             "fetch_zt_daily_summary",
             start_date,
             end_date

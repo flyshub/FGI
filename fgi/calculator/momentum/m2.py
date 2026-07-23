@@ -14,7 +14,7 @@ class M2Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "m2_sentiment",
+            "m2_market_overview",
             "fetch_open_sentiment",
             start_date,
             end_date

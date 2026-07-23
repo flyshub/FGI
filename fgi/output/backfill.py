@@ -47,12 +47,12 @@ def setup_data_manager() -> DataSourceManager:
         zzshare_ok = True
     except Exception:
         pass
-    for indicator in ["m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_volume",
-                       "s3_sentiment", "s4_zt_daily",
+    for indicator in ["m1_zt_stats", "m2_market_overview", "m3_index", "m4_cyb_volume",
+                       "s2_sentiment", "s3_zt_daily",
                        "v1_pe", "v1_bond", "v2_index",
                        "f1_margin", "f1_market_cap", "f2_fund_position", "f3_index", "f3_industry_flow"]:
         sources = []
-        if indicator in ("m2_sentiment", "s3_sentiment") and zzshare_ok:
+        if indicator in ("m2_market_overview", "s2_sentiment") and zzshare_ok:
             sources.append("zzshare")
         sources.append("akshare")
         if sources:
@@ -108,9 +108,9 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             print(f"ERR: {e}")
 
     # M1/S3 涨停板 (levistock, DB-first, do per-date)
-    print(f"\n  [M1/S3 涨停板] s4_zt_daily (levistock, multi-day by calculator)...", end=" ")
+    print(f"\n  [M1/S3 涨停板] s3_zt_daily (levistock, multi-day by calculator)...", end=" ")
     try:
-        result = data_manager.fetch("s4_zt_daily", "fetch_zt_daily_summary", "2020-01-01", today)
+        result = data_manager.fetch("s3_zt_daily", "fetch_zt_daily_summary", "2020-01-01", today)
         if result.status == DataSourceStatus.HEALTHY and result.data is not None:
             for _, row in result.data.iterrows():
                 ds = str(row["date"])
@@ -126,7 +126,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     # M2 sentiment from zzshare（S1 指标已删除，不再写 s1_* 键）
     print(f"\n  [M2 sentiment] zzshare...", end=" ")
     try:
-        result = data_manager.fetch("m2_sentiment", "fetch_open_sentiment", "2020-01-01", today)
+        result = data_manager.fetch("m2_market_overview", "fetch_open_sentiment", "2020-01-01", today)
         if result.status in (DataSourceStatus.HEALTHY, DataSourceStatus.DEGRADED) \
                 and result.data is not None:
             for _, row in result.data.iterrows():
@@ -143,7 +143,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     # S2 股吧热度
     print(f"  [S2 股吧热度] zzshare...", end=" ")
     try:
-        result = data_manager.fetch("s3_sentiment", "fetch_market_hot_sentiment", "2020-01-01", today)
+        result = data_manager.fetch("s2_sentiment", "fetch_market_hot_sentiment", "2020-01-01", today)
         if result.status == DataSourceStatus.HEALTHY and result.data is not None:
             n = store_indicator_data(db, "s2_heat", result.data, "p_close", "date")
             print(f"OK ({n} records)")

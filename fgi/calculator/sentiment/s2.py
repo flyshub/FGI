@@ -17,7 +17,7 @@ class S2Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "s3_sentiment",
+            "s2_sentiment",
             "fetch_market_hot_sentiment",
             start_date,
             end_date

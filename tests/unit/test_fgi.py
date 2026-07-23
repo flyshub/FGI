@@ -25,8 +25,8 @@ def data_manager():
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
     for chain in [
-        "m1_zt_stats", "m2_sentiment", "m3_index", "m4_cyb_volume",
-        "s3_sentiment", "s4_zt_daily", "v1_pe", "v1_bond",
+        "m1_zt_stats", "m2_market_overview", "m3_index", "m4_cyb_volume",
+        "s2_sentiment", "s3_zt_daily", "v1_pe", "v1_bond",
         "f1_margin", "f1_market_cap", "f2_fund_position",
         "f3_industry_flow", "f3_index",
     ]:

@@ -25,9 +25,9 @@ def data_manager():
     manager = DataSourceManager()
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
-    manager.configure_chain("m2_sentiment", ["mock"])
-    manager.configure_chain("s3_sentiment", ["mock"])
-    manager.configure_chain("s4_zt_daily", ["mock"])
+    manager.configure_chain("m2_market_overview", ["mock"])
+    manager.configure_chain("s2_sentiment", ["mock"])
+    manager.configure_chain("s3_zt_daily", ["mock"])
     return manager
 
 
