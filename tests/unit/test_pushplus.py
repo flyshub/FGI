@@ -13,14 +13,14 @@ class TestFgiHeader:
         assert "⚠️ 数据质量异常，仅供参考" in out
         assert "**55** / 100" in out
 
-    def test_boundary_60_not_warned(self):
-        """health == 60 不触发告警（spec: <60 才标注）"""
-        out = _fgi_header(60.0, 60.0, "2026-07-23")
+    def test_boundary_70_not_warned(self):
+        """health == 70 不触发告警（threshold 已从 60 提升到 70）"""
+        out = _fgi_header(60.0, 70.0, "2026-07-23")
         assert "数据质量异常" not in out
 
-    def test_boundary_59_warned(self):
-        """health == 59 触发告警"""
-        out = _fgi_header(60.0, 59.0, "2026-07-23")
+    def test_boundary_69_warned(self):
+        """health == 69 触发告警"""
+        out = _fgi_header(60.0, 69.0, "2026-07-23")
         assert "数据质量异常" in out
 
     def test_zero_health_warned(self):

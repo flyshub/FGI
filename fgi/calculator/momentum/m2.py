@@ -1,3 +1,4 @@
+from datetime import datetime
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -62,6 +63,7 @@ class M2Calculator:
 
         self._db.upsert_raw_data(date, "m2_percentile", percentile)
         self._db.upsert_score(date, {"M2": score})
-        self._db.upsert_status(date, "m2", "normal", result.source or "")
+        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self._db.upsert_status(date, "m2", "normal", result.source or "", f"fetched_at={ts}")
 
         return {"m2": score, "status": "normal", "percentile": percentile}

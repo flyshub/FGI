@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -67,8 +68,10 @@ class F2Calculator:
         # First, try to get data from database
         db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
 
+        fetched_freshly = False
         today_in_db = not db_data.empty and date in db_data["date"].values
         if not today_in_db:
+            fetched_freshly = True
             # Fetch recent data (last 30 days) to handle weekly frequencies
             recent_start = pd.Timestamp(date) - pd.Timedelta(days=30)
             recent_start = recent_start.strftime("%Y-%m-%d")
@@ -123,7 +126,14 @@ class F2Calculator:
         self._db.upsert_raw_data(date, "f2_percentile", percentile)
         self._db.upsert_score(date, {"F2": score})
         status = "degraded" if is_degraded else "normal"
-        source_note = f"ffill from {today['date'].iloc[0]} (staleness={staleness_days}d)" if is_degraded else "database"
-        self._db.upsert_status(date, "f2", status, "database", source_note)
+        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        if fetched_freshly:
+            source_note = f"fetched_at={ts}"
+            if is_degraded:
+                source_note += f"; ffill from {today['date'].iloc[0]} (staleness={staleness_days}d)"
+            self._db.upsert_status(date, "f2", status, "database", source_note)
+        else:
+            source_note = f"ffill from {today['date'].iloc[0]} (staleness={staleness_days}d)" if is_degraded else "database"
+            self._db.upsert_status_keep_source(date, "f2", status, source_note)
 
         return {"f2": score, "status": status, "percentile": percentile}

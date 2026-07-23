@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 from typing import Optional
@@ -72,11 +73,13 @@ class M4Calculator:
         db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
 
         is_degraded = False
+        fetched_freshly = False
         today_in_db = not db_data.empty and date in db_data["date"].values
         if not today_in_db:
             recent_start = pd.Timestamp(date) - pd.Timedelta(days=30)
             result = self.fetch_data(recent_start.strftime("%Y-%m-%d"), date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+                fetched_freshly = True
                 self._persist_source_data(result)
                 db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
 
@@ -96,6 +99,7 @@ class M4Calculator:
                     self._db.upsert_status(date, "m4", "missing", result.source or "", result.error or "No data collected")
                     return {"m4": None, "status": "missing"}
             else:
+                fetched_freshly = True
                 self._persist_source_data(result)
                 db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
 
@@ -122,6 +126,10 @@ class M4Calculator:
         self._db.upsert_raw_data(date, "m4_percentile", percentile)
         self._db.upsert_score(date, {"M4": score})
         if not is_degraded:
-            self._db.upsert_status(date, "m4", "normal", "database")
+            ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            if fetched_freshly:
+                self._db.upsert_status(date, "m4", "normal", "database", f"fetched_at={ts}")
+            else:
+                self._db.upsert_status_keep_source(date, "m4", "normal")
 
         return {"m4": score, "status": "degraded" if is_degraded else "normal", "percentile": percentile}

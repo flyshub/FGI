@@ -174,7 +174,8 @@ class TestFGICalculator:
             "M3": {"status": "missing"},
         }
         health = calculator.calculate_health(indicator_results)
-        assert abs(health - 83.33) < 0.01
+        # missing 计入 impaired 集，新公式: 0.667*40 + 0.667*40 + 20 = 73.33
+        assert abs(health - 73.33) < 0.01
 
     def test_calculate_health_all_normal(self, calculator):
         indicator_results = {

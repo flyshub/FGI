@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 from typing import Optional
@@ -89,6 +90,7 @@ class S2Calculator:
         self._db.upsert_raw_data(date, "s2_zscore", today["heat_zscore"].iloc[0])
         self._db.upsert_raw_data(date, "s2_percentile", percentile)
         self._db.upsert_score(date, {"S2": score})
-        self._db.upsert_status(date, "s2", "normal", result.source)
+        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self._db.upsert_status(date, "s2", "normal", result.source, f"fetched_at={ts}")
 
         return {"s2": score, "status": "normal", "percentile": percentile}

@@ -1,3 +1,4 @@
+from datetime import datetime
 import pandas as pd
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -94,6 +95,7 @@ class F1Calculator:
         self._db.upsert_raw_data(date, "f1_margin_ratio", today["margin_ratio"].iloc[0])
         self._db.upsert_raw_data(date, "f1_percentile", percentile)
         self._db.upsert_score(date, {"F1": score})
-        self._db.upsert_status(date, "f1", "normal", "akshare")
+        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self._db.upsert_status(date, "f1", "normal", "akshare", f"fetched_at={ts}")
 
         return {"f1": score, "status": "normal", "percentile": percentile}

@@ -37,6 +37,8 @@ class Database:
     def init_schema(self):
         if self._connection is None:
             raise RuntimeError("Database not connected")
+        # NOTE: S1 and S4 columns on scores_daily are deprecated since V3.8
+        # (indicator set reduced). Columns kept to avoid schema migration risk.
         self._connection.executescript("""
             CREATE TABLE IF NOT EXISTS raw_data (
                 date TEXT,

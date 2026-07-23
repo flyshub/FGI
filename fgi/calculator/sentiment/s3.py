@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import pandas as pd
 from typing import Optional
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
@@ -59,12 +60,14 @@ class S3Calculator:
 
         db_data = self._db.get_raw_data("s3_seal_fund", start_date, end_date)
 
+        fetched_freshly = False
         today_in_db = not db_data.empty and date in db_data["date"].values
         if not today_in_db:
             result = self.fetch_data(date, date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
                 valid = result.data[result.data["seal_fund_sum"].fillna(0).astype(float) > 0]
                 if not valid.empty:
+                    fetched_freshly = True
                     for _, row in valid.iterrows():
                         self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(row["seal_fund_sum"]) / 1e8)
                     self._db.commit()
@@ -107,6 +110,10 @@ class S3Calculator:
         self._db.upsert_raw_data(date, "s3_zt_ratio", today["zt_ratio"].iloc[0])
         self._db.upsert_raw_data(date, "s3_percentile", percentile)
         self._db.upsert_score(date, {"S3": score})
-        self._db.upsert_status(date, "s3", "normal", "database")
+        if fetched_freshly:
+            ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            self._db.upsert_status(date, "s3", "normal", "database", f"fetched_at={ts}")
+        else:
+            self._db.upsert_status_keep_source(date, "s3", "normal")
 
         return {"s3": score, "status": "normal", "percentile": percentile}
