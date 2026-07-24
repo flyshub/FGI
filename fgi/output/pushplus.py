@@ -6,6 +6,7 @@ import sqlite3
 import logging
 import requests
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fgi.common.utils import extract_indicator_score
 from fgi.config.settings import DB_PATH, HEALTHY_THRESHOLD
@@ -216,9 +217,84 @@ def _fgi_header(fgi: float, health: float, date_str: str,
     ])
 
 
+def _decision_matrix_section(dm: dict) -> str:
+    """决策矩阵块：3×3 网格 + 软性建议。"""
+    fgi = dm.get("fgi")
+    sent = dm.get("sentiment_tier", "")
+    val = dm.get("valuation_tier", "")
+    val_pct = dm.get("valuation_pct")
+    pe_pct = dm.get("pe_pct")
+    pb_pct = dm.get("pb_pct")
+    quadrant = dm.get("quadrant", "")
+    advice = dm.get("advice", "")
+
+    fgi_str = f"{fgi:.1f}" if fgi is not None else "—"
+    val_pct_str = f"{val_pct*100:.0f}%" if val_pct is not None else "—"
+    pe_pct_str = f"{pe_pct*100:.0f}%" if pe_pct is not None else "—"
+    pb_pct_str = f"{pb_pct*100:.0f}%" if pb_pct is not None else "—"
+
+    # 简单 emoji 选择
+    emoji = {
+        "强烈关注": "🟢", "关注": "🔵", "中性": "⚪",
+        "观望": "🟡", "谨慎": "🟠", "强烈谨慎": "🔴",
+    }.get(quadrant, "❓")
+
+    # 3x3 矩阵，当前象限高亮
+    def cell(s: str, v: str, hl: bool) -> str:
+        bg = "#FFE082" if hl else "#FAFAFA"
+        s_str = f"**{s}**" if hl else s
+        v_str = f"**{v}**" if hl else v
+        return f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:{bg};text-align:center">{s_str}<br><span style="font-size:0.85em;color:#555">{v_str}</span></td>'
+
+    cur_sent = sent
+    cur_val = val
+    sents = ["恐惧", "中性", "贪婪"]
+    vals = ["低估", "合理", "高估"]
+    html = ['<table style="width:100%">']
+    # 表头
+    html.append('<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">情绪＼估值</th>'
+                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">低估(&lt;25%)</th>'
+                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">合理(25-75%)</th>'
+                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">高估(&gt;75%)</th></tr>')
+    qmap = {
+        ("恐惧", "低估"): "强烈关注", ("恐惧", "合理"): "关注", ("恐惧", "高估"): "观望",
+        ("中性", "低估"): "关注", ("中性", "合理"): "中性", ("中性", "高估"): "谨慎",
+        ("贪婪", "低估"): "观望", ("贪婪", "合理"): "谨慎", ("贪婪", "高估"): "强烈谨慎",
+    }
+    for s in sents:
+        cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#333">{s}</td>']
+        for v in vals:
+            q = qmap[(s, v)]
+            cells.append(cell(q, "", s == cur_sent and v == cur_val))
+        html.append("<tr>" + "".join(cells) + "</tr>")
+    html.append("</table>")
+
+    lines = [
+        "### 🎯 情绪-估值决策矩阵",
+        "",
+        "\n".join(html),
+        "",
+        f"- 当前象限：{emoji} **{quadrant}**（情绪 {sent} · 估值 {val}）",
+        f"- 情绪 FGI：{fgi_str}",
+        f"- 估值分位：{val_pct_str}（PE {pe_pct_str} · PB {pb_pct_str}）",
+        f"- 建议：{advice}",
+        "",
+        "<sub>※ 决策矩阵为情绪-估值辅助工具，软性建议不构成投资指令</sub>",
+    ]
+    return "\n".join(lines)
+
+
 def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
-                        health: float, date_str: str) -> str:
+                        health: float, date_str: str,
+                        decision_matrix: Optional[dict] = None) -> str:
     parts = [_fgi_header(fgi_raw, health, date_str, indicator_results), "", "---", ""]
+
+    # --- 决策矩阵 ---
+    if decision_matrix:
+        parts.append(_decision_matrix_section(decision_matrix))
+        parts.append("")
+        parts.append("---")
+        parts.append("")
 
     # --- 指标明细 (HTML table with colored rows) ---
     parts.append("### 🔍 各维度指标明细")
@@ -359,7 +435,8 @@ def _post(title: str, content: str) -> bool:
 
 
 def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
-                    health: float, *, date_str: str | None = None) -> bool:
+                    health: float, *, date_str: str | None = None,
+                    decision_matrix: Optional[dict] = None) -> bool:
     """Send FGI daily report via PushPlus.
 
     Returns True on success, False otherwise.
@@ -368,7 +445,8 @@ def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: d
         date_str = datetime.now().strftime("%Y-%m-%d")
     ts = datetime.now().strftime("%H:%M:%S")
 
-    content = _build_fgi_markdown(fgi_raw, dimension_scores, indicator_results, health, date_str)
+    content = _build_fgi_markdown(fgi_raw, dimension_scores, indicator_results, health, date_str,
+                                  decision_matrix=decision_matrix)
     content += f"\n\n---\n`{date_str} {ts}`"
 
     return _post(f"📊 A股恐贪指数 · {date_str} {ts}", content)
