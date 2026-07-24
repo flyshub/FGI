@@ -20,6 +20,7 @@ DEFAULT_CHAINS: Dict[str, List[str]] = {
     "v1_pe": ["akshare"],
     "v1_bond": ["akshare"],
     "v2_index": ["akshare"],
+    "v4_qvix": ["akshare"],
     "f1_margin": ["akshare"],
     "f1_market_cap": ["akshare"],
     "f2_fund_position": ["akshare"],

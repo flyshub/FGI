@@ -18,6 +18,7 @@ from fgi.calculator.sentiment.s2 import S2Calculator
 from fgi.calculator.sentiment.s3 import S3Calculator
 from fgi.calculator.valuation.v1 import V1Calculator
 from fgi.calculator.valuation.v2 import V2Calculator
+from fgi.calculator.valuation.v4 import V4Calculator
 from fgi.calculator.funding.f1 import F1Calculator
 from fgi.calculator.funding.f2 import F2Calculator
 from fgi.calculator.funding.f3 import F3Calculator
@@ -29,14 +30,16 @@ INDICATOR_WEIGHTS = {
     # 退化为抖动开关造成 FGI 因权重切换跳变。改静态 S2=0.75/S3=0.25。
     "sentiment": {"S2": 0.75, "S3": 0.25},
     "valuation": {"V1": 0.50, "V2": 0.50},
+    "volatility": {"V4": 1.0},
     "funding": {"F1": 0.3333, "F2": 0.3333, "F3": 0.3334},
 }
 
 DIMENSION_WEIGHTS = {
-    "momentum": 0.25,
-    "sentiment": 0.25,
-    "valuation": 0.25,
-    "funding": 0.25,
+    "momentum": 0.20,
+    "sentiment": 0.20,
+    "valuation": 0.20,
+    "volatility": 0.20,
+    "funding": 0.20,
 }
 
 
@@ -53,6 +56,7 @@ class FGICalculator:
             "S3": S3Calculator(data_manager, db),
             "V1": V1Calculator(data_manager, db),
             "V2": V2Calculator(data_manager, db),
+            "V4": V4Calculator(data_manager, db),
             "F1": F1Calculator(data_manager, db),
             "F2": F2Calculator(data_manager, db),
             "F3": F3Calculator(data_manager, db),

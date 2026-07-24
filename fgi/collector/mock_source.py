@@ -1,6 +1,7 @@
+import numpy as np
 import pandas as pd
-from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
+from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 class MockSource(DataSource):
     def __init__(self, name: str = "mock", healthy: bool = True):
@@ -114,6 +115,19 @@ class MockSource(DataSource):
             "date": dates.strftime("%Y-%m-%d"),
             "call_volume": [100000] * len(dates),
             "put_volume": [80000] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
+    def fetch_qvix(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        n = len(dates)
+        # sine-wave variation around 20 ± 5 to avoid rolling_percentile degeneracy (nunique==1 → NaN)
+        wave = 20.0 + 5.0 * np.sin(np.linspace(0, 4 * np.pi, n)) + 0.01 * np.arange(n)
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "close": wave,
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 

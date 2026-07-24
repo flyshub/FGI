@@ -52,7 +52,7 @@ class Database:
                 date TEXT PRIMARY KEY,
                 M1 REAL, M2 REAL, M3 REAL, M4 REAL,
                 S1 REAL, S2 REAL, S3 REAL,
-                V1 REAL, V2 REAL,
+                V1 REAL, V2 REAL, V4 REAL,
                 F1 REAL, F2 REAL, F3 REAL,
                 FGI_raw REAL, FGI_final REAL,
                 FGI_legacy REAL, FGI_current REAL,
@@ -68,6 +68,24 @@ class Database:
                 PRIMARY KEY (date, indicator)
             );
         """)
+
+        self._migrate_scores_daily_columns()
+
+    def _migrate_scores_daily_columns(self):
+        """Add any scores_daily columns missing from older DB schemas.
+        Needed because CREATE TABLE IF NOT EXISTS is a no-op on existing tables,
+        so indicator columns added in later specs (V4, FGI_current, health_score)
+        require explicit ALTER TABLE on legacy DBs."""
+        if self._connection is None:
+            return
+        existing = {r[1] for r in self._connection.execute("PRAGMA table_info(scores_daily)").fetchall()}
+        defined = {
+            "M1", "M2", "M3", "M4", "S1", "S2", "S3",
+            "V1", "V2", "V4", "F1", "F2", "F3",
+            "FGI_raw", "FGI_final", "FGI_legacy", "FGI_current", "health_score",
+        }
+        for col in defined - existing:
+            self._connection.execute(f"ALTER TABLE scores_daily ADD COLUMN {col} REAL")
 
     def upsert_raw_data(self, date: str, indicator: str, value: float):
         if self._connection is None:
@@ -248,7 +266,7 @@ class Database:
             raise RuntimeError("Database not connected")
         # 字段白名单（与 init_schema 同步）
         allowed = {
-            "M1", "M2", "M3", "M4", "S1", "S2", "S3", "V1", "V2", "F1", "F2", "F3",
+            "M1", "M2", "M3", "M4", "S1", "S2", "S3", "V1", "V2", "V4", "F1", "F2", "F3",
             "FGI_raw", "FGI_final", "FGI_legacy", "FGI_current", "health_score",
         }
         if field not in allowed:

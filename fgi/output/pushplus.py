@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 INDICATOR_NAMES = {
     "M1": "涨停板家数", "M2": "散户意愿", "M3": "偏离60日均线", "M4": "创业板成交活跃度",
     "S2": "股吧热度", "S3": "涨停封单量",
-    "V1": "沪深300风险溢价", "V2": "ΔERP Z-score",
+    "V1": "沪深300风险溢价", "V2": "ΔERP Z-score", "V4": "期权隐含波动率",
     "F1": "融资余额占比", "F2": "基金股票仓位", "F3": "主力资金板块偏好",
 }
 
 DIMENSION_NAMES = {
     "momentum": "动量", "sentiment": "情绪",
-    "valuation": "估值", "funding": "资金",
+    "valuation": "估值", "volatility": "波动率", "funding": "资金",
 }
 
 # 维度 → 指标映射，控制排版顺序
@@ -30,6 +30,7 @@ DIMENSION_INDICATORS = {
     "momentum": ["M1", "M2", "M3", "M4"],
     "sentiment": ["S2", "S3"],
     "valuation": ["V1", "V2"],
+    "volatility": ["V4"],
     "funding":  ["F1", "F2", "F3"],
 }
 
@@ -37,6 +38,7 @@ _DIM_COLORS = {
     "momentum": "#E8F4FD",
     "sentiment": "#FDE8E8",
     "valuation": "#E8F5E9",
+    "volatility": "#F3E8FD",
     "funding": "#FFF8E1",
 }
 
@@ -55,6 +57,7 @@ _CHANGE_DEFS = {
     "主力资金板块偏好": "主力资金在行业板块间净流入的集中度百分位。读数高=集中布局；读数低=分散或收缩。",
     "创业板成交活跃度": "创业板成交量占全市场成交量的滚动百分位。读数高=资金集中于创业板；读数低=流出。",
     "ΔERP Z-score": "ERP的Z-score，衡量股债性价比偏离历史均值程度。正值=股票性价比偏强。",
+    "期权隐含波动率": "50ETF期权隐含波动率（QVIX，中国版VIX）的5年滚动百分位反向得分。高VIX=恐慌；低VIX=平静。",
 }
 
 _SUBSTITUTE_DESC = {

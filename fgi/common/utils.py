@@ -98,7 +98,15 @@ def calculate_fgi(dimension_scores: dict):
     excluded and the remaining dimension weights renormalized proportionally.
     Returns None when every dimension is missing, or when fewer than 2 dimensions
     have valid scores (insufficient coverage for a meaningful composite)."""
-    weights = {"momentum": 0.25, "sentiment": 0.25, "valuation": 0.25, "funding": 0.25}
+    # KEEP IN SYNC with fgi/calculator/fgi.py:DIMENSION_WEIGHTS
+    # (duplicated to avoid circular import; consolidated source-of-truth lives there)
+    weights = {
+        "momentum": 0.20,
+        "sentiment": 0.20,
+        "valuation": 0.20,
+        "volatility": 0.20,
+        "funding": 0.20,
+    }
     available = [
         (dim, dimension_scores[dim])
         for dim in weights
