@@ -6,8 +6,19 @@ from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m4 import M4Calculator
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
+from fgi.common.utils import clear_percentile_cache
 from fgi.storage.database import Database
 import pandas as pd
+
+
+@pytest.fixture(autouse=True)
+def _clear_percentile_cache():
+    """Module-level _PERCENTILE_CACHE causes cross-test pollution when two tests
+    produce series with identical (length, hash) keys but different semantics.
+    Clear before each test to guarantee a clean computation."""
+    clear_percentile_cache()
+    yield
+    clear_percentile_cache()
 
 
 @pytest.fixture
@@ -81,6 +92,35 @@ class TestM1Calculator:
         status = db.get_status("2024-01-10")
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
+
+    def test_null_today_triggers_refetch(self, m1_calculator, db, monkeypatch):
+        """当 db_data 里 today 的 value 是 NULL 时，calc 应该触发 fetch 而非跳过"""
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        # 灌入 500 天历史有效值（不含 today），再为 today 写 NULL（模拟清理后状态）
+        dates = pd.bdate_range("2022-01-03", "2023-12-28")
+        for i, d in enumerate(dates):
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m1_zt_count",
+                               float(20 + (i % 50)))
+        db.upsert_raw_data("2023-12-28", "m1_zt_count", None)
+        db.commit()
+
+        fetched = {"called": False}
+        def mock_fetch(start_date, end_date):
+            fetched["called"] = True
+            if start_date == "2023-12-28":
+                df = pd.DataFrame({
+                    "date": ["2023-12-28"],
+                    "limit_up_count": [30],
+                })
+                return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
+            return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+        monkeypatch.setattr(m1_calculator, "fetch_data", mock_fetch)
+
+        result = m1_calculator.run("2023-12-28", lookback_days=400)
+        assert fetched["called"], "NULL today must trigger fetch_data"
+        assert result["status"] == "normal", f"got {result['status']}"
+        assert result["m1"] is not None
 
 
 class TestM2Calculator:
@@ -217,3 +257,32 @@ class TestM4Calculator:
         assert len(m4_status) == 1
         assert m4_status.iloc[0]["status"] == "degraded", \
             f"#46 regression: degraded overwritten to {m4_status.iloc[0]['status']}"
+
+    def test_null_today_triggers_refetch(self, m4_calculator, db, monkeypatch):
+        """当 db_data 里 today 的 value 是 NULL 时，calc 应该触发 fetch 而非跳过"""
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        # 灌入 500 天历史 volume（不含 today），再为 today 写 NULL
+        dates = pd.bdate_range("2022-01-03", "2023-12-28")
+        for i, d in enumerate(dates):
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume",
+                               float(1e9 + (i % 30) * 1e7))
+        db.upsert_raw_data("2023-12-28", "m4_volume", None)
+        db.commit()
+
+        fetched = {"called": False}
+        def mock_fetch(start_date, end_date):
+            fetched["called"] = True
+            if end_date == "2023-12-28":
+                df = pd.DataFrame({
+                    "date": ["2023-12-28"],
+                    "volume": [1.5e9],
+                })
+                return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
+            return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+        monkeypatch.setattr(m4_calculator, "fetch_data", mock_fetch)
+
+        result = m4_calculator.run("2023-12-28", lookback_days=400)
+        assert fetched["called"], "NULL today must trigger fetch_data"
+        assert result["status"] == "normal", f"got {result['status']}"
+        assert result["m4"] is not None
