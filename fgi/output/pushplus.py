@@ -248,7 +248,8 @@ def _decision_matrix_section(dm: dict) -> str:
 
     cur_sent = sent
     cur_val = val
-    sents = ["恐惧", "中性", "贪婪"]
+    sents_raw = ["恐惧", "中性", "贪婪"]
+    sents_display = ["恐惧(<35)", "中性(35-65)", "贪婪(>65)"]
     vals = ["低估", "合理", "高估"]
     html = ['<table style="width:100%">']
     # 表头
@@ -261,8 +262,8 @@ def _decision_matrix_section(dm: dict) -> str:
         ("中性", "低估"): "关注", ("中性", "合理"): "中性", ("中性", "高估"): "谨慎",
         ("贪婪", "低估"): "观望", ("贪婪", "合理"): "谨慎", ("贪婪", "高估"): "强烈谨慎",
     }
-    for s in sents:
-        cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#222">{s}</td>']
+    for si, s in enumerate(sents_raw):
+        cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#222">{sents_display[si]}</td>']
         for v in vals:
             q = qmap[(s, v)]
             cells.append(cell(q, "", s == cur_sent and v == cur_val))
