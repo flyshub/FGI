@@ -5,8 +5,19 @@ from fgi.calculator.sentiment.s2 import S2Calculator
 from fgi.calculator.sentiment.s3 import S3Calculator
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
+from fgi.common.utils import clear_percentile_cache
 from fgi.storage.database import Database
 import pandas as pd
+
+
+@pytest.fixture(autouse=True)
+def _clear_percentile_cache():
+    """Module-level _PERCENTILE_CACHE causes cross-test pollution when two tests
+    produce series with identical (length, hash) keys but different semantics.
+    Clear before each test to guarantee a clean computation."""
+    clear_percentile_cache()
+    yield
+    clear_percentile_cache()
 
 
 @pytest.fixture
@@ -127,9 +138,9 @@ class TestS3Calculator:
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
 
-    def test_today_raw_zero_is_pollution(self, s3_calculator, db):
-        """S3 raw=0 is always data outage, not genuine zero-limit-up (no such market day).
-        Per audit: 476 S3=0 rows in production DB all turned out to be outages.
+    def test_today_raw_zero_is_pollution(self, s3_calculator, db, monkeypatch):
+        """S3 raw=0 (or denormalized float) is always a data-source outage
+        (audit: 0 genuine zero-limit-up days in 8 years), never a real value.
         Must return missing, not percentile=0."""
         # Seed window with valid data + zero-polluted today
         dates_valid = pd.date_range("2023-01-01", periods=1300).strftime("%Y-%m-%d")
@@ -137,6 +148,21 @@ class TestS3Calculator:
             db.upsert_raw_data(d, "s3_seal_fund", 50.0)  # all 50 亿 uniform
         db.upsert_raw_data("2024-01-10", "s3_seal_fund", 0.0)  # today: outage as 0
         db.commit()
+
+        # Stub fetch_data to also return 0 for today (since today_in_db now treats
+        # value=0 as "not in db" and tries to re-fetch)
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        def mock_fetch(start, end):
+            if start == "2024-01-10":
+                df = pd.DataFrame({
+                    "date": ["2024-01-10"],
+                    "limit_up_count": [0],
+                    "seal_fund_sum": [0.0],
+                })
+                return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
+            return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+        monkeypatch.setattr(s3_calculator, "fetch_data", mock_fetch)
 
         result = s3_calculator.run("2024-01-10", lookback_days=300)
         assert result["status"] == "missing", "S3 raw=0 today must be treated as missing (pollution)"
@@ -178,3 +204,36 @@ class TestS3Calculator:
         result = s3_calculator.run(dates[-1], lookback_days=1100)
         assert result["status"] == "normal"
         assert result["s3"] < 95, f"Denorm floats must not inflate percentile; got {result['s3']}"
+
+    def test_null_today_triggers_refetch(self, s3_calculator, db, monkeypatch):
+        """If today's raw_data row exists but value is NULL (e.g., from cleanup or
+        failed prior run), calculator must re-fetch from source instead of returning missing.
+
+        Bug source (2026-07-24): after S3 pollution cleanup NULL'd rows, calculator's
+        today_in_db check returned True (row exists), skipping the fetch path and
+        returning 'missing' even though the live API had data.
+        """
+        dates = pd.date_range("2023-01-01", periods=501).strftime("%Y-%m-%d")
+        for i, d in enumerate(dates[:-1]):
+            db.upsert_raw_data(d, "s3_seal_fund", 10.0 + (i % 50))
+        # Today: row exists but value is NULL (simulating post-cleanup state)
+        db.upsert_raw_data(dates[-1], "s3_seal_fund", None)
+        db.commit()
+
+        # Stub fetch_data to return valid fresh data for today only
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        def mock_fetch(start_date, end_date):
+            if start_date == dates[-1]:  # today-only fetch from calculator.run line 76
+                df = pd.DataFrame({
+                    "date": [dates[-1]],
+                    "limit_up_count": [60],
+                    "seal_fund_sum": [50.0 * 1e8],  # 50 亿
+                })
+                return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
+            return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+        monkeypatch.setattr(s3_calculator, "fetch_data", mock_fetch)
+
+        result = s3_calculator.run(dates[-1], lookback_days=400)
+        assert result["status"] == "normal", f"NULL today must re-fetch; got {result['status']}"
+        assert result["s3"] is not None, "NULL today must produce a real score"

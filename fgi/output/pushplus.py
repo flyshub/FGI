@@ -197,7 +197,7 @@ def _fgi_header(fgi: float, health: float, date_str: str,
     if trend:
         rows.append(f"| 趋势 | {trend} |")
     rows += [
-        f"| 健康度 | {health_label} |",
+        f"| 数据健康度 | {health_label} |",
         f"| 历史位置 | {pos} |",
     ]
     if extreme_note:
