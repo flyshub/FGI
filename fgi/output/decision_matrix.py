@@ -11,7 +11,7 @@
 
 设计原则：
 - 软性建议（"建议关注"/"建议谨慎"），不构成投资指令
-- 阈值 25/75 与 FGI_LEVELS 保持一致
+- 阈值 35/65 与 FGI_LEVELS 保持一致
 - PE 与 PB 分位等权平均
 - 数据缺失时返回 None，由调用方降级处理
 """
@@ -29,9 +29,9 @@ from fgi.storage.database import Database
 logger = logging.getLogger(__name__)
 
 
-# 阈值（百分位为 0~1 小数；阈值用 0.25/0.75 与 FGI 25/75 等价概念对应）
-SENTIMENT_LOW = 25.0   # FGI 0-100
-SENTIMENT_HIGH = 75.0
+# 阈值与 FGI_LEVELS 保持一致：恐惧≤35, 中性 35-65, 贪婪≥65
+SENTIMENT_LOW = 35.0
+SENTIMENT_HIGH = 65.0
 VALUATION_LOW = 0.25   # 百分位 0-1
 VALUATION_HIGH = 0.75
 ROLLING_WINDOW_DAYS = 5 * 252  # 5 年
