@@ -43,7 +43,7 @@ class F1Calculator:
         cap_df = cap_df.copy().sort_values("date").reset_index(drop=True)
         cap_df["market_cap"] = pd.to_numeric(cap_df["market_cap"], errors="coerce")
         merged = pd.merge(margin_df[["date", "margin_balance"]], cap_df, on="date", how="left")
-        merged["market_cap"] = merged["market_cap"].ffill()
+        merged["market_cap"] = merged["market_cap"].replace(0, pd.NA).ffill()
         merged = merged.dropna(subset=["market_cap"])
         merged["margin_ratio"] = merged["margin_balance"] / (merged["market_cap"] * 1e8)
         return merged
