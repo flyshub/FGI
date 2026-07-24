@@ -200,6 +200,18 @@ class MockSource(DataSource):
         })
         return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
 
+    def fetch_pb_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        if not self._healthy:
+            return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")
+        dates = pd.date_range(start=start_date, end=end_date, freq="B")
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "市净率": [1.4 + 0.001 * (i % 50) for i in range(len(dates))],
+            "等权市净率": [4.5] * len(dates),
+            "市净率中位数": [2.2] * len(dates),
+        })
+        return DataSourceResult(df, DataSourceStatus.HEALTHY, self._name)
+
     def fetch_open_sentiment(self, start_date: str, end_date: str) -> DataSourceResult:
         if not self._healthy:
             return DataSourceResult(None, DataSourceStatus.FAILED, self._name, "Mock failure")

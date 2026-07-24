@@ -19,6 +19,7 @@ DEFAULT_CHAINS: Dict[str, List[str]] = {
     "s3_zt_daily": ["zzshare", "akshare"],
     "v1_pe": ["akshare"],
     "v1_bond": ["akshare"],
+    "v1_pb": ["akshare"],
     "v2_index": ["akshare"],
     "v4_qvix": ["akshare"],
     "f1_margin": ["akshare"],

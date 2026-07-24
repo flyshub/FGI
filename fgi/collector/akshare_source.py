@@ -269,6 +269,24 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
+    def fetch_pb_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 沪深300 PB (price-to-book) history via stock_index_pb_lg."""
+        try:
+            ak = self._get_client()
+            df = self._cached(("pb", "沪深300"),
+                              lambda: _retry(lambda: ak.stock_index_pb_lg(symbol="沪深300")))
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PB data")
+            df = df.rename(columns={"日期": "date"})
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
+            df = df.loc[mask].copy()
+            if df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PB data in range")
+            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
     def health_check(self) -> DataSourceStatus:
         try:
             ak = self._get_client()

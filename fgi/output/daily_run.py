@@ -24,6 +24,7 @@ except ImportError:
 from fgi.output.pushplus import send_fgi_report
 from fgi.output.status import record_indicator_status
 from fgi.output.alert import Alert
+from fgi.output.decision_matrix import compute_decision_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +98,13 @@ def main():
         if anomaly_detected:
             print("Anomaly detected — suspending daily FGI push, manual review required (spec line 262).")
         else:
+            dm = compute_decision_matrix(db, target_date, result["fgi_final"])
+            dm_dict = dm.to_dict() if dm else None
             ok = send_fgi_report(
                 result["fgi_final"], result["dimension_scores"],
                 result["indicator_results"], result["health_score"],
-                date_str=target_date)
+                date_str=target_date,
+                decision_matrix=dm_dict)
             print(f"PushPlus: {'OK' if ok else 'skipped'}")
 
 
