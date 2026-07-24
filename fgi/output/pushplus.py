@@ -242,8 +242,8 @@ def _decision_matrix_section(dm: dict) -> str:
     # 3x3 矩阵，当前象限高亮
     def cell(s: str, v: str, hl: bool) -> str:
         bg = "#FFE082" if hl else "#FAFAFA"
-        s_str = f"**{s}**" if hl else s
-        v_str = f"**{v}**" if hl else v
+        s_str = f"<strong>{s}</strong>" if hl else s
+        v_str = f"<strong>{v}</strong>" if hl else v
         return f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:{bg};text-align:center">{s_str}<br><span style="font-size:0.85em;color:#555">{v_str}</span></td>'
 
     cur_sent = sent
@@ -252,7 +252,7 @@ def _decision_matrix_section(dm: dict) -> str:
     vals = ["低估", "合理", "高估"]
     html = ['<table style="width:100%">']
     # 表头
-    html.append('<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">情绪＼估值</th>'
+    html.append('<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
                 '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">低估(&lt;25%)</th>'
                 '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">合理(25-75%)</th>'
                 '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">高估(&gt;75%)</th></tr>')
@@ -276,7 +276,7 @@ def _decision_matrix_section(dm: dict) -> str:
         "",
         f"- 当前象限：{emoji} **{quadrant}**（情绪 {sent} · 估值 {val}）",
         f"- 情绪 FGI：{fgi_str}",
-        f"- 估值分位：{val_pct_str}（PE {pe_pct_str} · PB {pb_pct_str}）",
+        f"- 估值分位（沪深300）：{val_pct_str}（PE {pe_pct_str} · PB {pb_pct_str}）",
         f"- 建议：{advice}",
         "",
         "<sub>※ 决策矩阵为情绪-估值辅助工具，软性建议不构成投资指令</sub>",
