@@ -98,12 +98,24 @@ class TestCalculateFgi:
         动机：2015 年初仅 M1（涨停池）有数据时，跨维重归一化会给单维度 100% 权重，
         M1 raw=100 → FGI=100，是误导性极端值。门槛收紧为 ≥2 维度。
         """
-        scores = {"momentum": 100, "sentiment": None, "valuation": None, "funding": None}
+        scores = {"momentum": 100, "sentiment": None, "valuation": None, "volatility": None, "funding": None}
         assert calculate_fgi(scores) is None
         # 2 维度应正常产出（renorm 后）
-        scores2 = {"momentum": 80, "sentiment": None, "valuation": 60, "funding": None}
+        scores2 = {"momentum": 80, "sentiment": None, "valuation": 60, "volatility": None, "funding": None}
         result2 = calculate_fgi(scores2)
         assert result2 == pytest.approx((80 + 60) / 2, abs=0.01)
+
+    def test_five_dim_equal_weights(self):
+        """V3.8.7: 5 dimensions, each 20%. Pin against accidental drift."""
+        scores = {"momentum": 100, "sentiment": 80, "valuation": 60, "volatility": 40, "funding": 20}
+        # (100+80+60+40+20)/5 = 60
+        assert calculate_fgi(scores) == pytest.approx(60.0, abs=0.01)
+
+    def test_missing_dimension_renormalizes_correctly(self):
+        """V4 missing → other 4 dims each get 25%."""
+        scores = {"momentum": 80, "sentiment": 60, "valuation": 40, "volatility": None, "funding": 20}
+        # (80+60+40+20)/4 = 50
+        assert calculate_fgi(scores) == pytest.approx(50.0, abs=0.01)
 
 
 class TestApplyConsistencyAdjustment:

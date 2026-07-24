@@ -163,3 +163,48 @@ class TestFetchIndustryFundFlow:
         df = result.data
         assert df["date"].min() >= "2024-01-15"
         assert df["date"].max() <= "2024-01-25"
+
+
+def _qvix_df():
+    """模拟 ak.index_option_50etf_qvix() 返回格式：date + OHLC。"""
+    dates = pd.date_range("2024-01-01", periods=100, freq="B")
+    return pd.DataFrame({
+        "date": dates.strftime("%Y-%m-%d"),
+        "open": [20.0] * 100,
+        "high": [22.0] * 100,
+        "low": [18.0] * 100,
+        "close": [19.0 + i * 0.05 for i in range(100)],  # 渐变避免退化
+    })
+
+
+class TestFetchQvix:
+    """V4 (QVIX 中国版 VIX): fetch_qvix 必须返回 50ETF 期权隐含波动率历史。"""
+
+    def test_returns_close_column_full_range(self, fake_ak, fast_retry):
+        fake_ak.index_option_50etf_qvix = lambda: _qvix_df()
+        src = AKShareSource()
+        result = src.fetch_qvix("2024-01-02", "2024-01-31")
+        assert result.status == DataSourceStatus.HEALTHY
+        df = result.data
+        assert list(df.columns) == ["date", "close"]
+        assert df["date"].min() >= "2024-01-02"
+        assert df["date"].max() <= "2024-01-31"
+        # close 数值类型
+        assert df["close"].dtype.kind in "iuf"
+
+    def test_no_data_failed(self, fake_ak, fast_retry):
+        fake_ak.index_option_50etf_qvix = lambda: pd.DataFrame()
+        src = AKShareSource()
+        result = src.fetch_qvix("2024-01-02", "2024-01-31")
+        assert result.status == DataSourceStatus.FAILED
+
+    def test_full_range_cached_and_sliced(self, fake_ak, fast_retry):
+        calls = []
+        fake_ak.index_option_50etf_qvix = lambda: calls.append(1) or _qvix_df()
+        src = AKShareSource()
+        r1 = src.fetch_qvix("2024-01-02", "2024-01-05")
+        r2 = src.fetch_qvix("2024-01-08", "2024-01-10")
+        assert r1.status == DataSourceStatus.HEALTHY
+        assert r2.status == DataSourceStatus.HEALTHY
+        # 一次拉取全量后切片
+        assert len(calls) == 1

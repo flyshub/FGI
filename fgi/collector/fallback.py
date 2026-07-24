@@ -26,6 +26,7 @@ OFFLINE_RAW_MAPPING: Dict[str, tuple] = {
     "fetch_pe_data": (("v1_pe_ttm",), ("滚动市盈率",)),
     "fetch_bond_yield": (("v1_bond_yield",), ("yield_10y",)),
     "fetch_open_sentiment": (("m2_up_num", "m2_down_num"), ("up_num", "down_num")),
+    "fetch_qvix": (("v4_qvix",), ("close",)),
 }
 
 # fetch_index_daily 被 m3/v2/f3 共用，按 indicator 名分流到不同的 raw_key
@@ -45,6 +46,7 @@ INDICATOR_RAW_KEY: Dict[str, str] = {
     "S3": "s3_seal_fund",
     "V1": "v1_pe_ttm",
     "V2": "v1_erp",
+    "V4": "v4_qvix",
     "F1": "f1_margin_ratio",
     "F2": "f2_fund_position",
     "F3": "f3_industry_net_flow",

@@ -315,6 +315,24 @@ class AKShareSource(DataSource):
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
+    def fetch_qvix(self, start_date: str, end_date: str) -> DataSourceResult:
+        """50ETF 期权隐含波动率指数（中国版 VIX）。
+        数据源：ak.index_option_50etf_qvix()，字段 close，历史 2015-02-09 至今。"""
+        try:
+            ak = self._get_client()
+            df = self._cached(("qvix_50etf",),
+                              lambda: _retry(lambda: ak.index_option_50etf_qvix()))
+            if df is None or df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No QVIX data")
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
+            df = df.loc[mask, ["date", "close"]].copy()
+            if df.empty:
+                return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No data in range")
+            return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
+        except Exception as e:
+            return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
+
     def fetch_market_cap(self, start_date: str, end_date: str) -> DataSourceResult:
         """Fetch 全A总市值 (沪+深合计, monthly, from macro_china_stock_market_cap)."""
         try:
