@@ -32,8 +32,14 @@ class S3Calculator:
         return df
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
-        df["percentile"] = rolling_percentile(df["zt_ratio"], window=self._window)
-        return df
+        # Audit 2026-07-24: S3 raw=0 (and denormalized floats like 1e-142) are
+        # data-source outages mis-stored as 0.0, not genuine zero-limit-up days.
+        # All 476 S3=0 rows in production DB had same-day M1>0, confirming outage.
+        # These pollution values sit at the bottom of the rolling window and inflate
+        # every later percentile by +8 to +36 points. Filter them out before ranking.
+        clean = df[df["zt_ratio"].isna() | (df["zt_ratio"] > 1e-100)].copy()
+        clean["percentile"] = rolling_percentile(clean["zt_ratio"], window=self._window)
+        return df.merge(clean[["date", "percentile"]], on="date", how="left")
 
     def calculate_score(self, percentile: float) -> float:
         return percentile * 100
@@ -42,7 +48,11 @@ class S3Calculator:
         result = self.fetch_data(start_date, end_date)
         if result.status == DataSourceStatus.HEALTHY and result.data is not None and not result.data.empty:
             for _, row in result.data.iterrows():
-                self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(row["seal_fund_sum"]) / 1e8)
+                # raw_data 可能含 NULL（数据中断），跳过不写
+                seal_fund = row.get("seal_fund_sum")
+                if seal_fund is None or pd.isna(seal_fund):
+                    continue
+                self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(seal_fund) / 1e8)
             self._db.commit()
             df = result.data
             df["zt_ratio"] = pd.to_numeric(df["seal_fund_sum"], errors="coerce") / 1e8
@@ -81,7 +91,7 @@ class S3Calculator:
         else:
             df = pd.DataFrame({
                 "date": db_data["date"],
-                "zt_ratio": db_data["value"],
+                "zt_ratio": pd.to_numeric(db_data["value"], errors="coerce"),
             })
             df = df[df["date"] >= start_date].copy()
             if len(df) < 252:
@@ -103,6 +113,11 @@ class S3Calculator:
         raw_value = today["zt_ratio"].iloc[0]
         if pd.isna(raw_value):
             self._db.upsert_status(date, "s3", "missing", "database", "Raw value is NaN")
+            return {"s3": None, "status": "missing"}
+        if raw_value <= 1e-100:
+            # S3 raw=0 (or denormalized float) is always a data-source outage,
+            # never a genuine zero-limit-up day (audit: 0 such days in 8 years).
+            self._db.upsert_status(date, "s3", "missing", "database", "Raw value is zero (data outage)")
             return {"s3": None, "status": "missing"}
 
         score = self.calculate_score(percentile)

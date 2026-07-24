@@ -126,3 +126,55 @@ class TestS3Calculator:
         status = db.get_status("2024-01-10")
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
+
+    def test_today_raw_zero_is_pollution(self, s3_calculator, db):
+        """S3 raw=0 is always data outage, not genuine zero-limit-up (no such market day).
+        Per audit: 476 S3=0 rows in production DB all turned out to be outages.
+        Must return missing, not percentile=0."""
+        # Seed window with valid data + zero-polluted today
+        dates_valid = pd.date_range("2023-01-01", periods=1300).strftime("%Y-%m-%d")
+        for d in dates_valid:
+            db.upsert_raw_data(d, "s3_seal_fund", 50.0)  # all 50 亿 uniform
+        db.upsert_raw_data("2024-01-10", "s3_seal_fund", 0.0)  # today: outage as 0
+        db.commit()
+
+        result = s3_calculator.run("2024-01-10", lookback_days=300)
+        assert result["status"] == "missing", "S3 raw=0 today must be treated as missing (pollution)"
+        assert result["s3"] is None
+
+    def test_window_zeros_excluded_from_percentile(self, s3_calculator, db):
+        """Zeros elsewhere in the rolling window are data-source outages (per audit:
+        same-day M1>0 confirms), must NOT inflate today's percentile."""
+        # Window: 500 valid values (varying 10..59) + 500 zeros (pollution) + today
+        dates = pd.date_range("2023-01-01", periods=1001).strftime("%Y-%m-%d")
+        for i, d in enumerate(dates):
+            if i < 500:
+                db.upsert_raw_data(d, "s3_seal_fund", 10.0 + (i % 50))  # vary to avoid nunique==1 NaN
+            elif i < 1000:
+                db.upsert_raw_data(d, "s3_seal_fund", 0.0)   # pollution
+            else:
+                db.upsert_raw_data(d, "s3_seal_fund", 50.0)  # today, valid
+        db.commit()
+
+        result = s3_calculator.run(dates[-1], lookback_days=1100)
+        # Without guard: 500 zeros at bottom → today=50 percentile ≈ 1.0 (perfect greed)
+        # With guard: zeros excluded → today=50 in [10..59] window ≈ 0.82 percentile
+        assert result["status"] == "normal"
+        assert result["s3"] is not None
+        assert result["s3"] < 95, f"Window zeros must not inflate percentile; got {result['s3']}"
+
+    def test_denormalized_floats_excluded(self, s3_calculator, db):
+        """Denormalized floats (1e-142 from upstream) are pollution, not real values."""
+        dates = pd.date_range("2023-01-01", periods=1001).strftime("%Y-%m-%d")
+        for i, d in enumerate(dates):
+            if i < 500:
+                db.upsert_raw_data(d, "s3_seal_fund", 10.0 + (i % 50))
+            elif i < 1000:
+                db.upsert_raw_data(d, "s3_seal_fund", 1.4e-142)  # denorm pollution
+            else:
+                db.upsert_raw_data(d, "s3_seal_fund", 50.0)
+        db.commit()
+
+        result = s3_calculator.run(dates[-1], lookback_days=1100)
+        assert result["status"] == "normal"
+        assert result["s3"] < 95, f"Denorm floats must not inflate percentile; got {result['s3']}"

@@ -1,6 +1,6 @@
 # A股恐惧贪婪指数（FGI）实施方案 · 终稿 V3.8
 
-**版本**：V3.8.7（期权波动率维度版）  
+**版本**：V3.8.8（S3 零值污染清理版）  
 **更新日期**：2026年7月24日  
 **设计原则**：数据免费、逻辑稳健、每日自动更新、可解释  
 
@@ -24,6 +24,11 @@
 > **V3.8.6 候选接口稳定性 Spike 结论**（2026-07-24，`scripts/spike_f3_alternatives.py`）：
 > - 评估了 4 个候选数据源。`stock_sse_summary`（沪市大单）只有当日快照无历史；`stock_fund_flow_industrial`（行业即时）API 已废弃；`stock_market_fund_flow`（全市场主力资金）**稳定可用**（5/5 成功率、p50 0.34s、120 天历史、与当前 proxy 方向相关性 Pearson=0.816）。
 > - **结论**：当前 proxy（上证量价）已分布健康 + 全程覆盖，**维持不变**。如未来需切换到"真实主力资金"语义，`stock_market_fund_flow`（字段 `主力净流入-净额`）是首选备选源（120 天历史窗口，每日 daily_run 滚动累积）。
+
+> **V3.8.8 修订**（2026-07-24，S3 零值污染清理）：
+> - **S3 历史零值污染**：production DB 中 496 行 `s3_seal_fund` 被误存为 0 或 denormalized float（~1.4e-142）。这些日期对应的 M1（同源涨停家数）均 > 0，证实为数据源中断被误判为"零封单"。共 476 行零值 + 20 行 denormalized float（2020-12 月）。零值分布：2017（126）、2018（117）、2020（231）、2026（2）。
+> - **影响**：S3 历史得分均值 81.2（严重右偏），将整个 FGI 分布推向贪婪侧（FGI mean=54.7）。
+> - **三层修复**：① DB 数据清理：496 行 `s3_seal_fund` 改为 NULL；② `S3Calculator.calculate_percentile` 在调用 `rolling_percentile` 前过滤窗口内 ≤ 1e-100 的污染值，避免其垫在窗口底部推高其他值的 rank 导致 percentile 系统性虚高；③ `S3Calculator._try_fetch_from_source` 在 `float()` 强转前 `pd.isna()` 守卫，offline reconstruct 路径不再 TypeError。预期 S3 mean 81.2 → ~55-60，FGI mean 54.7 → ~52。
 
 > **V3.8.6 修订**（2026-07-24，F3 锁定代理）：
 > - **F3 真实 API 停用**：`ak.stock_market_fund_flow`（东财主力资金流）间歇性不可达（连接超时），曾导致 F3 在不同源间跳变。锁定为纯上证量价代理，不再尝试获取真实数据。
@@ -164,7 +169,7 @@ V3.8 基于 V3.7 深度评审，修正以下核心问题：
 
 - **原始值**：当日所有涨停板股票的封单金额总和（亿元）
 - **数据源**：levistock `stock_zt_pool_em`（主），AKShare `stock_zt_pool_em`（备，仅历史）
-- **处理**：滚动 5 年百分位。
+- **处理**：滚动 5 年百分位。**V3.8.8 修复**：raw=0 及 denormalized float（≤ 1e-100）一律视为数据源中断（production DB 中 496 行此类值经审计全部证实为中断，非真实零封单日），在 percentile 计算前过滤。
 - **方向**：封单量越大 → 得分越高。
 - **降级**：同 M1。
 - **注**：与 M1 同源，已预先制定相关性处理方案（见 M1 注）。
@@ -436,12 +441,12 @@ CREATE TABLE daily_status (
 
 | 指标        | 数据起始时间                      | 冷启动处理                      |
 | --------- | --------------------------- | -------------------------- |
-| M1 涨停家数   | 2020 年 (levistock)          | 2015–2019 扩展窗口，权重暂分给 M2–M4 |
+| M1 涨停家数   | 2017-06 (levistock)          | 2015–2017.5 扩展窗口，权重暂分给 M2–M4。2017-06 前为 levistock 空窗期（CONSTRAINTS #64），raw_data NULL 处理 |
 | M2 上涨家数占比 | 2015 年 (zzshare)            | 正常                         |
 | M3 偏离均线   | 2014 年 (AKShare)            | 正常                         |
 | M4 创业板成交活跃度 | 2016 年 (新浪 stock_zh_index_daily) | 正常                    |
 | S2 股吧热度   | 2020 年 (zzshare)            | 2015–2019 扩展窗口，权重暂分给 S3 |
-| S3 涨停封单   | 2020 年 (levistock)          | 2015–2019 扩展窗口，权重暂分给 S2 |
+| S3 涨停封单   | 2017-06 (levistock)          | 2015–2017.5 扩展窗口，权重暂分给 S2。V3.8.8 起 raw=0/≤1e-100 视为中断，在 percentile 计算前过滤 |
 | V1 ERP    | 2014 年 (AKShare)            | 正常                         |
 | V2 ΔERP   | 2014 年 (AKShare)            | 正常                         |
 | V4 QVIX   | 2015-02-09 (AKShare index_option_50etf_qvix) | 正常（5 年滚动窗口起始有少量 NaN） |
