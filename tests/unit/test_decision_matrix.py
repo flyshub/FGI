@@ -133,8 +133,8 @@ class TestComputeDecisionMatrix:
         db.upsert_raw_data(target, "v1_pb_percentile", 0.20)
         dm = compute_decision_matrix(db, target, fgi=30.0)
         d = dm.to_dict()
-        assert d["quadrant"] == "关注"
-        assert d["sentiment_tier"] == "中性"
+        assert d["quadrant"] == "强烈关注"
+        assert d["sentiment_tier"] == "恐惧"
         assert d["valuation_tier"] == "低估"
         assert d["fgi"] == 30.0
 
