@@ -6,8 +6,18 @@ from fgi.calculator.funding.f2 import F2Calculator
 from fgi.calculator.funding.f3 import F3Calculator
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
+from fgi.common.utils import clear_percentile_cache
 from fgi.storage.database import Database
 import pandas as pd
+
+
+@pytest.fixture(autouse=True)
+def _clear_percentile_cache():
+    """Module-level _PERCENTILE_CACHE causes cross-test pollution when two tests
+    produce series with identical (length, hash) keys but different semantics."""
+    clear_percentile_cache()
+    yield
+    clear_percentile_cache()
 
 
 @pytest.fixture
@@ -139,6 +149,55 @@ class TestF2Calculator:
         # 2024-01-10 是周三，周频数据没有该日期的行
         row = db.get_raw_data("f2_fund_position", "2024-01-10", "2024-01-10")
         assert row.empty
+
+    def test_weekly_recency_no_refetch(self, f2_calculator, db, monkeypatch):
+        """最近 7 天内有有效 raw 值（周频已发布）→ 不触发 fetch，forward-fill 即可"""
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        # 灌入历史周频值，最后一条是 3 天前（2023-12-25，周一）
+        dates = pd.bdate_range("2018-01-01", "2023-12-25")
+        for i, d in enumerate(dates):
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "f2_fund_position",
+                               float(85.0 + (i % 10)))
+        db.commit()
+
+        fetched = {"called": False}
+        def mock_fetch(start, end):
+            fetched["called"] = True
+            return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+        monkeypatch.setattr(f2_calculator, "fetch_data", mock_fetch)
+
+        # 2023-12-28（周四）：3 天前有数据 → 不应 fetch
+        result = f2_calculator.run("2023-12-28", lookback_days=400)
+        assert not fetched["called"], "should not fetch when weekly data is recent"
+        assert result["status"] in ("normal", "degraded"), f"got {result['status']}"
+
+    def test_stale_data_triggers_refetch(self, f2_calculator, db, monkeypatch):
+        """最近 raw_data 距今 > 7 天 → 触发 fetch 尝试"""
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        # 灌入历史周频值，最后一条是 2023-11-30（距今 28 天）
+        dates = pd.bdate_range("2018-01-01", "2023-11-30")
+        for i, d in enumerate(dates):
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "f2_fund_position",
+                               float(85.0 + (i % 10)))
+        db.commit()
+
+        fetched = {"called": False}
+        def mock_fetch(start, end):
+            fetched["called"] = True
+            if end == "2023-12-28":
+                df = pd.DataFrame({
+                    "date": ["2023-12-25"],
+                    "position": [88.0],
+                })
+                return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
+            return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+        monkeypatch.setattr(f2_calculator, "fetch_data", mock_fetch)
+
+        # 2023-12-28：最近数据 28 天前 → 应该 fetch
+        result = f2_calculator.run("2023-12-28", lookback_days=400)
+        assert fetched["called"], "should fetch when weekly data is >7 days stale"
 
 
 class TestF3Calculator:

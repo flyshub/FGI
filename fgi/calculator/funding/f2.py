@@ -69,7 +69,18 @@ class F2Calculator:
         db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
 
         fetched_freshly = False
-        today_in_db = not db_data.empty and date in db_data["date"].values
+        # F2 是周频数据：today_in_db 不检查 today 是否存在，
+        # 而是检查最近 7 天内是否有有效 raw 值（覆盖本周发布日）。
+        # 若 7 天内无数据，触发 fetch；否则直接 forward-fill（spec 设计）。
+        if not db_data.empty:
+            recent_mask = (
+                (db_data["date"] >= (pd.Timestamp(date) - pd.Timedelta(days=7)).strftime("%Y-%m-%d"))
+                & (db_data["date"] <= date)
+                & db_data["value"].notna()
+            )
+            today_in_db = recent_mask.any()
+        else:
+            today_in_db = False
         if not today_in_db:
             fetched_freshly = True
             # Fetch recent data (last 30 days) to handle weekly frequencies

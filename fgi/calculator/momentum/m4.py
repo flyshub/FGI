@@ -74,7 +74,13 @@ class M4Calculator:
 
         is_degraded = False
         fetched_freshly = False
-        today_in_db = not db_data.empty and date in db_data["date"].values
+        # today_in_db 必须同时满足 date 存在 AND value 非 NULL。
+        # 否则历史 NULL 行（数据中断或清理后的污染行）会欺骗 calc 跳过当天 fetch。
+        if not db_data.empty and date in db_data["date"].values:
+            today_val = db_data[db_data["date"] == date]["value"].iloc[0]
+            today_in_db = pd.notna(today_val) and today_val > 0
+        else:
+            today_in_db = False
         if not today_in_db:
             recent_start = pd.Timestamp(date) - pd.Timedelta(days=30)
             result = self.fetch_data(recent_start.strftime("%Y-%m-%d"), date)
