@@ -241,10 +241,10 @@ def _decision_matrix_section(dm: dict) -> str:
 
     # 3x3 矩阵，当前象限高亮
     def cell(s: str, v: str, hl: bool) -> str:
-        bg = "#FFE082" if hl else "#FAFAFA"
+        bg = "#FFE082" if hl else "#Fff"
         s_str = f"<strong>{s}</strong>" if hl else s
         v_str = f"<strong>{v}</strong>" if hl else v
-        return f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:{bg};text-align:center">{s_str}<br><span style="font-size:0.85em;color:#555">{v_str}</span></td>'
+        return f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:{bg};text-align:center;color:#222">{s_str}<br><span style="font-size:0.85em;color:#444">{v_str}</span></td>'
 
     cur_sent = sent
     cur_val = val
@@ -252,17 +252,17 @@ def _decision_matrix_section(dm: dict) -> str:
     vals = ["低估", "合理", "高估"]
     html = ['<table style="width:100%">']
     # 表头
-    html.append('<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
-                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">低估(&lt;25%)</th>'
-                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">合理(25-75%)</th>'
-                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">高估(&gt;75%)</th></tr>')
+    html.append('<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
+                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">低估(&lt;25%)</th>'
+                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">合理(25-75%)</th>'
+                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">高估(&gt;75%)</th></tr>')
     qmap = {
         ("恐惧", "低估"): "强烈关注", ("恐惧", "合理"): "关注", ("恐惧", "高估"): "观望",
         ("中性", "低估"): "关注", ("中性", "合理"): "中性", ("中性", "高估"): "谨慎",
         ("贪婪", "低估"): "观望", ("贪婪", "合理"): "谨慎", ("贪婪", "高估"): "强烈谨慎",
     }
     for s in sents:
-        cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#333">{s}</td>']
+        cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#222">{s}</td>']
         for v in vals:
             q = qmap[(s, v)]
             cells.append(cell(q, "", s == cur_sent and v == cur_val))
