@@ -18,16 +18,13 @@ A-Share Fear & Greed Index (FGI)，全自动 A 股市场情绪量化指数。每
 ## 快速开始
 
 ```bash
-pip install -e .
+pip install -r requirements.txt
 
 # 单次运行（最近交易日）
 python -m fgi.output.daily_run
 
 # 指定日期
 python -m fgi.output.daily_run --date 2026-07-24
-
-# 不推送
-python -m fgi.output.daily_run --skip-push
 ```
 
 ### 数据源配置
@@ -60,27 +57,37 @@ fgi/
 │   ├── momentum/       # M1–M4
 │   ├── sentiment/      # S2–S3
 │   ├── valuation/      # V1–V2
-│   └── funding/        # F1–F3
+│   ├── funding/        # F1–F3
+│   └── fgi.py          # FGI 合成 + 健康度
 ├── collector/          # 数据源采集层
-│   ├── base.py         # DataSource 抽象基类
-│   ├── sources/        # AKShare、ZZShare、Mootdx、Tencent、Mock
-│   ├── fallback.py     # FallbackChain 自动降级 + 离线重建
-│   └── chains.py       # 数据源链配置
+│   ├── base.py             # DataSource 抽象基类
+│   ├── akshare_source.py   # AKShare 数据源
+│   ├── zzshare_source.py   # ZZShare 数据源
+│   ├── mootdx_source.py    # Mootdx 数据源（TCP）
+│   ├── tencent_source.py   # 腾讯数据源（HTTP）
+│   ├── mock_source.py      # 测试用 Mock
+│   ├── fallback.py         # FallbackChain 自动降级 + 离线重建
+│   ├── chains.py           # 数据源链配置
+│   └── trading_calendar.py # 交易日历
 ├── storage/
 │   └── database.py     # SQLite 存储（raw_data / scores_daily / daily_status）
 ├── output/
 │   ├── daily_run.py    # 每日运行入口
+│   ├── pushplus.py     # PushPlus 推送模板
+│   ├── alert.py        # 异常检测与告警
+│   ├── status.py       # 状态记录辅助
 │   ├── backfill.py     # 历史回填
-│   └── pushplus.py     # 推送模板
+│   ├── backtest.py     # 极端事件回测
+│   └── zt_backfill.py  # 涨停数据专用回填
 ├── common/
-│   └── utils.py        # 工具函数
+│   └── utils.py        # 工具函数（rolling_percentile 等）
 └── config/
     └── settings.py     # 全局配置
 ```
 
 ## 数据存储
 
-SQLite（`fgi_data.db`），三张核心表：
+SQLite（`data/fgi.db`），三张核心表：
 
 | 表 | 用途 | 主键 |
 |----|------|------|
@@ -96,14 +103,17 @@ SQLite（`fgi_data.db`），三张核心表：
 # 全指标历史回填
 python -m fgi.output.backfill
 
-# 仅某指标（如涨停数据）
+# 仅涨停数据
 python fgi/output/zt_backfill.py
 
-# 重算历史得分
+# 重算历史得分（含 health_score 两阶段）
 python scripts/recompute_scores.py
 
-# 重算健康度
-python scripts/recompute_health.py
+# 断点续算
+python scripts/recompute_scores.py --resume
+
+# 向量化加速版（推荐大范围重算）
+python scripts/recompute_v2.py
 ```
 
 ## 数据源架构
@@ -122,24 +132,25 @@ python scripts/recompute_health.py
 
 ## GitHub Actions 自动运行
 
-项目包含 GitHub Actions 工作流，每日自动计算 FGI 并推送手机。
+项目通过 GitHub Actions 每个交易日自动计算 FGI、推送 PushPlus、回写数据库。
 
 ### 工作流配置
 
-`.github/workflows/daily_fgi.yml`：
+`.github/workflows/daily_update.yml`：
 
-- **触发**：交易日 18:00（北京时间，`0 10 * * 1-5` UTC）
-- **步骤**：安装依赖 → 运行 `python -m fgi.output.daily_run` → 上传 SQLite 数据库为构建产物
-- **手动触发**：仓库 Actions 页面点击 "Run workflow"
+- **触发**：交易日 19:00（北京时间，`0 11 * * 1-5` UTC）+ 手动 `workflow_dispatch`
+- **Python**：3.12
+- **步骤**：安装依赖 → 运行 `python -m fgi.output.daily_run --date <date>` → 上传 `data/fgi.db` + `output/` 为构建产物 → schedule 触发时把 `data/fgi.db` commit 回 main
+- **手动触发**：仓库 Actions 页面点击 "Run workflow"（可传 `--date` 参数；手动触发不会 commit DB，避免误污染 main）
 
 ### 配置步骤
 
 1. 在 GitHub 仓库 → **Settings → Secrets and variables → Actions** 添加：
-   - `FGI_PUSHPLUS_TOKEN`：你的 PushPlus 推送令牌
+   - `PUSHPLUS_TOKEN`：你的 PushPlus 推送令牌（workflow 会把它映射到代码读取的 `FGI_PUSHPLUS_TOKEN` 环境变量）
 
-2. 工作流会在每个交易日下午 6 点自动运行并推送手机。
+2. 工作流会在每个交易日晚 7 点自动运行并推送手机；schedule 触发的运行还会把当日更新的 `data/fgi.db` commit 回 main 分支（作者 `github-actions[bot]`，带 `[skip ci]` 避免递归）。
 
-3. 如需调试，每次运行后可在 Actions 页面下载 `fgi-data` artifact（含完整 `fgi_data.db`）。
+3. 如需调试，每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact（含完整 `data/fgi.db` + 输出文件，保留 90 天）。
 
 ### 本地测试 CI
 
