@@ -84,16 +84,22 @@ FGI_PUSHPLUS_TOKEN=your_token_here
 
 ### 回测框架（backtest.py）
 
-⚠️ `fgi/output/backtest.py` 存在已知缺陷：用 FGI_final 预测自身未来值（自相关），而非预测市场收益。暂不推荐使用。该模块计划在 spec 5.2-5.4 框架下重写。
+⚠️ `fgi/output/backtest.py` 已废弃（ADR-0003）。该模块存在 FGI 自相关缺陷。替代方案见 `fgi/output/signal_report.py`：
+
+- **Rank IC 分析**：`compute_rank_ic(df)` — Spearman Rank IC + 滚动窗口 + Bonferroni 参考阈值
+- **10 档分层回测**：`layer_backtest_10(df)` — 每档 5/20/60 日前瞻收益与胜率
+- **逆情绪 DCA**：`simulate_dca(df)` — DCA vs 等额定投，含年化收益/最大回撤/夏普
+
+运行 `python scripts/generate_signal_report.py` 生成包含上述分析的完整报告。
 
 ### 与实施方案 V3.8 的回测差距
 
 | spec 要求 | 状态 | 说明 |
 |----------|------|------|
 | 5.1 样本分割 | ✅ 已实现 | signal_report.py 自动拆分 2015-2022 / 2023-2026 |
-| 5.2 分层回测（10 档，沪深300/中证500/中证1000 基准） | ❌ 未实现 | 当前仅 5 档分桶，仅上证综指基准 |
-| 5.3 IC 分析（Rank IC, Bonferroni 校正） | ❌ 未实现 | backtest.py 仅做 Pearson IC 自相关 |
-| 5.4 策略模拟（逆情绪定投、极端择时） | ❌ 未实现 | 当前策略模拟用 FGI 自相关 |
+| 5.2 分层回测（10 档，沪深300/中证500/中证1000 基准） | ⚠️ 部分 | 10 档已实现（#83）；CSI 基准留 v2 |
+| 5.3 IC 分析（Rank IC, Bonferroni 校正） | ✅ 已实现 | signal_report.py（#83）：Spearman Rank IC + 半年度滚动 + α/36 |
+| 5.4 策略模拟（逆情绪定投、极端择时） | ⚠️ 部分 | DCA 已实现（#83）；极端择时留 v2 |
 | 5.5 逐指标验证（剔除测试、方向验证） | ⚠️ 部分 | 极端事件方向性已验证，系统 IC 未做 |
 
 ## 项目结构
@@ -124,8 +130,8 @@ fgi/
 │   ├── alert.py             # 异常检测与告警
 │   ├── status.py            # 状态记录辅助
 │   ├── backfill.py          # 历史回填
-│   ├── backtest.py          # [PENDING] 极端事件回测框架 (broken — 仍在用 旧设计)
-│   ├── signal_report.py     # 历史信号有效性验证 + 推送卡片
+│   ├── backtest.py          # ⚠️ 已废弃 (ADR-0003) — 用 signal_report.py 替代
+│   ├── signal_report.py     # 历史信号验证 + Rank IC + 分层回测 + DCA
 │   ├── decision_matrix.py   # 情绪-估值 3×3 决策矩阵
 │   └── zt_backfill.py       # 涨停数据专用回填
 ├── common/
