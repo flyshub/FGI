@@ -423,7 +423,133 @@ class TestZoneContextCard:
         assert card == ""
 
 
-class TestCliEntry:
+class TestRankIC:
+    """Test Rank IC analysis functions."""
+
+    def _make_df(self, n=200):
+        """Create a synthetic DataFrame with FGI_final, close, and dimension scores."""
+        rng = np.random.default_rng(123)
+        dates = pd.date_range("2020-01-02", periods=n, freq="B")
+        closes = 3000 + np.cumsum(rng.normal(0, 20, n))
+        fgis = rng.uniform(20, 80, n)
+        return pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "FGI_final": fgis,
+            "close": closes,
+            "M1": rng.uniform(0, 100, n),
+            "M2": rng.uniform(0, 100, n),
+            "S2": rng.uniform(0, 100, n),
+        })
+
+    def test_compute_rank_ic_returns_dict(self):
+        from fgi.output.signal_report import compute_rank_ic
+        df = self._make_df(200)
+        result = compute_rank_ic(df)
+        assert result is not None
+        assert "ic" in result
+        assert "n" in result
+        assert -1.0 <= result["ic"] <= 1.0
+
+    def test_compute_rank_ic_insufficient_data(self):
+        from fgi.output.signal_report import compute_rank_ic
+        df = self._make_df(20)
+        result = compute_rank_ic(df)
+        assert result is None
+
+    def test_rolling_ic_window_structure(self):
+        from fgi.output.signal_report import compute_rolling_ic_window
+        df = self._make_df(800)  # need >756 for at least one window
+        results = compute_rolling_ic_window(df, half_year=126)
+        assert len(results) >= 1
+        for pt in results:
+            assert "date" in pt
+            assert "ic" in pt
+            assert "n" in pt
+
+
+class TestLayerBacktest10:
+    """Test 10-layer backtest."""
+
+    def _make_df(self, n=200):
+        rng = np.random.default_rng(456)
+        dates = pd.date_range("2020-01-02", periods=n, freq="B")
+        closes = 3000 + np.cumsum(rng.normal(0, 20, n))
+        fgis = rng.uniform(20, 80, n)
+        return pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "FGI_final": fgis,
+            "close": closes,
+        })
+
+    def test_layer_backtest_returns_all_horizons(self):
+        from fgi.output.signal_report import layer_backtest_10
+        df = self._make_df(200)
+        result = layer_backtest_10(df)
+        for h in [5, 20, 60]:
+            assert h in result
+            assert len(result[h]) >= 1
+
+    def test_layer_backtest_monotonicity_check(self):
+        """Lowest decile (layer 1) should tend to have higher 60d return than highest decile (layer 10)."""
+        from fgi.output.signal_report import layer_backtest_10
+        rng = np.random.default_rng(789)
+        n = 500
+        dates = pd.date_range("2018-01-02", periods=n, freq="B")
+        # Create a strong negative correlation: low FGI → high forward return
+        base = np.linspace(-0.5, 0.5, n)
+        noise = rng.normal(0, 0.03, n)
+        forward_60 = base + noise  # increasing over time
+        closes = 3000 * np.cumprod(1 + np.concatenate([[0], forward_60[:-1] / 100]))
+        fgis = 100 - (np.linspace(20, 80, n) + rng.normal(0, 5, n))  # inverse
+        df = pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "FGI_final": fgis.clip(1, 99),
+            "close": closes,
+        })
+        result = layer_backtest_10(df)
+        layer_60 = result[60]
+        if len(layer_60) >= 2:
+            # Top decile wins should differ from bottom decile
+            bottom = layer_60[0]
+            top = layer_60[-1]
+            assert bottom["mean_return"] > top["mean_return"], \
+                f"Expected low-FGI decile to outperform high-FGI decile, got {bottom['mean_return']:.4f} vs {top['mean_return']:.4f}"
+
+
+class TestDCA:
+    """Test DCA simulation."""
+
+    def _make_df(self, n_years=5):
+        """Create synthetic data spanning multiple years."""
+        n = n_years * 252
+        rng = np.random.default_rng(111)
+        dates = pd.date_range("2018-01-02", periods=n, freq="B")
+        # Upward drift
+        daily_ret = rng.normal(0.0003, 0.015, n)
+        closes = 3000 * np.cumprod(1 + daily_ret)
+        fgis = rng.uniform(30, 70, n)
+        return pd.DataFrame({
+            "date": dates.strftime("%Y-%m-%d"),
+            "FGI_final": fgis,
+            "close": closes,
+        })
+
+    def test_dca_returns_expected_keys(self):
+        from fgi.output.signal_report import simulate_dca
+        df = self._make_df(5)
+        result = simulate_dca(df)
+        assert "dca_total_return" in result
+        assert "dca_annualized" in result
+        assert "benchmark_total_return" in result
+        assert "dca_max_drawdown" in result
+        assert "n_months" in result
+
+    def test_dca_insufficient_data(self):
+        from fgi.output.signal_report import simulate_dca
+        df = self._make_df(1)  # only ~12 months
+        result = simulate_dca(df)
+        # should work with 12 months
+        assert "error" not in result
     """Test the generate_signal_report.py CLI script."""
 
     def test_main_with_defaults(self, tmp_path, monkeypatch):
