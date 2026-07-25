@@ -409,3 +409,245 @@ def render_zone_context_card(fgi: float | None, db) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Backtest v2: Rank IC, layer backtest, DCA simulation (ADR-0003)
+# ---------------------------------------------------------------------------
+
+def compute_rank_ic(df: pd.DataFrame, indicator_col: str = "FGI_final",
+                    horizon: int = 20) -> dict | None:
+    """Compute Spearman Rank IC between an indicator and forward market return.
+
+    Args:
+        df: DataFrame with columns ['close', indicator_col].
+        horizon: forward trading days for return calculation.
+
+    Returns:
+        {ic, n, ic_annualized} or None if insufficient data.
+    """
+    if indicator_col not in df.columns or df[indicator_col].dropna().empty:
+        return None
+    working = df.copy()
+    working["forward_return"] = working["close"].shift(-horizon) / working["close"] - 1.0
+    working = working.dropna(subset=["forward_return", indicator_col])
+    if len(working) < 30:
+        return None
+    ic = float(working[indicator_col].corr(working["forward_return"], method="spearman"))
+    n = len(working)
+    return {"ic": ic, "n": n, "indicator": indicator_col, "horizon": horizon}
+
+
+def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final",
+                              horizon: int = 20, half_year: int = 126,
+                              window_years: int = 3) -> list:
+    """Compute rolling Rank IC over semi-annual windows using trailing 3-year data.
+
+    Returns a list of {date, ic, n} dicts, one per semi-annual evaluation point.
+    Skips points with fewer than 252 valid observations.
+    """
+    results = []
+    working = df.copy()
+    working["forward_return"] = working["close"].shift(-horizon) / working["close"] - 1.0
+    working = working.dropna(subset=["forward_return", indicator_col])
+    min_obs = 252 * window_years
+    step = half_year
+    n = len(working)
+    for end in range(min_obs, n, step):
+        window_df = working.iloc[end - min_obs:end]
+        if len(window_df) < min_obs:
+            continue
+        ic = float(window_df[indicator_col].corr(window_df["forward_return"], method="spearman"))
+        results.append({
+            "date": str(window_df["date"].iloc[-1]),
+            "ic": ic,
+            "n": len(window_df),
+        })
+    return results
+
+
+def layer_backtest_10(df: pd.DataFrame, horizons: list | None = None) -> dict:
+    """10-quantile layer backtest: FGI decile × forward market returns.
+
+    Returns {horizon: [{layer, n, mean_return, win_rate}]} keyed by horizon.
+    """
+    horizons = horizons or [5, 20, 60]
+    working = df.copy()
+    working = working.sort_values("date").reset_index(drop=True)
+    for h in horizons:
+        working[f"forward_{h}"] = working["close"].shift(-h) / working["close"] - 1.0
+
+    result = {}
+    for h in horizons:
+        col = f"forward_{h}"
+        valid = working.dropna(subset=[col, "FGI_final"]).copy()
+        if len(valid) < 10:
+            result[h] = []
+            continue
+        valid["layer"] = pd.qcut(valid["FGI_final"], 10, labels=False, duplicates="drop")
+        layers = []
+        for layer in range(10):
+            subset = valid[valid["layer"] == layer]
+            if len(subset) == 0:
+                continue
+            rets = subset[col].values
+            layers.append({
+                "layer": layer + 1,  # 1-indexed
+                "n": len(subset),
+                "mean_return": float(np.mean(rets)),
+                "win_rate": float(np.mean(rets > 0)),
+            })
+        result[h] = layers
+    return result
+
+
+def simulate_dca(df: pd.DataFrame, base_amount: float = 10000,
+                 indicator_col: str = "FGI_final") -> dict:
+    """Simulate contrarian DCA: monthly investment scaled by (1 - FGI/100) × 2.
+
+    Buys on the first trading day of each month. Benchmark: equal monthly DCA.
+
+    Returns {dca_return, dca_annualized, benchmark_return, benchmark_annualized,
+             dca_max_drawdown, benchmark_max_drawdown, dca_sharpe, benchmark_sharpe,
+             n_months}
+    """
+    working = df.copy()
+    working["_dt"] = pd.to_datetime(working["date"])
+    working["_year"] = working["_dt"].dt.year
+    working["_month"] = working["_dt"].dt.month
+    # First trading day of each month
+    monthly = working.groupby(["_year", "_month"]).first().reset_index(drop=True)
+    monthly = monthly.dropna(subset=["close", indicator_col])
+    if len(monthly) < 12:
+        return {"error": "Insufficient data (need >= 12 months)"}
+
+    fgi_vals = monthly[indicator_col].values
+    close_vals = monthly["close"].values
+
+    # DCA: amount = base × (1 - FGI/100) × 2
+    amounts = base_amount * (1.0 - fgi_vals / 100.0) * 2.0
+    shares = amounts / close_vals
+    total_shares_dca = np.cumsum(shares)
+    final_value_dca = total_shares_dca[-1] * close_vals[-1]
+    total_invested_dca = np.sum(amounts)
+    total_return_dca = (final_value_dca / total_invested_dca) - 1.0
+    n_trading_days = len(working)
+    n_years = n_trading_days / 252.0
+
+    # Benchmark: equal monthly DCA
+    bench_shares = base_amount / close_vals
+    total_shares_bench = np.cumsum(bench_shares)
+    final_value_bench = total_shares_bench[-1] * close_vals[-1]
+    total_invested_bench = base_amount * len(close_vals)
+    total_return_bench = (final_value_bench / total_invested_bench) - 1.0
+
+    # Annualized
+    dca_annualized = (1.0 + total_return_dca) ** (1.0 / max(n_years, 0.5)) - 1.0
+    bench_annualized = (1.0 + total_return_bench) ** (1.0 / max(n_years, 0.5)) - 1.0
+
+    # Max drawdown
+    dca_portfolio = total_shares_dca * close_vals
+    bench_portfolio = total_shares_bench * close_vals
+
+    def _max_drawdown(series):
+        peak = np.maximum.accumulate(series)
+        drawdown = (series - peak) / peak
+        return float(np.min(drawdown))
+
+    dca_mdd = _max_drawdown(dca_portfolio)
+    bench_mdd = _max_drawdown(bench_portfolio)
+
+    # Sharpe (monthly returns annualized)
+    dca_monthly_ret = np.diff(dca_portfolio) / dca_portfolio[:-1]
+    bench_monthly_ret = np.diff(bench_portfolio) / bench_portfolio[:-1]
+    dca_sharpe = float(np.mean(dca_monthly_ret) / np.std(dca_monthly_ret, ddof=1) * np.sqrt(12)) if np.std(dca_monthly_ret, ddof=1) > 0 else 0.0
+    bench_sharpe = float(np.mean(bench_monthly_ret) / np.std(bench_monthly_ret, ddof=1) * np.sqrt(12)) if np.std(bench_monthly_ret, ddof=1) > 0 else 0.0
+
+    return {
+        "n_months": len(monthly),
+        "dca_total_return": float(total_return_dca),
+        "dca_annualized": float(dca_annualized),
+        "benchmark_total_return": float(total_return_bench),
+        "benchmark_annualized": float(bench_annualized),
+        "dca_max_drawdown": dca_mdd,
+        "benchmark_max_drawdown": bench_mdd,
+        "dca_sharpe": dca_sharpe,
+        "benchmark_sharpe": bench_sharpe,
+    }
+
+
+def _render_ic_section(ic_result: dict) -> str:
+    """Render Rank IC analysis section."""
+    lines = [
+        "### 📊 Rank IC 分析",
+        "",
+        "FGI_final 与上证综指 20 日前瞻收益的 Spearman Rank IC：",
+        "",
+    ]
+    if ic_result.get("error"):
+        lines.append(f"**数据不足**：{ic_result['error']}")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.append(f"- 全样本 IC：{ic_result['ic']:.4f}（n={ic_result['n']} 个交易日）")
+    if "bonferroni_threshold" in ic_result:
+        lines.append(f"- Bonferroni 参考阈值（α/36）：{ic_result['bonferroni_threshold']:.4f}")
+    lines.append("")
+    if ic_result.get("rolling"):
+        lines.append("#### 滚动 IC 窗口（每半年，3 年回顾窗）")
+        lines.append("")
+        lines.append("| 评估日期 | Rank IC | 观测数 |")
+        lines.append("|---------|--------|--------|")
+        for pt in ic_result["rolling"]:
+            lines.append(f"| {pt['date']} | {pt['ic']:.4f} | {pt['n']} |")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _render_layer_section(layer_result: dict) -> str:
+    """Render 10-layer backtest section."""
+    lines = [
+        "### 📊 10 档分层回测",
+        "",
+    ]
+    if not layer_result:
+        lines.append("数据不足。")
+        lines.append("")
+        return "\n".join(lines)
+
+    for h in [5, 20, 60]:
+        if h not in layer_result or not layer_result[h]:
+            continue
+        lines.append(f"#### {h} 日前瞻")
+        lines.append("")
+        lines.append("| 分档 | N | 平均收益 | 胜率 |")
+        lines.append("|------|---|---------|------|")
+        for lr in layer_result[h]:
+            mean_s = _fmt_pct(lr["mean_return"])
+            wr_s = _fmt_pct(lr["win_rate"])
+            lines.append(f"| {lr['layer']} | {lr['n']} | {mean_s} | {wr_s} |")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _render_dca_section(dca_result: dict) -> str:
+    """Render DCA simulation section."""
+    lines = [
+        "### 💰 逆情绪 DCA vs 等额定投",
+        "",
+    ]
+    if dca_result.get("error"):
+        lines.append(f"**数据不足**：{dca_result['error']}")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.append(f"- 投资月数：{dca_result['n_months']}")
+    lines.append("")
+    lines.append("| 策略 | 总收益 | 年化收益 | 最大回撤 | 夏普比率 |")
+    lines.append("|------|--------|---------|---------|---------|")
+    lines.append(f"| 逆情绪 DCA | {_fmt_pct(dca_result['dca_total_return'])} | {_fmt_pct(dca_result['dca_annualized'])} | {_fmt_pct(dca_result['dca_max_drawdown'])} | {dca_result['dca_sharpe']:.2f} |")
+    lines.append(f"| 等额定投 | {_fmt_pct(dca_result['benchmark_total_return'])} | {_fmt_pct(dca_result['benchmark_annualized'])} | {_fmt_pct(dca_result['benchmark_max_drawdown'])} | {dca_result['benchmark_sharpe']:.2f} |")
+    lines.append("")
+    return "\n".join(lines)
+
+    return "\n".join(lines)
