@@ -22,7 +22,7 @@ class M3Calculator:
             end_date
         )
 
-    def calculate_deviation(self, df: pd.DataFrame) -> pd.Series:
+    def calculate_deviation(self, df: pd.DataFrame) -> pd.DataFrame:
         df["ma60"] = df["close"].rolling(window=60).mean()
         df["deviation"] = (df["close"] - df["ma60"]) / df["ma60"]
         return df
