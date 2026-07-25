@@ -17,6 +17,7 @@ class TencentSource(DataSource):
             url = "http://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
             params = {"param": f"{code},day,,,{1500},qfq"}
             resp = self._session.get(url, params=params, timeout=10)
+            resp.raise_for_status()
             data = resp.json()
 
             if code not in data.get("data", {}):
