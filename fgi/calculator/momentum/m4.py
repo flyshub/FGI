@@ -95,8 +95,11 @@ class M4Calculator:
                 # last-good-value 回退：成交量是慢变指标，当日拉不到时用最近非 NaN 值
                 fallback_val = self._get_last_good_volume(date)
                 if fallback_val is not None:
-                    self._db.upsert_raw_data(date, "m4_volume", fallback_val)
-                    db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
+                    # 不改写 raw_data（避免重复回退累积平坦段 → zscore 发散），
+                    # 改从 DB 读取已有历史 + 在内存中追加当日回退值
+                    historical = self._db.get_raw_data("m4_volume", start_date, date)
+                    new_row = pd.DataFrame({"date": [date], "value": [fallback_val]})
+                    db_data = pd.concat([historical, new_row], ignore_index=True)
                     self._db.upsert_status(date, "m4", "degraded", result.source or "fallback",
                                            f"fetch failed, used last-good-value: {result.error or 'No data'}")
                     self._db.commit()
