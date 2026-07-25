@@ -29,7 +29,7 @@ from fgi.storage.database import Database
 logger = logging.getLogger(__name__)
 
 
-# 阈值与 FGI_LEVELS 保持一致：恐惧≤35, 中性 35-65, 贪婪≥65
+# 阈值：恐惧≤35, 中性 35-65, 贪婪≥65（与 FGI_LEVELS 的 20/40/60/80 不同，决策矩阵使用更灵敏的阈值）
 SENTIMENT_LOW = 35.0
 SENTIMENT_HIGH = 65.0
 VALUATION_LOW = 0.25   # 百分位 0-1
