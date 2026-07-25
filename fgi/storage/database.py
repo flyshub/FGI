@@ -241,20 +241,38 @@ class Database:
 
     # --- 扩展公共查询接口（避免外部直接访问 _connection） ---
 
-    def count_rows(self, table: str, where: str = "", params: tuple = ()) -> int:
-        """通用行数查询。table 限 'raw_data' / 'scores_daily' / 'daily_status'。
-
-        where 是可选的带 ? 占位符的 SQL 片段；params 是对应的参数元组。
-        为了防止 SQL 注入，table 必须命中白名单。
-        """
+    def count_rows(self, table: str) -> int:
+        """全表行数。table 限 'raw_data' / 'scores_daily' / 'daily_status'。"""
         if self._connection is None:
             raise RuntimeError("Database not connected")
         if table not in ("raw_data", "scores_daily", "daily_status"):
             raise ValueError(f"unknown table: {table}")
-        sql = f"SELECT COUNT(*) FROM {table}"
-        if where:
-            sql += f" WHERE {where}"
-        return self._connection.execute(sql, params).fetchone()[0]
+        return self._connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+    def count_raw_data_by_indicator(self, indicator: str) -> int:
+        """统计 raw_data 中某个 indicator 的行数。"""
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        return self._connection.execute(
+            "SELECT COUNT(*) FROM raw_data WHERE indicator = ?", (indicator,)
+        ).fetchone()[0]
+
+    def count_scores_with_data(self) -> int:
+        """scores_daily 中 FGI_final 不为空的行数。"""
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        return self._connection.execute(
+            "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL"
+        ).fetchone()[0]
+
+    def count_scores_below(self, fgi: float) -> int:
+        """scores_daily 中非空 FGI_final 小于给定值的行数。"""
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        return self._connection.execute(
+            "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL AND FGI_final < ?",
+            (fgi,),
+        ).fetchone()[0]
 
     def clear_table(self, table: str):
         """清空指定表数据。table 限 'scores_daily' / 'daily_status' / 'raw_data'。"""

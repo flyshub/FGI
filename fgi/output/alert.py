@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from fgi.config.settings import WEBHOOK_URL, WEBHOOK_TYPE, ANOMALY_PERCENTILE, DB_PATH
+from fgi.config.settings import WEBHOOK_URL, ANOMALY_PERCENTILE, DB_PATH
 from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,6 @@ QUERY_LOOKBACK_DAYS = 365 * 8
 class Alert:
     def __init__(self, db_path=None):
         self.webhook_url = WEBHOOK_URL
-        self.webhook_type = WEBHOOK_TYPE
         self.anomaly_percentile = ANOMALY_PERCENTILE
         self.db_path = db_path
 
@@ -72,25 +71,10 @@ class Alert:
         return message.strip()
 
     def _send_webhook(self, message: str):
-        if self.webhook_type == "wecom":
-            self._send_wecom(message)
-        elif self.webhook_type == "dingtalk":
-            self._send_dingtalk(message)
+        """统一发送 webhook 文本消息（wecom 和 dingtalk 使用相同的 msgtype:text 格式）。"""
+        self._send_webhook_text(message)
 
-    def _send_wecom(self, message: str):
-        try:
-            data = {
-                "msgtype": "text",
-                "text": {
-                    "content": message
-                }
-            }
-            response = requests.post(self.webhook_url, json=data, timeout=10)
-            response.raise_for_status()
-        except Exception:
-            pass
-
-    def _send_dingtalk(self, message: str):
+    def _send_webhook_text(self, message: str):
         try:
             data = {
                 "msgtype": "text",
