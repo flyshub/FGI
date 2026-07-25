@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import logging
 import numpy as np
 import pandas as pd
 
 from fgi.config.settings import FGI_EXTREME_LOW, FGI_EXTREME_HIGH
 
-
-_PERCENTILE_CACHE: dict[tuple[int, int, int], pd.Series] = {}
+_PERCENTILE_CACHE: dict = {}
 
 
 def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
@@ -19,7 +19,8 @@ def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     recompute 场景下同一 series 的二次调用通过 cache 直接返回。
     """
     arr = series.values
-    key = (len(arr), hash(arr.tobytes()), window)
+    key = (len(arr), hash(arr.tobytes()), window,
+           series.index[0], series.index[-1], len(series.index))
     cached = _PERCENTILE_CACHE.get(key)
     if cached is not None:
         return cached
@@ -31,7 +32,7 @@ def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     if n < min_p:
         out = pd.Series(result, index=series.index)
         if len(_PERCENTILE_CACHE) > 32:
-            _PERCENTILE_CACHE.clear()
+            _PERCENTILE_CACHE.pop(next(iter(_PERCENTILE_CACHE)))
         _PERCENTILE_CACHE[key] = out
         return out
 
@@ -57,8 +58,9 @@ def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     out = pd.Series(result, index=series.index)
 
     if len(_PERCENTILE_CACHE) > 32:
-        _PERCENTILE_CACHE.clear()
+        _PERCENTILE_CACHE.pop(next(iter(_PERCENTILE_CACHE)))
     _PERCENTILE_CACHE[key] = out
+
     return out
 
 
@@ -89,10 +91,12 @@ def winsorize(series: pd.Series, lower: float = 0.01, upper: float = 0.99) -> pd
 
 
 def mad_filter(series: pd.Series, threshold: float = 5.0) -> pd.Series:
-    median = series.median()
-    mad = np.median(np.abs(series - median))
-    modified_z = 0.6745 * (series - median) / mad
-    return series[np.abs(modified_z) < threshold]
+    """Filter outliers using Modified Z-Score (MAD-based).
+
+    Returns a *shorter* Series with outlier rows removed (not replaced with NaN).
+    Uses the modified Z-score method: 0.6745 * (x - median) / MAD.
+    Values with |modified_z| >= threshold are dropped.
+    """
 
 
 def calculate_fgi(dimension_scores: dict):
