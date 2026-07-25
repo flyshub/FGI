@@ -344,18 +344,42 @@ def get_zone_for_fgi(fgi: float | None) -> str:
 def _find_closest_prior_fgi(db: Database, fgi_value: float, current_date: str) -> tuple | None:
     """从 scores_daily 中查找与当前 FGI 最接近的历史日期（排除当日）。
 
-    Returns (date_str, fgi_value) or None.
+    匹配时考虑方向一致性：不仅要 FGI 值接近，涨跌方向也须一致。
+    例如当前从 55→35（下跌接近 35），历史上从 20→35（上涨接近 35）不匹配。
+
+    Returns (date_str, fgi_value, prev_fgi_value) or None.
     """
     try:
         scores = db.get_scores("2009-01-01", current_date)
         if scores.empty:
             return None
         hist = scores[scores["date"] < current_date].dropna(subset=["FGI_final"]).copy()
-        if hist.empty:
+        if len(hist) < 2:
             return None
-        hist["_diff"] = (hist["FGI_final"] - fgi_value).abs()
-        best = hist.loc[hist["_diff"].idxmin()]
-        return str(best["date"]), float(best["FGI_final"])
+        hist = hist.sort_values("date").reset_index(drop=True)
+        # 计算今日方向（当日 vs 前一日）
+        today_prev = hist[hist["date"] < current_date]["FGI_final"].iloc[-1] if len(hist[hist["date"] < current_date]) > 0 else None
+        if today_prev is None:
+            return None
+        today_direction = fgi_value - float(today_prev)
+        if abs(today_direction) < 0.5:
+            # 今日持平，不限制方向
+            candidates = hist[hist["date"] < current_date].copy()
+        else:
+            # 今日有方向：找同向的候选
+            # 计算每条历史记录的方向
+            hist["_prev"] = hist["FGI_final"].shift(1)
+            hist["_direction"] = hist["FGI_final"] - hist["_prev"]
+            candidates = hist[
+                (hist["date"] < current_date)
+                & (hist["_prev"].notna())
+                & ((hist["_direction"] * today_direction) > 0)  # 同向
+            ].copy()
+        if candidates.empty:
+            return None
+        candidates["_diff"] = (candidates["FGI_final"] - fgi_value).abs()
+        best = candidates.loc[candidates["_diff"].idxmin()]
+        return str(best["date"]), float(best["FGI_final"]), float(best["_prev"])
     except Exception:
         return None
 
@@ -420,16 +444,19 @@ def render_zone_context_card(fgi: float | None, db) -> str:
         extreme_note = f"\n> ⚠️ 历史仅 {n} 个交易日处于此区间，统计推断不可靠。\n"
 
     # 时间锚点：查找历史上与当前 FGI 最接近的日期及后续表现
+    # 匹配时要求方向一致（同为上涨接近或同为下跌接近）
     closest = _find_closest_prior_fgi(db, fgi, meta.get("end_date", ""))
     anchor_line = None
     if closest is not None:
-        closest_date, closest_fgi = closest
+        closest_date, closest_fgi, closest_prev = closest
+        direction_arrow = "📈" if closest_fgi >= closest_prev else "📉"
         forward_ret = _get_forward_return(db, closest_date, horizon=20)
         if forward_ret is not None:
-            arrow = "📈" if forward_ret > 0 else "📉"
+            after_arrow = "📈" if forward_ret > 0 else "📉"
             anchor_line = (
-                f"📎 **参考**：上次接近此水平（{closest_fgi:.1f}）是 **{closest_date}**，"
-                f"之后 20 日 {arrow} **{forward_ret*100:+.1f}%**"
+                f"📎 **参考**：上次同向接近此水平（{closest_fgi:.1f}）是 **{closest_date}**"
+                f"（{direction_arrow} {closest_fgi - closest_prev:+.1f}），"
+                f"之后 20 日 {after_arrow} **{forward_ret*100:+.1f}%**"
             )
 
     lines = [
