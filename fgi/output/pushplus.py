@@ -420,7 +420,7 @@ def _post(title: str, content: str) -> bool:
     }
 
     try:
-        resp = requests.post("http://www.pushplus.plus/send", json=payload, timeout=10)
+        resp = requests.post("https://www.pushplus.plus/send", json=payload, timeout=10)
         if resp.status_code == 200 and resp.json().get("code") == 200:
             logger.info(f"PushPlus sent: {title}")
             return True
