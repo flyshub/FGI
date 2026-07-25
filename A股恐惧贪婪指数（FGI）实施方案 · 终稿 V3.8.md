@@ -292,7 +292,7 @@ FGI_raw = 0.20 × 动量 + 0.20 × 情绪 + 0.20 × 估值 + 0.20 × 波动率 +
 - **语言**：Python 3.9+
 - **依赖**：`akshare`, `levistock`, `zzshare`, `pandas`, `numpy`, `requests`, `beautifulsoup4`, `scipy`, `sqlite3`, `matplotlib`
 - **存储**：SQLite
-- **调度**：Linux cron 或 Windows 任务计划，交易日 18:00 触发
+- **调度**：GitHub Actions（`.github/workflows/daily_update.yml`），交易日 19:00（北京时间）触发；支持手动 `workflow_dispatch`
 
 ### 4.2 数据库设计（EAV 模式）
 
@@ -338,7 +338,7 @@ CREATE TABLE daily_status (
 2. 逐指标增量更新，写入 `raw_data`，同时更新 `daily_status` 表。
 3. 从 `raw_data` 读取足够历史，计算得分及 FGI，写入 `scores_daily`。
 4. 容错降级：见各指标降级方案；连续缺失 10 日则剔除，权重分配给同维度其他指标。阈值由 `fgi/config/settings.py:MISSING_DAY_LIMIT` 控制（V3.8.3 起从 5 调至 10，因 T+1 数据延迟 + 周末 + 节假日实际可累积 4-5 自然日，10 个交易日宽容度更符合实际数据上报节奏）。
-5. 异常日志 + 报警（企业微信/钉钉 Webhook）。
+5. 异常日志 + 推送（PushPlus 每日报告 + 企业微信/钉钉 Webhook 报警）。
 6. **计算并输出指数健康度**（见 4.5 节），健康度低于 60 时推送标注“数据质量异常，仅供参考”。
 7. **FGI 日度变动异常检测**：当日 FGI_final 与前一交易日的绝对差值若超过滚动 5 年日度变动的 99% 分位数，标记“疑似异常”，暂停自动发布，触发人工复核。
 
