@@ -128,7 +128,9 @@ class F2Calculator:
         # #50: F2 是周频数据。ffill 到日频后多数日期是重复值（spec 设计），
         # 但 status 应诚实反映：最近 raw_data 距 target_date 超过 7 个日历日
         # 说明周频尚未更新，标 'degraded' 而非 'normal'，避免 health_score 失真。
-        latest_raw_date = pd.to_datetime(today["date"].iloc[0])
+        # 从 raw_data 取真实原始日期，而非 ffill 后的交易日日期（#88）
+        raw_latest = self._db.get_latest_raw_date("f2_fund_position", date)
+        latest_raw_date = pd.to_datetime(raw_latest) if raw_latest else pd.to_datetime(today["date"].iloc[0])
         target_dt = pd.to_datetime(date)
         staleness_days = (target_dt - latest_raw_date).days
         is_degraded = staleness_days > 7
