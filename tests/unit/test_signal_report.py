@@ -370,6 +370,59 @@ class TestMarkdownReport:
         assert "样本外" in md or "2023" in md
 
 
+class TestZoneContextCard:
+    """Test get_zone_for_fgi and render_zone_context_card."""
+
+    def test_get_zone_for_fgi_maps_correctly(self):
+        from fgi.output.signal_report import get_zone_for_fgi
+
+        assert get_zone_for_fgi(10) == "极度恐惧"
+        assert get_zone_for_fgi(20) == "恐惧"
+        assert get_zone_for_fgi(39.9) == "恐惧"
+        assert get_zone_for_fgi(50) == "中性"
+        assert get_zone_for_fgi(70) == "贪婪"
+        assert get_zone_for_fgi(80) == "极度贪婪"
+        assert get_zone_for_fgi(None) == "未知"
+        assert get_zone_for_fgi(float("nan")) == "未知"
+
+    def test_render_zone_context_card_extreme_fear(self, db):
+        """When FGI < 20, card shows extreme-fear stats with small-n warning."""
+        from fgi.output.signal_report import render_zone_context_card
+
+        # Seed tiny dataset with one extreme fear day
+        _seed(db, [("2020-01-02", 15.0)], [("2020-01-02", 3050.0)])
+        card = render_zone_context_card(15.0, db)
+        assert "极度恐惧" in card
+        assert "历史信号参考" in card
+
+    def test_render_zone_context_card_normal_zone(self, db):
+        """Card renders for a zone with enough data."""
+        n = 200
+        rng = np.random.default_rng(99)
+        dates = pd.date_range("2018-01-02", periods=n, freq="B")
+        closes = 3000 + np.cumsum(rng.normal(0, 20, n))
+        fgis = rng.uniform(45, 55, n)  # all neutral
+
+        _seed(db,
+              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis)],
+              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes)])
+
+        from fgi.output.signal_report import render_zone_context_card
+
+        card = render_zone_context_card(50.0, db)
+        assert "中性" in card
+        assert "历史信号参考" in card
+        assert "上证综指" in card
+
+    def test_render_zone_context_card_returns_empty_on_failure(self):
+        """Missing DB or bad data returns empty string."""
+        from fgi.output.signal_report import render_zone_context_card
+
+        # None FGI → should return empty
+        card = render_zone_context_card(None, None)
+        assert card == ""
+
+
 class TestCliEntry:
     """Test the generate_signal_report.py CLI script."""
 

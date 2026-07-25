@@ -328,3 +328,77 @@ def render_markdown(result: dict) -> str:
     parts.append("<sub>本报告由 `fgi/output/signal_report.py` 自动生成。报告仅供参考，不构成投资建议。</sub>")
 
     return "\n".join(parts)
+
+
+def get_zone_for_fgi(fgi: float | None) -> str:
+    """Map an FGI value to its five-zone label (aligned with signal report zones)."""
+    return assign_zone(fgi)
+
+
+def render_zone_context_card(fgi: float | None, db) -> str:
+    """Render a compact historical signal reference card for push notification.
+
+    Returns a markdown block showing the current FGI's zone and its historical
+    forward-return statistics across 5/20/60-day horizons. Returns empty string
+    on failure or insufficient data.
+    """
+    if fgi is None or (isinstance(fgi, float) and pd.isna(fgi)):
+        return ""
+    if db is None:
+        return ""
+
+    try:
+        engine = SignalReportEngine(db)
+        result = engine.run()
+        stats = result.get("stats", {})
+        meta = result.get("metadata", {})
+    except Exception:
+        return ""
+
+    if not stats:
+        return ""
+
+    zone = get_zone_for_fgi(fgi)
+    horizon = 5  # Use 5-day stats for the distribution count
+    zone_stats_all = stats.get(horizon, [])
+    zone_data = next((z for z in zone_stats_all if z["zone"] == zone), None)
+    if zone_data is None:
+        return ""
+
+    n = zone_data["n"]
+    total = meta.get("total_days", 0)
+    pct = f"{n / total * 100:.1f}%" if total > 0 else "—"
+    extreme_note = ""
+    if n < 30:
+        extreme_note = f"\n> ⚠️ 历史仅 {n} 个交易日处于此区间，统计推断不可靠。\n"
+
+    lines = [
+        "",
+        "---",
+        "",
+        "### 📈 历史信号参考",
+        "",
+        f"当前 FGI 处于 **{zone}** 区间，历史上出现 {n} 次（占比 {pct}）：",
+        "",
+        "| 前瞻 | 上证综指平均涨跌 | 胜率 |",
+        "|------|----------------|------|",
+    ]
+
+    for h in [5, 20, 60]:
+        h_stats = stats.get(h, [])
+        h_data = next((z for z in h_stats if z["zone"] == zone), None)
+        if h_data is None:
+            continue
+        mean_s = _fmt_pct(h_data["mean"])
+        wr_s = _fmt_pct(h_data["win_rate"])
+        lines.append(f"| {h} 日 | {mean_s} | {wr_s} |")
+
+    lines.append("")
+    if extreme_note:
+        lines.append(extreme_note)
+    start_d = meta.get("start_date", "—")
+    end_d = meta.get("end_date", "—")
+    lines.append(f"<sub>数据：{start_d} ~ {end_d} · 上证综指 · 历史不代表未来收益</sub>")
+    lines.append("")
+
+    return "\n".join(lines)
