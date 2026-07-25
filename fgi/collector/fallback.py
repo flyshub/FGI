@@ -50,7 +50,7 @@ INDICATOR_RAW_KEY: Dict[str, str] = {
     "V4": "v4_qvix",
     "F1": "f1_margin_ratio",
     "F2": "f2_fund_position",
-    "F3": "f3_industry_net_flow",
+    "F3": "f3_percentile",
 }
 
 
