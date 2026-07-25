@@ -159,6 +159,17 @@ class Database:
         """
         return pd.read_sql_query(query, self._connection, params=(start_date, end_date))
 
+    def get_score_on_date(self, date: str) -> dict | None:
+        """返回 scores_daily 某日完整行（dict），无数据返回 None。"""
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        cur = self._connection.execute("SELECT * FROM scores_daily WHERE date = ?", (date,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
     def upsert_status(self, date: str, indicator: str, status: str, source: str = "", error: str = ""):
         if self._connection is None:
             raise RuntimeError("Database not connected")
@@ -230,10 +241,10 @@ class Database:
 
     # --- 扩展公共查询接口（避免外部直接访问 _connection） ---
 
-    def count_rows(self, table: str, where: str = "") -> int:
+    def count_rows(self, table: str, where: str = "", params: tuple = ()) -> int:
         """通用行数查询。table 限 'raw_data' / 'scores_daily' / 'daily_status'。
 
-        where 是可选的 SQL 片段，会被原样拼到 WHERE 后（参数化由调用方在片段内处理）。
+        where 是可选的带 ? 占位符的 SQL 片段；params 是对应的参数元组。
         为了防止 SQL 注入，table 必须命中白名单。
         """
         if self._connection is None:
@@ -243,7 +254,7 @@ class Database:
         sql = f"SELECT COUNT(*) FROM {table}"
         if where:
             sql += f" WHERE {where}"
-        return self._connection.execute(sql).fetchone()[0]
+        return self._connection.execute(sql, params).fetchone()[0]
 
     def clear_table(self, table: str):
         """清空指定表数据。table 限 'scores_daily' / 'daily_status' / 'raw_data'。"""

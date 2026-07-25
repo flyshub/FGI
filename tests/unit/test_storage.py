@@ -75,6 +75,17 @@ class TestScores:
         assert len(df) == 1
         assert df.iloc[0]["M1"] == 55.0
 
+    def test_get_score_on_date_found(self, db):
+        db.upsert_score("2024-01-01", {"M1": 50.0, "M2": 60.0, "FGI_final": 55.0})
+        row = db.get_score_on_date("2024-01-01")
+        assert row is not None
+        assert row["M1"] == 50.0
+        assert row["M2"] == 60.0
+        assert row["FGI_final"] == 55.0
+
+    def test_get_score_on_date_not_found(self, db):
+        assert db.get_score_on_date("2099-01-01") is None
+
 
 class TestStatus:
     def test_upsert_and_get(self, db):
