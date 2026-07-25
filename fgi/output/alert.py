@@ -84,5 +84,5 @@ class Alert:
             }
             response = requests.post(self.webhook_url, json=data, timeout=10)
             response.raise_for_status()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("Webhook send failed: %s", e)
