@@ -55,7 +55,9 @@ class Alert:
 
             return False
         except Exception:
-            return False
+            # 异常检测自身失败 → 保守原则：视为已检测到异常，暂停推送并通过
+            # webhook/PushPlus 通知运维（spec L343: 暂停自动发布）
+            return True
 
     def _build_alert_message(self, date: str, fgi_result: Dict[str, Any]) -> str:
         fgi_final = fgi_result.get("fgi_final", 0)

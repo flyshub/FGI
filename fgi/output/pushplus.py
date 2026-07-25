@@ -335,7 +335,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         bg = f' style="background:{_DIM_COLORS[dim]}"'
         score = dimension_scores.get(dim)
         s_str = f"{score:.1f}" if score is not None else '<span style="color:#999">—</span>'
-        dhtml.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333;font-weight:700">{DIMENSION_NAMES[dim]}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222;white-space:nowrap">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333">25%</td></tr>')
+        dhtml.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333;font-weight:700">{DIMENSION_NAMES[dim]}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222;white-space:nowrap">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333">20%</td></tr>')
     dhtml.append("</table>")
     parts.append("\n".join(dhtml))
 
