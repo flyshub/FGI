@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import sqlite3
 import logging
 import requests
 from datetime import datetime, timedelta
@@ -10,6 +9,7 @@ from typing import Optional
 
 from fgi.common.utils import extract_indicator_score
 from fgi.config.settings import DB_PATH, HEALTHY_THRESHOLD
+from fgi.storage.database import Database
 from fgi.output.signal_report import render_zone_context_card
 
 logger = logging.getLogger(__name__)
@@ -101,14 +101,9 @@ def _fgi_level(fgi: float) -> str:
 
 def _get_prev_scores(date_str: str) -> dict | None:
     try:
-        db = sqlite3.connect(str(DB_PATH))
         prev = (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
-        cursor = db.execute("SELECT * FROM scores_daily WHERE date = ?", (prev,))
-        row = cursor.fetchone()
-        if not row:
-            return None
-        cols = [d[0] for d in cursor.description]
-        return dict(zip(cols, row))
+        with Database(DB_PATH) as db:
+            return db.get_score_on_date(prev)
     except Exception:
         return None
 
@@ -134,15 +129,9 @@ def _score_bar(score: float, width: int = 8) -> str:
 def _fgi_percentile(fgi: float) -> tuple[str, str]:
     """return (human-friendly label, short note for extreme)."""
     try:
-        db = sqlite3.connect(str(DB_PATH))
-        below = db.execute(
-            "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL AND FGI_final < ?",
-            (fgi,)
-        ).fetchone()[0]
-        total = db.execute(
-            "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL"
-        ).fetchone()[0]
-        db.close()
+        with Database(DB_PATH) as db:
+            below = db.count_rows("scores_daily", "FGI_final IS NOT NULL AND FGI_final < ?", (fgi,))
+            total = db.count_rows("scores_daily", "FGI_final IS NOT NULL")
         if total == 0:
             return "无历史数据", ""
         pct = below / total * 100
@@ -305,8 +294,7 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         parts.append("")
 
     # --- 历史信号参考 ---
-    from fgi.storage.database import Database as _Db
-    with _Db(DB_PATH) as _signal_db:
+    with Database(DB_PATH) as _signal_db:
         parts.append(render_zone_context_card(fgi_raw, _signal_db))
 
     parts.append("")
