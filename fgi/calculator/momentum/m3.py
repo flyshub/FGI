@@ -64,6 +64,7 @@ class M3Calculator:
         score = self.calculate_score(percentile)
 
         self._db.upsert_raw_data(date, "m3_deviation", today["deviation"].iloc[0])
+        self._db.upsert_raw_data(date, "m3_close", today["close"].iloc[0])
         self._db.upsert_raw_data(date, "m3_percentile", percentile)
         self._db.upsert_score(date, {"M3": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
