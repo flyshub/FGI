@@ -124,7 +124,9 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 项目通过 GitHub Actions 每个交易日自动计算 FGI、推送 PushPlus、回写数据库。
 
 - **触发**：交易日 19:00（北京时间）+ 手动 `workflow_dispatch`
-- **配置**：在 Settings → Secrets 添加 `PUSHPLUS_TOKEN`
+- **配置**：在 Settings → Secrets → Actions 添加：
+  - `PUSHPLUS_TOKEN` — 主推送地址
+  - `PUSHPLUS_TOKENS` — 额外订阅者 token（逗号分隔，可选）
 - **产物**：每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact
 
 ## 测试
