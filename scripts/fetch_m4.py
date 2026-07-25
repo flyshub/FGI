@@ -9,10 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd
 from fgi.collector.akshare_source import AKShareSource
 from fgi.storage.database import Database
+from fgi.config.settings import DB_PATH
 
 
 def main():
-    db = Database(Path("data/fgi.db"))
+    db = Database(DB_PATH)
     db.connect()
     src = AKShareSource()
 

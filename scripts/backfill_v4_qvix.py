@@ -12,9 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import akshare as ak
 
 from fgi.storage.database import Database
-
-
-DB_PATH = "data/fgi.db"
+from fgi.config.settings import DB_PATH
 
 
 def main():
