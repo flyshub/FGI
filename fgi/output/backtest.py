@@ -1,3 +1,21 @@
+"""⚠️ DEPRECATED — see ADR-0003 and signal_report.py.
+
+This module has a known defect: all analysis methods compute `future_return`
+as `FGI_final.shift(-N) / FGI_final - 1`, measuring FGI autocorrelation
+rather than predictive power against actual market returns.
+
+Use `fgi.output.signal_report` instead:
+  - Rank IC:   compute_rank_ic(df, indicator_col='FGI_final')
+  - Layers:    layer_backtest_10(df)
+  - DCA:       simulate_dca(df)
+  - Report:    scripts/generate_signal_report.py
+
+"""
+raise NotImplementedError(
+    "BacktestEngine is deprecated. Use fgi.output.signal_report for "
+    "Rank IC analysis, layer backtest, and DCA simulation (ADR-0003)."
+)
+
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional
