@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from fgi.config.settings import FGI_EXTREME_LOW, FGI_EXTREME_HIGH
+
 
 _PERCENTILE_CACHE: dict[tuple[int, int, int], pd.Series] = {}
 
@@ -151,7 +153,7 @@ def apply_consistency_adjustment(fgi_raw: float, indicator_scores: list) -> tupl
 
 
 def adjust_fgi_with_mad_pct(fgi_raw: float, mad: float, mad_pct: float) -> float:
-    if fgi_raw < 15 or fgi_raw > 85:
+    if fgi_raw < FGI_EXTREME_LOW or fgi_raw > FGI_EXTREME_HIGH:
         lam = min(mad_pct * 0.6, 0.3)
         return fgi_raw * (1.0 - lam) + 50.0 * lam
     return fgi_raw
