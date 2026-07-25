@@ -408,9 +408,9 @@ CREATE TABLE daily_status (
 | 章节 | 需求 | 状态 | 负责模块 |
 |------|------|------|---------|
 | 5.1 样本分割 | 2015-2022 样本内 / 2023-2026 样本外 | ✅ 已实现 | `signal_report.py` |
-| 5.2 分层回测 | 10 档分位，5/20/60 日窗口，沪深300/500/1000 基准 | ⚠️ 部分 | `signal_report.py`（5 档，仅上证综指） |
-| 5.3 IC 分析 | Rank IC，Bonferroni 校正，滚动窗口 | ❌ 未实现 | `backtest.py`（仅 FGI 自相关 Pearson IC） |
-| 5.4 策略模拟 | 逆情绪定投、极端择时、基准对比 | ❌ 未实现 | `backtest.py`（仅 FGI 自相关模拟） |
+| 5.2 分层回测 | 10 档分位，5/20/60 日窗口，沪深300/500/1000 基准 | ⚠️ 部分 | `signal_report.py`（10 档已实现；仅上证综指基准；CSI300/500/1000 留 v2） |
+| 5.3 IC 分析 | Rank IC，Bonferroni 校正，滚动窗口 | ✅ 已实现（#83） | `signal_report.py`（Spearman Rank IC + 半年度滚动窗口 + Bonferroni 参考阈值） |
+| 5.4 策略模拟 | 逆情绪定投、极端择时、基准对比 | ⚠️ 部分 | `signal_report.py`（DCA 已实现 + 等额定投对比；极端择时留 v2） |
 | 5.5 其他验证 | 剔除测试、F1 IC、MAD 有效性 | ⚠️ 部分 | 极端事件方向性已验证；系统 IC 未做 |
 | 推送内信号参考 | 每日推送附带当前 FGI 所在区间历史胜率 | ✅ 已实现 | `signal_report.py` + `pushplus.py` |
 | 决策矩阵 | 情绪×估值 3×3 象限 | ✅ 已实现 | `decision_matrix.py` + `pushplus.py` |
