@@ -31,15 +31,21 @@ class S3Calculator:
         df["zt_ratio"] = pd.to_numeric(df["seal_fund_sum"], errors="coerce") / 1e8
         return df
 
-    def calculate_percentile(self, df: pd.DataFrame) -> pd.Series:
+    def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
         # Audit 2026-07-24: S3 raw=0 (and denormalized floats like 1e-142) are
         # data-source outages mis-stored as 0.0, not genuine zero-limit-up days.
         # All 476 S3=0 rows in production DB had same-day M1>0, confirming outage.
         # These pollution values sit at the bottom of the rolling window and inflate
-        # every later percentile by +8 to +36 points. Filter them out before ranking.
-        clean = df[df["zt_ratio"].isna() | (df["zt_ratio"] > 1e-100)].copy()
-        clean["percentile"] = rolling_percentile(clean["zt_ratio"], window=self._window)
-        return df.merge(clean[["date", "percentile"]], on="date", how="left")
+        # every later percentile by +8 to +36 points.
+        #
+        # Replace pollution with NaN (rather than removing rows) so the rolling
+        # percentile array position stays aligned. rolling_percentile skips NaN
+        # in its window computation (fgi/common/utils.py:43).
+        clean_zt = df["zt_ratio"].where(
+            df["zt_ratio"].isna() | (df["zt_ratio"] > 1e-100), other=float("nan")
+        )
+        df["percentile"] = rolling_percentile(clean_zt, window=self._window)
+        return df
 
     def calculate_score(self, percentile: float) -> float:
         return percentile * 100
