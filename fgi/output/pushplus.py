@@ -24,11 +24,9 @@ from fgi.output.renderer import (
 logger = logging.getLogger(__name__)
 
 
-def _post(title: str, content: str) -> bool:
-    """Common PushPlus send: token lookup → payload → post → 200 check. Returns True on success."""
-    token = os.getenv("FGI_PUSHPLUS_TOKEN", "")
+def _post(token: str, title: str, content: str) -> bool:
+    """Send to a single PushPlus token. Returns True on success."""
     if not token:
-        logger.info("FGI_PUSHPLUS_TOKEN not configured, skipping push")
         return False
 
     payload = {
@@ -48,6 +46,27 @@ def _post(title: str, content: str) -> bool:
     except Exception as e:
         logger.error(f"PushPlus push failed: {e}")
         return False
+
+
+def _broadcast(title: str, content: str) -> bool:
+    """Push to all configured subscribers. Returns True if at least one succeeded."""
+    tokens = []
+    primary = os.getenv("FGI_PUSHPLUS_TOKEN", "")
+    if primary:
+        tokens.append(primary)
+    extra = os.getenv("FGI_PUSHPLUS_TOKENS", "")
+    if extra:
+        tokens.extend(t for t in extra.split(",") if t.strip())
+
+    if not tokens:
+        logger.info("no PushPlus tokens configured, skipping push")
+        return False
+
+    ok = False
+    for t in tokens:
+        if _post(t.strip(), title, content):
+            ok = True
+    return ok
 
 
 def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
@@ -80,9 +99,9 @@ def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: d
     content += f"\n\n---\n`{date_str} {ts}`"
 
     # HTTP transport
-    return _post(f"📊 A股恐贪指数 · {date_str} {ts}", content)
+    return _broadcast(f"📊 A股恐贪指数 · {date_str} {ts}", content)
 
 
 def send_alert(title: str, content: str) -> bool:
     """Send an alert message via PushPlus. Returns True on success."""
-    return _post(title, content)
+    return _broadcast(title, content)
