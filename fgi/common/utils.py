@@ -97,6 +97,10 @@ def mad_filter(series: pd.Series, threshold: float = 5.0) -> pd.Series:
     Uses the modified Z-score method: 0.6745 * (x - median) / MAD.
     Values with |modified_z| >= threshold are dropped.
     """
+    median = series.median()
+    mad = np.median(np.abs(series - median))
+    modified_z = 0.6745 * (series - median) / mad
+    return series[np.abs(modified_z) < threshold]
 
 
 def calculate_fgi(dimension_scores: dict):
