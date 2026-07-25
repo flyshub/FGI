@@ -190,21 +190,13 @@ class Database:
         if self._connection is None:
             raise RuntimeError("Database not connected")
         indicator = indicator.lower()
-        # 第一次插入：source/error 初始空
         self._connection.execute("""
-            INSERT OR IGNORE INTO daily_status (date, indicator, status, source, error)
-            VALUES (?, ?, ?, '', '')
-        """, (date, indicator, status))
-        # 更新 status；source/error 仅在传入非空时更新（保留 forward_fill 写入的 elapsed 轨迹）
-        self._connection.execute("""
-            UPDATE daily_status SET status = ?
-            WHERE date = ? AND indicator = ?
-        """, (status, date, indicator))
-        if error:
-            self._connection.execute("""
-                UPDATE daily_status SET error = ?
-                WHERE date = ? AND indicator = ?
-            """, (error, date, indicator))
+            INSERT INTO daily_status (date, indicator, status, source, error)
+            VALUES (?, ?, ?, COALESCE((SELECT source FROM daily_status WHERE date = ? AND indicator = ?), ''), ?)
+            ON CONFLICT (date, indicator) DO UPDATE SET
+                status = excluded.status,
+                error = CASE WHEN excluded.error != '' THEN excluded.error ELSE daily_status.error END
+        """, (date, indicator, status, date, indicator, error or ""))
 
     def get_status(self, date: str) -> pd.DataFrame:
         query = """
