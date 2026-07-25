@@ -83,7 +83,8 @@ def _classify_valuation(pct: Optional[float]) -> Optional[str]:
 
 
 # 9 宫格：行=情绪(恐惧/中性/贪婪)，列=估值(低估/合理/高估)
-_QUADRANT_TABLE = {
+# 元组：(象限名, 建议文案)
+QUADRANT_TABLE = {
     ("恐惧", "低估"):   ("强烈关注", "情绪悲观+估值偏低，建议关注左侧机会"),
     ("恐惧", "合理"):   ("关注",     "情绪悲观但估值合理，建议观察"),
     ("恐惧", "高估"):   ("观望",     "情绪悲观且估值偏高，建议观望"),
@@ -95,9 +96,15 @@ _QUADRANT_TABLE = {
     ("贪婪", "高估"):   ("强烈谨慎", "情绪高涨+估值偏高，建议警惕右侧风险"),
 }
 
+# 象限 → emoji（供 pushplus 等渲染层使用）
+QUADRANT_EMOJI = {
+    "强烈关注": "🟢", "关注": "🔵", "中性": "⚪",
+    "观望": "🟡", "谨慎": "🟠", "强烈谨慎": "🔴",
+}
+
 
 def _lookup_quadrant(sentiment: str, valuation: str) -> tuple:
-    return _QUADRANT_TABLE.get(
+    return QUADRANT_TABLE.get(
         (sentiment, valuation),
         ("未知", "数据不足"),
     )

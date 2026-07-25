@@ -99,9 +99,10 @@ def calculate_fgi(dimension_scores: dict):
     """Weighted composite. Dimensions whose score is None (fully missing) are
     excluded and the remaining dimension weights renormalized proportionally.
     Returns None when every dimension is missing, or when fewer than 2 dimensions
-    have valid scores (insufficient coverage for a meaningful composite)."""
-    # KEEP IN SYNC with fgi/calculator/fgi.py:DIMENSION_WEIGHTS
-    # (duplicated to avoid circular import; consolidated source-of-truth lives there)
+    have valid scores (insufficient coverage for a meaningful composite).
+
+    Source of truth for dimension weights: fgi/calculator/fgi.py:DIMENSION_WEIGHTS.
+    Duplicated here to avoid circular import — keep in sync manually."""
     weights = {
         "momentum": 0.20,
         "sentiment": 0.20,
@@ -159,7 +160,7 @@ def adjust_fgi_with_mad_pct(fgi_raw: float, mad: float, mad_pct: float) -> float
     return fgi_raw
 
 
-def calculate_health_score(status_df: pd.DataFrame, correlation_exceed_rate: float = 0.0) -> float:
+def calculate_health_score(status_df: pd.DataFrame) -> float:
     total = len(status_df)
     if total == 0:
         return 0
@@ -170,11 +171,5 @@ def calculate_health_score(status_df: pd.DataFrame, correlation_exceed_rate: flo
     normal_ratio = normal_count / total
     impaired_ratio = impaired_count / total
 
-    health_score = (normal_ratio * 40) + ((1 - impaired_ratio) * 40) + ((1 - correlation_exceed_rate) * 20)
+    health_score = (normal_ratio * 40) + ((1 - impaired_ratio) * 40) + 20
     return min(100, max(0, health_score))
-
-
-def calculate_correlation_exceed_rate(db, date: str, lookback: int = 60) -> float:
-    """#49 (deprecated 2026-07-23): M1/S3 高相关已通过 INDICATOR_WEIGHTS 静态降权解决。
-    保留函数签名仅为兼容旧调用方；返回常数 0.0，不再参与 health_score 计算。"""
-    return 0.0

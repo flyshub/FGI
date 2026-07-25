@@ -116,7 +116,8 @@ def zt_backfill(start_date: str, end_date: str, db_path: Optional[Path] = None):
                 print(f"    {d}: {e}")
             if len(errors) > 10:
                 print(f"    ... and {len(errors) - 10} more")
-        count = db.count_rows("raw_data", "indicator IN ('m1_zt_count', 's3_seal_fund')")
+        count = (db.count_raw_data_by_indicator("m1_zt_count")
+                 + db.count_raw_data_by_indicator("s3_seal_fund"))
         print(f"  Database: {count} raw records")
 
 

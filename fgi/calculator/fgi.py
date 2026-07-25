@@ -76,18 +76,13 @@ class FGICalculator:
                 results[name] = {"score": None, "status": "error", "source_date": None, "error": str(e)}
         return results
 
-    @staticmethod
-    def _extract_score(result: dict, name: str):
-        """Extract an indicator score; only None/NaN count as missing (0.0 is valid)."""
-        return extract_indicator_score(result, name)
-
     def calculate_dimension_score(self, indicator_results: dict, dimension: str,
                                   weights: dict = None):
         weights = (weights or INDICATOR_WEIGHTS)[dimension]
         scores = []
         for ind, weight in weights.items():
             result = indicator_results.get(ind, {})
-            score = self._extract_score(result, ind)
+            score = extract_indicator_score(result, ind)
             if score is not None:
                 scores.append((score, weight))
         if not scores:
@@ -106,9 +101,8 @@ class FGICalculator:
             })
         if not statuses:
             return 0
-        # #49: correlation_exceed_rate 已废弃 — M1/S3 高相关是同源结构性事实，
-        # 已通过 INDICATOR_WEIGHTS 静态降权解决，不再惩罚 health_score。
-        return calculate_health_score(pd.DataFrame(statuses), 0.0)
+        # correlation_exceed_rate 已废弃 — 不再参与 health_score 计算
+        return calculate_health_score(pd.DataFrame(statuses))
 
     def _apply_forward_fill(self, indicator_results: dict, date: str):
         """指标当日无得分时，用最近 MISSING_DAY_LIMIT 个交易日内
@@ -124,7 +118,7 @@ class FGICalculator:
             return
         trade_days = sorted(history["date"].tolist())
         for name, result in indicator_results.items():
-            if self._extract_score(result, name) is not None:
+            if extract_indicator_score(result, name) is not None:
                 continue
             if name not in history.columns:
                 continue
@@ -176,7 +170,7 @@ class FGICalculator:
 
         all_scores = []
         for name, r in indicator_results.items():
-            s = self._extract_score(r, name)
+            s = extract_indicator_score(r, name)
             if s is not None:
                 all_scores.append(float(s))
 

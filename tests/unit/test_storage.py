@@ -28,10 +28,11 @@ class TestDatabaseInit:
         # Manually insert deprecated indicator before re-init
         db.upsert_raw_data("2024-01-01", "f3_industry_net_flow", -12345.0)
         db.upsert_raw_data("2024-01-02", "f3_industry_net_flow", 67890.0)
-        assert db.count_rows("raw_data", "indicator='f3_industry_net_flow'") == 2
+        assert db.count_rows("raw_data") == 2
+        assert db.count_raw_data_by_indicator("f3_industry_net_flow") == 2
         # Re-init triggers cleanup
         db.init_schema()
-        assert db.count_rows("raw_data", "indicator='f3_industry_net_flow'") == 0
+        assert db.count_raw_data_by_indicator("f3_industry_net_flow") == 0
 
 
 class TestRawData:

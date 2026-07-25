@@ -11,6 +11,7 @@ from fgi.common.utils import extract_indicator_score
 from fgi.config.settings import DB_PATH, HEALTHY_THRESHOLD
 from fgi.storage.database import Database
 from fgi.output.signal_report import render_zone_context_card
+from fgi.output.decision_matrix import QUADRANT_TABLE, QUADRANT_EMOJI
 
 logger = logging.getLogger(__name__)
 
@@ -130,24 +131,25 @@ def _fgi_percentile(fgi: float) -> tuple[str, str]:
     """return (human-friendly label, short note for extreme)."""
     try:
         with Database(DB_PATH) as db:
-            below = db.count_rows("scores_daily", "FGI_final IS NOT NULL AND FGI_final < ?", (fgi,))
-            total = db.count_rows("scores_daily", "FGI_final IS NOT NULL")
+            below = db.count_scores_below(fgi)
+            total = db.count_scores_with_data()
         if total == 0:
             return "无历史数据", ""
         pct = below / total * 100
-        if pct <= 10:
-            return f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"
-        if pct <= 25:
-            return f"低于历史上 {100-pct:.0f}% 的日子（偏低）", ""
-        if pct <= 40:
-            return f"位于历史中下区域（{pct:.0f}%分位）", ""
-        if pct <= 60:
-            return f"位于历史中部（{pct:.0f}%分位）", ""
-        if pct <= 75:
-            return f"位于历史中上区域（{pct:.0f}%分位）", ""
-        if pct <= 90:
-            return f"高于历史上 {pct:.0f}% 的日子（偏高）", ""
-        return f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"
+        # 阈值表: (上限%, 标签前缀, 极端标记)
+        tiers = [
+            (10,  f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
+            (25,  f"低于历史上 {100-pct:.0f}% 的日子（偏低）",  ""),
+            (40,  f"位于历史中下区域（{pct:.0f}%分位）",        ""),
+            (60,  f"位于历史中部（{pct:.0f}%分位）",            ""),
+            (75,  f"位于历史中上区域（{pct:.0f}%分位）",        ""),
+            (90,  f"高于历史上 {pct:.0f}% 的日子（偏高）",      ""),
+            (100, f"高于历史上 {pct:.0f}% 的日子（极高）",      "⚠️ 处于历史极高区间"),
+        ]
+        for limit, label, note in tiers:
+            if pct <= limit:
+                return label, note
+        return "暂无历史参考", ""
     except Exception:
         return "暂无历史参考", ""
 
@@ -231,11 +233,7 @@ def _decision_matrix_section(dm: dict) -> str:
     pe_pct_str = f"{pe_pct*100:.0f}%" if pe_pct is not None else "—"
     pb_pct_str = f"{pb_pct*100:.0f}%" if pb_pct is not None else "—"
 
-    # 简单 emoji 选择
-    emoji = {
-        "强烈关注": "🟢", "关注": "🔵", "中性": "⚪",
-        "观望": "🟡", "谨慎": "🟠", "强烈谨慎": "🔴",
-    }.get(quadrant, "❓")
+    emoji = QUADRANT_EMOJI.get(quadrant, "❓")
 
     # 3x3 矩阵，当前象限高亮
     def cell(s: str, v: str, hl: bool) -> str:
@@ -249,21 +247,15 @@ def _decision_matrix_section(dm: dict) -> str:
     sents_raw = ["恐惧", "中性", "贪婪"]
     sents_display = ["恐惧(<35)", "中性(35-65)", "贪婪(>65)"]
     vals = ["低估", "合理", "高估"]
-    html = ['<table style="width:100%">']
-    # 表头
-    html.append('<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
-                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">低估(&lt;25%)</th>'
-                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">合理(25-75%)</th>'
-                '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">高估(&gt;75%)</th></tr>')
-    qmap = {
-        ("恐惧", "低估"): "强烈关注", ("恐惧", "合理"): "关注", ("恐惧", "高估"): "观望",
-        ("中性", "低估"): "关注", ("中性", "合理"): "中性", ("中性", "高估"): "谨慎",
-        ("贪婪", "低估"): "观望", ("贪婪", "合理"): "谨慎", ("贪婪", "高估"): "强烈谨慎",
-    }
+    html = ['<table style="width:100%">',
+            '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
+            '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">低估(&lt;25%)</th>'
+            '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">合理(25-75%)</th>'
+            '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">高估(&gt;75%)</th></tr>']
     for si, s in enumerate(sents_raw):
         cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#222">{sents_display[si]}</td>']
         for v in vals:
-            q = qmap[(s, v)]
+            q, _ = QUADRANT_TABLE.get((s, v), ("?", ""))
             cells.append(cell(q, "", s == cur_sent and v == cur_val))
         html.append("<tr>" + "".join(cells) + "</tr>")
     html.append("</table>")

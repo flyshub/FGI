@@ -25,7 +25,6 @@ class TestAlert:
 
     def test_alert_with_webhook(self, db):
         with patch('fgi.output.alert.WEBHOOK_URL', 'http://test.com'), \
-             patch('fgi.output.alert.WEBHOOK_TYPE', 'wecom'), \
              patch('fgi.output.alert.requests.post') as mock_post:
             mock_post.return_value.raise_for_status.return_value = None
 
@@ -44,7 +43,6 @@ class TestAlert:
 
     def test_alert_dingtalk(self, db):
         with patch('fgi.output.alert.WEBHOOK_URL', 'http://test.com'), \
-             patch('fgi.output.alert.WEBHOOK_TYPE', 'dingtalk'), \
              patch('fgi.output.alert.requests.post') as mock_post:
             mock_post.return_value.raise_for_status.return_value = None
 
@@ -63,7 +61,6 @@ class TestAlert:
 
     def test_alert_no_anomaly(self, db):
         with patch('fgi.output.alert.WEBHOOK_URL', 'http://test.com'), \
-             patch('fgi.output.alert.WEBHOOK_TYPE', 'wecom'), \
              patch('fgi.output.alert.requests.post') as mock_post:
 
             db.upsert_score("2024-01-01", {"FGI_final": 60.0})
@@ -78,7 +75,6 @@ class TestAlert:
     def test_alert_dimension_extreme_does_not_trigger(self, db):
         """dimension scores > 85 / < 15 no longer trigger anomaly (spec: only |ΔFGI| does)."""
         with patch('fgi.output.alert.WEBHOOK_URL', 'http://test.com'), \
-             patch('fgi.output.alert.WEBHOOK_TYPE', 'wecom'), \
              patch('fgi.output.alert.requests.post') as mock_post:
             mock_post.return_value.raise_for_status.return_value = None
 
