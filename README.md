@@ -11,7 +11,8 @@
 pip install -r requirements.txt
 
 # 2. 配置推送（可选）
-export FGI_PUSHPLUS_TOKEN=your_token_here
+export FGI_PUSHPLUS_TOKEN=your_token_here      # 主推送
+export FGI_PUSHPLUS_TOKENS=tokenA,tokenB        # 额外订阅者（逗号分隔，可选）
 
 # 3. 运行
 python -m fgi.output.daily_run          # 最近交易日
