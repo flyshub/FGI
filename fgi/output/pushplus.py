@@ -305,9 +305,9 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
         parts.append("")
 
     # --- 历史信号参考 ---
-    db = sqlite3.connect(str(DB_PATH))
-    parts.append(render_zone_context_card(fgi_raw, db))
-    db.close()
+    from fgi.storage.database import Database as _Db
+    with _Db(DB_PATH) as _signal_db:
+        parts.append(render_zone_context_card(fgi_raw, _signal_db))
 
     parts.append("")
     parts.append("---")
