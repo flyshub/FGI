@@ -70,6 +70,16 @@ class Database:
         """)
 
         self._migrate_scores_daily_columns()
+        self._cleanup_deprecated_raw_data()
+
+    def _cleanup_deprecated_raw_data(self):
+        """Remove deprecated indicators from raw_data (one-time cleanup)."""
+        if self._connection is None:
+            return
+        # F3 switched to proxy (price×volume) — f3_industry_net_flow is dead data (#77)
+        self._connection.execute(
+            "DELETE FROM raw_data WHERE indicator = 'f3_industry_net_flow'"
+        )
 
     def _migrate_scores_daily_columns(self):
         """Add any scores_daily columns missing from older DB schemas.
