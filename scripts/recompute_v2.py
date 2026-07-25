@@ -167,8 +167,8 @@ def main(start: str = "2015-01-01", end: str | None = None,
             if not rows:
                 continue
             status_df = pd.DataFrame(rows, columns=["indicator", "status"])
-            # #49: correlation_exceed_rate deprecated (M1/S3 高相关已静态降权), 恒为 0
-            health = calculate_health_score(status_df, 0.0)
+            # correlation_exceed_rate 已在 #66 中移除
+            health = calculate_health_score(status_df)
             db.update_score_field(d, "health_score", health)
             updated += 1
         except Exception as e:
