@@ -400,5 +400,7 @@ def render_zone_context_card(fgi: float | None, db) -> str:
     end_d = meta.get("end_date", "—")
     lines.append(f"<sub>数据：{start_d} ~ {end_d} · 上证综指 · 历史不代表未来收益</sub>")
     lines.append("")
+    lines.append("<sub>胜率 = N 个交易日后上证综指上涨的交易日占比。</sub>")
+    lines.append("")
 
     return "\n".join(lines)
