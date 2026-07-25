@@ -13,6 +13,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+
 from fgi.storage.database import Database
 from fgi.output.signal_report import (SignalReportEngine, render_markdown,
     compute_rank_ic, compute_rolling_ic_window, layer_backtest_10, simulate_dca,
@@ -34,36 +36,65 @@ def main() -> None:
     with Database() as db:
         engine = SignalReportEngine(db)
         result = engine.run()
-        df = engine.load_data()
+        df_full = engine.load_data()
+
+    df_full["_year"] = pd.to_datetime(df_full["date"]).dt.year
+    df_in = df_full[df_full["_year"] <= 2022]
+    df_out = df_full[df_full["_year"] >= 2023]
 
     report_sections = [render_markdown(result)]
 
     # Backtest v2: Rank IC analysis
     print("  Computing Rank IC...")
-    ic_full = compute_rank_ic(df)
+    ic_full = compute_rank_ic(df_full)
     if ic_full:
-        ic_full["bonferroni_threshold"] = 0.05 / 36  # spec 5.3
-        ic_full["rolling"] = compute_rolling_ic_window(df)
+        ic_full["rolling"] = compute_rolling_ic_window(df_full)
         report_sections.append("")
         report_sections.append("---")
         report_sections.append("")
         report_sections.append(_render_ic_section(ic_full))
 
+    # Rank IC split: in-sample vs out-of-sample
+    ic_in = compute_rank_ic(df_in)
+    ic_out = compute_rank_ic(df_out)
+    if ic_in and ic_out:
+        ic_in["rolling"] = compute_rolling_ic_window(df_in)
+        ic_out["rolling"] = compute_rolling_ic_window(df_out)
+        report_sections.append("")
+        report_sections.append(_render_ic_section(ic_in, title="Rank IC 分析（样本内 2015-2022）"))
+        report_sections.append("")
+        report_sections.append(_render_ic_section(ic_out, title="Rank IC 分析（样本外 2023-2026）"))
+
     # Backtest v2: 10-layer backtest
     print("  Computing 10-layer backtest...")
-    layer_result = layer_backtest_10(df)
+    layer_result = layer_backtest_10(df_full)
     report_sections.append("")
     report_sections.append("---")
     report_sections.append("")
     report_sections.append(_render_layer_section(layer_result))
+    # Layer split
+    layer_in = layer_backtest_10(df_in)
+    layer_out = layer_backtest_10(df_out)
+    if layer_in and layer_out:
+        report_sections.append("")
+        report_sections.append(_render_layer_section(layer_in))
+        report_sections.append("")
+        report_sections.append(_render_layer_section(layer_out))
 
     # Backtest v2: DCA simulation
     print("  Computing DCA simulation...")
-    dca_result = simulate_dca(df)
+    dca_full = simulate_dca(df_full)
+    dca_in = simulate_dca(df_in)
+    dca_out = simulate_dca(df_out)
     report_sections.append("")
     report_sections.append("---")
     report_sections.append("")
-    report_sections.append(_render_dca_section(dca_result))
+    report_sections.append(_render_dca_section(dca_full, title="逆情绪 DCA vs 等额定投（全样本）"))
+    if "error" not in dca_in and "error" not in dca_out:
+        report_sections.append("")
+        report_sections.append(_render_dca_section(dca_in, title="逆情绪 DCA vs 等额定投（样本内 2015-2022）"))
+        report_sections.append("")
+        report_sections.append(_render_dca_section(dca_out, title="逆情绪 DCA vs 等额定投（样本外 2023-2026）"))
 
     md = "\n".join(report_sections)
     out_path.write_text(md, encoding="utf-8")
