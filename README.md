@@ -39,7 +39,6 @@ python -m fgi.output.daily_run --date 2026-07-24
 FGI_ZZSHARE=0 python -m fgi.output.daily_run    # 关闭 zzshare
 FGI_MOOTDX=0 python -m fgi.output.daily_run     # 关闭 mootdx
 FGI_TENCENT=0 python -m fgi.output.daily_run    # 关闭腾讯
-FGI_OFFLINE=1 python -m fgi.output.daily_run    # 完全离线（从数据库重建）
 ```
 
 ### PushPlus 推送
@@ -131,7 +130,7 @@ python scripts/recompute_v2.py
 
 每个指标有首选来源链。首源失败后按序降级。5 次连续失败后冷却 5 分钟，更多失败后冷却 1 小时。
 
-支持离线重建模式（`FGI_OFFLINE=1`）：从 `raw_data` 数据库直接加载，无需网络。
+支持离线重建模式（`FGI_OFFLINE=1`）：从 `raw_data` 数据库直接加载，无需网络。⚠️ 仅用于 `scripts/recompute_scores.py` 历史重算，不可用于 `daily_run` 生产推送（会跳过实时数据采集，导致 FGI 基于陈旧数据）。
 
 ## GitHub Actions 自动运行
 
