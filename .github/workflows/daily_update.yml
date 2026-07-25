@@ -51,6 +51,7 @@ jobs:
           path: |
             data/fgi.db
             output/
+          retention-days: 7
 
       - name: Commit updated DB back to repo
         if: github.event_name == 'schedule'
