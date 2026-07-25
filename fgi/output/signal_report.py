@@ -341,6 +341,47 @@ def get_zone_for_fgi(fgi: float | None) -> str:
     return assign_zone(fgi)
 
 
+def _find_closest_prior_fgi(db: Database, fgi_value: float, current_date: str) -> tuple | None:
+    """从 scores_daily 中查找与当前 FGI 最接近的历史日期（排除当日）。
+
+    Returns (date_str, fgi_value) or None.
+    """
+    try:
+        scores = db.get_scores("2009-01-01", current_date)
+        if scores.empty:
+            return None
+        hist = scores[scores["date"] < current_date].dropna(subset=["FGI_final"]).copy()
+        if hist.empty:
+            return None
+        hist["_diff"] = (hist["FGI_final"] - fgi_value).abs()
+        best = hist.loc[hist["_diff"].idxmin()]
+        return str(best["date"]), float(best["FGI_final"])
+    except Exception:
+        return None
+
+
+def _get_forward_return(db: Database, date: str, horizon: int = 20) -> float | None:
+    """计算指定日期 horizon 个交易日后的上证综指涨跌幅。"""
+    try:
+        close_df = db.get_raw_data("f3_proxy_close", date, "2099-12-31")
+        if close_df.empty:
+            close_df = db.get_raw_data("m3_close", date, "2099-12-31")
+        if close_df.empty:
+            return None
+        close_df = close_df.sort_values("date").reset_index(drop=True)
+        dates = close_df["date"].tolist()
+        try:
+            idx = dates.index(date)
+        except ValueError:
+            return None
+        if idx + horizon >= len(dates):
+            return None
+        ret = float(close_df.iloc[idx + horizon]["value"]) / float(close_df.iloc[idx]["value"]) - 1.0
+        return ret
+    except Exception:
+        return None
+
+
 def render_zone_context_card(fgi: float | None, db) -> str:
     """Render a compact historical signal reference card for push notification.
 
@@ -378,6 +419,19 @@ def render_zone_context_card(fgi: float | None, db) -> str:
     if n < 30:
         extreme_note = f"\n> ⚠️ 历史仅 {n} 个交易日处于此区间，统计推断不可靠。\n"
 
+    # 时间锚点：查找历史上与当前 FGI 最接近的日期及后续表现
+    closest = _find_closest_prior_fgi(db, fgi, meta.get("end_date", ""))
+    anchor_line = None
+    if closest is not None:
+        closest_date, closest_fgi = closest
+        forward_ret = _get_forward_return(db, closest_date, horizon=20)
+        if forward_ret is not None:
+            arrow = "📈" if forward_ret > 0 else "📉"
+            anchor_line = (
+                f"📎 **参考**：上次接近此水平（{closest_fgi:.1f}）是 **{closest_date}**，"
+                f"之后 20 日 {arrow} **{forward_ret*100:+.1f}%**"
+            )
+
     lines = [
         "",
         "---",
@@ -402,6 +456,10 @@ def render_zone_context_card(fgi: float | None, db) -> str:
     lines.append("")
     if extreme_note:
         lines.append(extreme_note)
+    # 时间锚点：历史上最接近的 FGI 值及后续 20 日表现
+    if anchor_line:
+        lines.append(anchor_line)
+        lines.append("")
     start_d = meta.get("start_date", "—")
     end_d = meta.get("end_date", "—")
     lines.append(f"<sub>数据：{start_d} ~ {end_d} · 上证综指 · 历史不代表未来收益</sub>")
