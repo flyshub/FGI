@@ -97,9 +97,14 @@ class SignalReportEngine:
         self._db = db
 
     def load_data(self) -> pd.DataFrame:
-        """Load FGI_final from scores_daily and m3_close from raw_data, join on date."""
+        """Load FGI_final from scores_daily and Shanghai Composite close from raw_data.
+
+        优先用 f3_proxy_close（F3 calculator 每日写入），回退到 m3_close（仅 backfill 写入）。
+        """
         scores = self._db.get_scores("2009-01-01", "2099-12-31")
-        close_df = self._db.get_raw_data("m3_close", "2009-01-01", "2099-12-31")
+        close_df = self._db.get_raw_data("f3_proxy_close", "2009-01-01", "2099-12-31")
+        if close_df.empty:
+            close_df = self._db.get_raw_data("m3_close", "2009-01-01", "2099-12-31")
 
         if scores is None or scores.empty:
             return pd.DataFrame(columns=["date", "FGI_final", "close"])
