@@ -10,6 +10,7 @@ from typing import Optional
 
 from fgi.common.utils import extract_indicator_score
 from fgi.config.settings import DB_PATH, HEALTHY_THRESHOLD
+from fgi.output.signal_report import render_zone_context_card
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ STATUS_LABELS = {
 }
 
 FGI_LEVELS = [
-    (15, "极度恐惧"), (35, "恐惧"), (65, "中性"), (85, "贪婪"),
+    (20, "极度恐惧"), (40, "恐惧"), (60, "中性"), (80, "贪婪"),
 ]
 
 
@@ -302,8 +303,15 @@ def _build_fgi_markdown(fgi_raw: float, dimension_scores: dict, indicator_result
     if decision_matrix:
         parts.append(_decision_matrix_section(decision_matrix))
         parts.append("")
-        parts.append("---")
-        parts.append("")
+
+    # --- 历史信号参考 ---
+    db = sqlite3.connect(str(DB_PATH))
+    parts.append(render_zone_context_card(fgi_raw, db))
+    db.close()
+
+    parts.append("")
+    parts.append("---")
+    parts.append("")
 
     # --- 指标明细 (HTML table with colored rows) ---
     parts.append("### 🔍 各维度指标明细")

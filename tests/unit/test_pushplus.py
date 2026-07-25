@@ -1,5 +1,34 @@
-"""Tests for PushPlus markdown rendering, especially health_score<60 warning."""
-from fgi.output.pushplus import _fgi_header
+"""Tests for PushPlus markdown rendering, especially health_score<60 warning and FGI_LEVELS."""
+from fgi.output.pushplus import _fgi_header, _fgi_level, FGI_LEVELS
+
+
+class TestFgiLevels:
+    def test_fgi_levels_aligned_with_report_zones(self):
+        """FGI_LEVELS thresholds should match signal_report zone boundaries: 20/40/60/80."""
+        thresholds = [t for t, _ in FGI_LEVELS]
+        assert thresholds == [20, 40, 60, 80], f"Expected [20,40,60,80], got {thresholds}"
+
+    def test_extreme_fear(self):
+        assert _fgi_level(0) == "极度恐惧"
+        assert _fgi_level(10) == "极度恐惧"
+        assert _fgi_level(19.9) == "极度恐惧"
+
+    def test_fear(self):
+        assert _fgi_level(20) == "恐惧"
+        assert _fgi_level(30) == "恐惧"
+
+    def test_neutral(self):
+        assert _fgi_level(40) == "中性"
+        assert _fgi_level(55) == "中性"
+
+    def test_greed(self):
+        assert _fgi_level(60) == "贪婪"
+        assert _fgi_level(79.9) == "贪婪"
+
+    def test_extreme_greed(self):
+        assert _fgi_level(80) == "极度贪婪"
+        assert _fgi_level(95) == "极度贪婪"
+        assert _fgi_level(100) == "极度贪婪"
 
 
 class TestFgiHeader:
