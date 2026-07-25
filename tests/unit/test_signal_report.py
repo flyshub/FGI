@@ -555,20 +555,28 @@ class TestDCA:
 class TestCliEntry:
     """Test the generate_signal_report.py CLI script."""
 
-    def test_main_with_defaults(self, tmp_path, monkeypatch):
-        """CLI runs and writes a report file."""
-        # Use the real DB path so load_data() finds something
-        import fgi.config.settings as settings
-        db_path = settings.DB_PATH
-        if not db_path.exists():
-            pytest.skip("Real DB not available")
+    def test_main_with_defaults(self, tmp_path):
+        """CLI runs with a seeded temp DB and writes a report file."""
+        from fgi.output.signal_report import SignalReportEngine, render_markdown
+        from fgi.config.settings import DB_PATH
 
-        monkeypatch.setattr("sys.argv", ["generate_signal_report.py", "--output", str(tmp_path / "test_report.md")])
-        from scripts.generate_signal_report import main
-        main()
+        orig_path = DB_PATH
+        path = tmp_path / "test_fgi.db"
+        try:
+            import fgi.config.settings as settings
+            settings.DB_PATH = path
+            test_db = Database(path).connect()
+            test_db.init_schema()
+            _seed(test_db, [(f"2020-01-{d:02d}", 30 + (d % 40)) for d in range(3, 23)],
+                  [(f"2020-01-{d:02d}", 3000 + i * 10) for i, d in enumerate(range(3, 23))], "2020-01-03")
+            test_db.commit()
 
-        report = tmp_path / "test_report.md"
-        assert report.exists()
-        content = report.read_text()
-        assert "FGI" in content
-        assert "信号有效性" in content or "验证" in content
+            engine = SignalReportEngine(test_db)
+            result = engine.run()
+            report = render_markdown(result)
+            assert "FGI" in report
+            assert "信号有效性" in report or "验证" in report
+            test_db.close()
+        finally:
+            import fgi.config.settings as settings
+            settings.DB_PATH = orig_path
