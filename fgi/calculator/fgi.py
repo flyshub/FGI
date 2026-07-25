@@ -1,4 +1,5 @@
 import copy
+import logging
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -10,6 +11,8 @@ from fgi.common.utils import (calculate_fgi, apply_consistency_adjustment,
                               adjust_fgi_with_mad_pct, rolling_percentile,
                               calculate_health_score,
                               extract_indicator_score)
+
+logger = logging.getLogger(__name__)
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m3 import M3Calculator
@@ -72,7 +75,7 @@ class FGICalculator:
                     result["source_date"] = date
                 results[name] = result
             except Exception as e:
-                print(f"[WARN] calculator {name} failed for {date}: {type(e).__name__}: {e}")
+                logger.warning("calculator %s failed for %s: %s: %s", name, date, type(e).__name__, e)
                 results[name] = {"score": None, "status": "error", "source_date": None, "error": str(e)}
         return results
 
@@ -149,7 +152,7 @@ class FGICalculator:
             if d:
                 return d
         except Exception as e:
-            print(f"[WARN] _resolve_source_date failed for {indicator} ({raw_key}): {e}", flush=True)
+            logger.warning("_resolve_source_date failed for %s (%s): %s", indicator, raw_key, e)
         return last_score_date
 
     def run(self, date: str) -> dict:
