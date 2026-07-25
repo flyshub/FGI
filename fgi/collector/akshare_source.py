@@ -19,7 +19,7 @@ def _retry(fn, retries=5, delay=3):
     for i in range(retries):
         try:
             return fn()
-        except Exception as e:
+        except (ConnectionError, Timeout, ValueError, OSError) as e:
             last_err = e
             if i < retries - 1:
                 time.sleep(delay * (2 ** i))
