@@ -550,6 +550,9 @@ class TestDCA:
         result = simulate_dca(df)
         # should work with 12 months
         assert "error" not in result
+
+
+class TestCliEntry:
     """Test the generate_signal_report.py CLI script."""
 
     def test_main_with_defaults(self, tmp_path, monkeypatch):
