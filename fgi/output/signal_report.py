@@ -424,7 +424,7 @@ def compute_rank_ic(df: pd.DataFrame, indicator_col: str = "FGI_final",
         horizon: forward trading days for return calculation.
 
     Returns:
-        {ic, n, ic_annualized} or None if insufficient data.
+        {ic, n, mean, std, ir, win_rate, indicator, horizon} or None if insufficient data.
     """
     if indicator_col not in df.columns or df[indicator_col].dropna().empty:
         return None
@@ -433,9 +433,34 @@ def compute_rank_ic(df: pd.DataFrame, indicator_col: str = "FGI_final",
     working = working.dropna(subset=["forward_return", indicator_col])
     if len(working) < 30:
         return None
-    ic = float(working[indicator_col].corr(working["forward_return"], method="spearman"))
-    n = len(working)
-    return {"ic": ic, "n": n, "indicator": indicator_col, "horizon": horizon}
+    # Split into 20-day rolling sub-windows for IC statistics
+    ic_values = []
+    window_size = 20
+    for i in range(len(working) - window_size + 1):
+        win = working.iloc[i:i + window_size]
+        if len(win) < 10:
+            continue
+        val = win[indicator_col].corr(win["forward_return"], method="spearman")
+        if not pd.isna(val):
+            ic_values.append(float(val))
+    if not ic_values:
+        return None
+    ic_series = np.array(ic_values)
+    mean_ic = float(np.mean(ic_series))
+    std_ic = float(np.std(ic_series, ddof=1))
+    ir = mean_ic / std_ic if std_ic > 0 else 0.0
+    win_rate = float(np.mean(ic_series > 0))
+    return {
+        "ic": float(working[indicator_col].corr(working["forward_return"], method="spearman")),
+        "n": len(working),
+        "mean": mean_ic,
+        "std": std_ic,
+        "ir": ir,
+        "win_rate": win_rate,
+        "indicator": indicator_col,
+        "horizon": horizon,
+        "bonferroni_threshold": 0.05 / 36,  # spec 5.3: α/36 = 0.0014
+    }
 
 
 def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final",
@@ -443,25 +468,45 @@ def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final"
                               window_years: int = 3) -> list:
     """Compute rolling Rank IC over semi-annual windows using trailing 3-year data.
 
-    Returns a list of {date, ic, n} dicts, one per semi-annual evaluation point.
-    Skips points with fewer than 252 valid observations.
+    Returns a list of {date, ic, n, mean, std, ir, win_rate} dicts, one per
+    semi-annual evaluation point. Skips points with fewer than `min_valid_obs`
+    valid observations within the window.
     """
     results = []
     working = df.copy()
     working["forward_return"] = working["close"].shift(-horizon) / working["close"] - 1.0
     working = working.dropna(subset=["forward_return", indicator_col])
-    min_obs = 252 * window_years
+    window_size = 252 * window_years  # 756 trading days
+    min_valid_obs = 252  # spec: skip if fewer than 252 valid obs in window
     step = half_year
     n = len(working)
-    for end in range(min_obs, n, step):
-        window_df = working.iloc[end - min_obs:end]
-        if len(window_df) < min_obs:
+    for end in range(window_size, n, step):
+        window_df = working.iloc[end - window_size:end]
+        if len(window_df) < min_valid_obs:
             continue
         ic = float(window_df[indicator_col].corr(window_df["forward_return"], method="spearman"))
+        # Compute sub-window statistics within this rolling window
+        ic_vals = []
+        sub_win = 20
+        for i in range(len(window_df) - sub_win + 1):
+            s = window_df.iloc[i:i + sub_win]
+            if len(s) < 10:
+                continue
+            val = s[indicator_col].corr(s["forward_return"], method="spearman")
+            if not pd.isna(val):
+                ic_vals.append(float(val))
+        win_mean = float(np.mean(ic_vals)) if ic_vals else ic
+        win_std = float(np.std(ic_vals, ddof=1)) if len(ic_vals) > 1 else None
+        win_ir = win_mean / win_std if (win_std and win_std > 0) else 0.0
+        win_wr = float(np.mean(np.array(ic_vals) > 0)) if ic_vals else 0.5
         results.append({
             "date": str(window_df["date"].iloc[-1]),
             "ic": ic,
             "n": len(window_df),
+            "mean": win_mean,
+            "std": win_std,
+            "ir": win_ir,
+            "win_rate": win_wr,
         })
     return results
 
@@ -576,10 +621,10 @@ def simulate_dca(df: pd.DataFrame, base_amount: float = 10000,
     }
 
 
-def _render_ic_section(ic_result: dict) -> str:
+def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
     """Render Rank IC analysis section."""
     lines = [
-        "### 📊 Rank IC 分析",
+        f"### 📊 {title}",
         "",
         "FGI_final 与上证综指 20 日前瞻收益的 Spearman Rank IC：",
         "",
@@ -590,24 +635,28 @@ def _render_ic_section(ic_result: dict) -> str:
         return "\n".join(lines)
 
     lines.append(f"- 全样本 IC：{ic_result['ic']:.4f}（n={ic_result['n']} 个交易日）")
-    if "bonferroni_threshold" in ic_result:
-        lines.append(f"- Bonferroni 参考阈值（α/36）：{ic_result['bonferroni_threshold']:.4f}")
+    lines.append(f"- IC 均值（20 日滚动窗）：{ic_result.get('mean', float('nan')):.4f}")
+    lines.append(f"- IC 标准差：{ic_result.get('std', float('nan')):.4f}")
+    lines.append(f"- IR（IC 均值/标准差）：{ic_result.get('ir', float('nan')):.4f}")
+    lines.append(f"- IC 胜率（IC>0 占比）：{ic_result.get('win_rate', float('nan')):.1%}")
+    lines.append(f"- Bonferroni 参考阈值（α/36）：{ic_result.get('bonferroni_threshold', 0.05/36):.4f}")
     lines.append("")
     if ic_result.get("rolling"):
         lines.append("#### 滚动 IC 窗口（每半年，3 年回顾窗）")
         lines.append("")
-        lines.append("| 评估日期 | Rank IC | 观测数 |")
-        lines.append("|---------|--------|--------|")
+        lines.append("| 评估日期 | Rank IC | 观测数 | IC 均值 | IR | 胜率 |")
+        lines.append("|---------|--------|--------|--------|-----|------|")
         for pt in ic_result["rolling"]:
-            lines.append(f"| {pt['date']} | {pt['ic']:.4f} | {pt['n']} |")
+            ir_s = f"{pt.get('ir', 0):.3f}" if pt.get('ir') is not None else "—"
+            lines.append(f"| {pt['date']} | {pt['ic']:.4f} | {pt['n']} | {pt.get('mean', 0):.4f} | {ir_s} | {pt.get('win_rate', 0):.1%} |")
         lines.append("")
     return "\n".join(lines)
 
 
-def _render_layer_section(layer_result: dict) -> str:
+def _render_layer_section(layer_result: dict, title: str = "10 档分层回测") -> str:
     """Render 10-layer backtest section."""
     lines = [
-        "### 📊 10 档分层回测",
+        f"### 📊 {title}",
         "",
     ]
     if not layer_result:
@@ -630,10 +679,10 @@ def _render_layer_section(layer_result: dict) -> str:
     return "\n".join(lines)
 
 
-def _render_dca_section(dca_result: dict) -> str:
+def _render_dca_section(dca_result: dict, title: str = "逆情绪 DCA vs 等额定投") -> str:
     """Render DCA simulation section."""
     lines = [
-        "### 💰 逆情绪 DCA vs 等额定投",
+        f"### 💰 {title}",
         "",
     ]
     if dca_result.get("error"):
