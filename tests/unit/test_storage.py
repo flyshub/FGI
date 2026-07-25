@@ -24,6 +24,15 @@ class TestDatabaseInit:
         assert "scores_daily" in tables
         assert "daily_status" in tables
 
+    def test_deprecated_f3_industry_net_flow_cleaned(self, db):
+        # Manually insert deprecated indicator before re-init
+        db.upsert_raw_data("2024-01-01", "f3_industry_net_flow", -12345.0)
+        db.upsert_raw_data("2024-01-02", "f3_industry_net_flow", 67890.0)
+        assert db.count_rows("raw_data", "indicator='f3_industry_net_flow'") == 2
+        # Re-init triggers cleanup
+        db.init_schema()
+        assert db.count_rows("raw_data", "indicator='f3_industry_net_flow'") == 0
+
 
 class TestRawData:
     def test_upsert_and_get(self, db):
