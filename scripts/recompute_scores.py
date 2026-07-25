@@ -80,7 +80,7 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
 
     db.commit()
     n = db.count_rows("scores_daily")
-    nonnull = db.count_rows("scores_daily", "FGI_final IS NOT NULL")
+    nonnull = db.count_scores_with_data()
     status_n = db.count_rows("daily_status")
     print(f"DONE ok={ok} miss={miss} err={err} in {time.time()-t0:.0f}s", flush=True)
     print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
