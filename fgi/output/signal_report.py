@@ -456,7 +456,7 @@ def render_zone_context_card(fgi: float | None, db) -> str:
             anchor_line = (
                 f"📎 **参考**：上次同向接近此水平（{closest_fgi:.1f}）是 **{closest_date}**"
                 f"（{direction_arrow} {closest_fgi - closest_prev:+.1f}），"
-                f"之后 20 日 {after_arrow} **{forward_ret*100:+.1f}%**"
+                f"之后 20 日上证综指 {after_arrow} **{forward_ret*100:+.1f}%**"
             )
 
     lines = [
