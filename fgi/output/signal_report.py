@@ -649,5 +649,3 @@ def _render_dca_section(dca_result: dict) -> str:
     lines.append(f"| 等额定投 | {_fmt_pct(dca_result['benchmark_total_return'])} | {_fmt_pct(dca_result['benchmark_annualized'])} | {_fmt_pct(dca_result['benchmark_max_drawdown'])} | {dca_result['benchmark_sharpe']:.2f} |")
     lines.append("")
     return "\n".join(lines)
-
-    return "\n".join(lines)
