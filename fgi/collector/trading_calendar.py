@@ -1,7 +1,10 @@
 """真实交易日历：akshare tool_trade_date_hist_sina，内存 + 磁盘缓存。"""
+import logging
 from pathlib import Path
 from typing import List, Optional
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class TradingCalendar:
@@ -51,8 +54,8 @@ class TradingCalendar:
         try:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
             pd.DataFrame({"trade_date": days}).to_csv(self._cache_path(), index=False)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to save trading calendar cache: %s", e)
 
     def _load_disk(self) -> Optional[List[str]]:
         try:
