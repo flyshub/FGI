@@ -172,10 +172,11 @@ class DataSourceManager:
             return None
 
     def fetch(self, indicator: str, method: str, *args, **kwargs) -> DataSourceResult:
+        # FGI_OFFLINE 是 recompute_scores 内部机制，不为 daily_run / 常规使用设计。
+        # 从 raw_data 重构 DataFrame 绕过所有 API 调用，数据缺失时静默 FAILED。
+        # 不要在生产推送中使用，否则会跳过实时数据采集导致 FGI 基于陈旧数据。
         if os.environ.get("FGI_OFFLINE") == "1":
-            # offline: 先尝试从 raw_data 重构，找不到则 FAILED
             if args and len(args) >= 2:
-                # 末尾两个参数是 start_date/end_date（部分 calculator 在前面传 symbol 等位置参数）
                 start_date, end_date = args[-2], args[-1]
                 reconstructed = self._offline_reconstruct(indicator, method, start_date, end_date)
                 if reconstructed is not None:
