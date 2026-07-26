@@ -358,4 +358,9 @@ def build_fgi_markdown(
             desc = _SUBSTITUTE_DESC.get(code, "代理估算")
             parts.append(f"- 替代指标：{name}：{desc}")
 
+    parts.append("")
+    parts.append("---")
+    parts.append("")
+    parts.append("📊 查看历史走势与详细图表：[https://flyshub.github.io/FGI/](https://flyshub.github.io/FGI/)")
+
     return "\n".join(parts)
