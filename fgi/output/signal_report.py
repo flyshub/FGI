@@ -477,6 +477,20 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                                         f"（{direction_arrow} {closest_fgi - closest_prev:+.1f}），"
                                         f"之后 20 日上证综指 {after_arrow} **{forward_ret*100:+.1f}%**"
                                     )
+                                    # 再查同向匹配中 FGI 最接近的另外 4 次，评估后市一致性
+                                    try:
+                                        top5 = candidates.sort_values("_diff").head(5)
+                                        returns5 = []
+                                        for _, cr in top5.iterrows():
+                                            r = _get_forward_return(db, str(cr["date"]), horizon=20)
+                                            if r is not None:
+                                                returns5.append(r)
+                                        if len(returns5) >= 3:
+                                            r_min = min(returns5) * 100
+                                            r_max = max(returns5) * 100
+                                            anchor_line += f"\n（类似情形共 {len(returns5)} 次，{r_min:+.0f}%~{r_max:+.0f}%）"
+                                    except Exception:
+                                        pass
         except Exception:
             pass
 
