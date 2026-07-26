@@ -65,3 +65,21 @@ jobs:
             git commit -m "chore(db): daily update for ${{ steps.date.outputs.target_date }} [skip ci]"
             git push
           fi
+
+      - name: Export web data
+        env:
+          PYTHONPATH: .
+        run: python scripts/export_fgi_web_data.py --full
+
+      - name: Commit web data
+        if: github.event_name == 'schedule'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/
+          if git diff --cached --quiet; then
+            echo "No web data changes to commit"
+          else
+            git commit -m "chore(web): update frontend data for ${{ steps.date.outputs.target_date }} [skip ci]"
+            git push
+          fi
