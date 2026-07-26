@@ -31,7 +31,6 @@ let state = {
 };
 let chartInstances = {};
 let currentDate = null; // YYYY-MM-DD
-let _switchingDate = false; // guard re-entrancy for chart click → switchToDate → setOption → redraw → click
 
 function registerChart(id, chart) {
   chartInstances[id] = chart;
@@ -101,9 +100,17 @@ function init() {
   switchToDate(latestDate);
 }
 
+// ── Date switching (debounced) ──
+let _switchTimer = null;
+
 function switchToDate(dateStr) {
+  // Debounce: only process the last request within 200ms
+  if (_switchTimer) clearTimeout(_switchTimer);
+  _switchTimer = setTimeout(() => _doSwitchDate(dateStr), 200);
+}
+
+function _doSwitchDate(dateStr) {
   if (dateStr === currentDate) return;
-  _switchingDate = true;
   currentDate = dateStr;
   const data = getDataForDate(dateStr);
   if (!data) { _switchingDate = false; return; }
