@@ -480,15 +480,23 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                                     # 再查同向匹配中 FGI 最接近的另外 4 次，评估后市一致性
                                     try:
                                         top5 = candidates.sort_values("_diff").head(5)
-                                        returns5 = []
+                                        detail_rows = []
                                         for _, cr in top5.iterrows():
-                                            r = _get_forward_return(db, str(cr["date"]), horizon=20)
+                                            d = str(cr["date"])
+                                            r = _get_forward_return(db, d, horizon=20)
                                             if r is not None:
-                                                returns5.append(r)
-                                        if len(returns5) >= 3:
-                                            r_min = min(returns5) * 100
-                                            r_max = max(returns5) * 100
-                                            anchor_line += f"\n（类似情形共 {len(returns5)} 次，{r_min:+.0f}%~{r_max:+.0f}%）"
+                                                marker = " ← 最近似" if d == closest_date else ""
+                                                arrow = "📈" if r > 0 else "📉"
+                                                detail_rows.append((d, f"{arrow} {r*100:+.1f}%", marker))
+                                        if len(detail_rows) >= 3:
+                                            r_vals = [float(r[1].replace("📈 ","").replace("📉 ","").replace("%","")) for r in detail_rows]
+                                            r_min = min(r_vals)
+                                            r_max = max(r_vals)
+                                            table = "\n其他同向接近情形：\n| 日期 | 后市20日 |\n|------|---------|\n"
+                                            for d, ret_s, marker in detail_rows:
+                                                table += f"| {d} | {ret_s} |{marker}|\n"
+                                            table += f"| **区间** | **{r_min:+.0f}% ~ {r_max:+.0f}%** |"
+                                            anchor_line += table
                                     except Exception:
                                         pass
         except Exception:
