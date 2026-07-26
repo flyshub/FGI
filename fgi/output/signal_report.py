@@ -443,21 +443,42 @@ def render_zone_context_card(fgi: float | None, db) -> str:
     if n < 30:
         extreme_note = f"\n> ⚠️ 历史仅 {n} 个交易日处于此区间，统计推断不可靠。\n"
 
-    # 时间锚点：查找历史上与当前 FGI 最接近的日期及后续表现
-    # 匹配时要求方向一致（同为上涨接近或同为下跌接近）
-    closest = _find_closest_prior_fgi(db, fgi, meta.get("end_date", ""))
+    # 时间锚点：仅当 FGI 处于非中性区间且趋势明确时展示
+    # 条件A: 非中性区间（恐惧/贪婪才够有信号意义）
     anchor_line = None
-    if closest is not None:
-        closest_date, closest_fgi, closest_prev = closest
-        direction_arrow = "📈" if closest_fgi >= closest_prev else "📉"
-        forward_ret = _get_forward_return(db, closest_date, horizon=20)
-        if forward_ret is not None:
-            after_arrow = "📈" if forward_ret > 0 else "📉"
-            anchor_line = (
-                f"📎 **参考**：上次同向接近此水平（{closest_fgi:.1f}）是 **{closest_date}**"
-                f"（{direction_arrow} {closest_fgi - closest_prev:+.1f}），"
-                f"之后 20 日上证综指 {after_arrow} **{forward_ret*100:+.1f}%**"
-            )
+    if fgi < 40 or fgi > 60:
+        # 条件B: 趋势明确——从历史数据找 FGI 值的位置，看它附近的趋势纯度
+        try:
+            all_scores = db.get_scores("2009-01-01", "2099-12-31")
+            if all_scores is not None and not all_scores.empty:
+                # 找与当前 fgi 值最匹配的行 → 确定日期
+                candidates = all_scores[all_scores["date"] < meta.get("end_date", "2099-12-31")].dropna(subset=["FGI_final"]).copy()
+                candidates["_diff"] = (candidates["FGI_final"].astype(float) - float(fgi)).abs()
+                if not candidates.empty:
+                    best_row = candidates.loc[candidates["_diff"].idxmin()]
+                    best_date = str(best_row["date"])
+                    # 取该日期前6个非空FGI值算纯度
+                    trend_series = all_scores[all_scores["date"] <= best_date]["FGI_final"].dropna().tail(6).astype(float).values
+                    if len(trend_series) == 6:
+                        changes = np.abs(np.diff(trend_series))
+                        total_v = np.sum(changes)
+                        net_c = abs(trend_series[-1] - trend_series[0])
+                        purity = net_c / total_v if total_v > 0 else 0
+                        if purity >= 0.3:
+                            closest = _find_closest_prior_fgi(db, fgi, best_date)
+                            if closest is not None:
+                                closest_date, closest_fgi, closest_prev = closest
+                                direction_arrow = "📈" if closest_fgi >= closest_prev else "📉"
+                                forward_ret = _get_forward_return(db, closest_date, horizon=20)
+                                if forward_ret is not None:
+                                    after_arrow = "📈" if forward_ret > 0 else "📉"
+                                    anchor_line = (
+                                        f"📎 **参考**：上次同向接近此水平（{closest_fgi:.1f}）是 **{closest_date}**"
+                                        f"（{direction_arrow} {closest_fgi - closest_prev:+.1f}），"
+                                        f"之后 20 日上证综指 {after_arrow} **{forward_ret*100:+.1f}%**"
+                                    )
+        except Exception:
+            pass
 
     lines = [
         "",
