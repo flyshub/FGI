@@ -212,6 +212,7 @@ function renderSignalReport(sr) {
     const d = ic.full;
     document.getElementById('signal-report-ic').innerHTML = `
       <p><strong>Rank IC 分析</strong>（FGI vs 上证综指20日前瞻收益）</p>
+      <p style="margin:6px 0;font-size:0.85rem;color:#666;border-left:3px solid #e0e0e0;padding-left:8px">💡 大白话：Rank IC 衡量「FGI 分数和未来市场涨跌之间的关联有多强」。IC 为负数说明 FGI 越高（市场越贪婪），未来越容易跌——这正是我们希望看到的反向预测能力。IR 衡量这种关联是否稳定。IC 胜率低于 50% 说明 FGI 大多数时候方向正确。</p>
       <table class="signal-table">
         <thead><tr><th>指标</th><th>值</th></tr></thead>
         <tbody>
@@ -236,6 +237,7 @@ function renderSignalReport(sr) {
   const layers = sr.layer_backtest;
   if (layers && layers.full) {
     let html = '<p style="margin-top:12px"><strong>10档分层回测</strong>（FGI分档 × 前瞻收益）</p>';
+    html += '<p style="margin:6px 0;font-size:0.85rem;color:#666;border-left:3px solid #e0e0e0;padding-left:8px">💡 大白话：把历史上所有交易日按 FGI 分数从低到高排成 10 档，第 1 档最恐慌，第 10 档最贪婪。理想情况下应该是「第 1 档涨最多、第 10 档跌最多」——像下楼梯一样严格递减。如果中段收益交叉，说明 FGI 在中间区域的区分度不够精细。</p>';
     [5, 20, 60].forEach(h => {
       const data = layers.full[String(h)];
       if (!data || !data.length) return;
@@ -256,6 +258,7 @@ function renderSignalReport(sr) {
     const _pct = v => `${(v * 100).toFixed(2)}%`;
     document.getElementById('signal-report-dca').innerHTML = `
       <p style="margin-top:12px"><strong>逆情绪 DCA vs 等额定投</strong>（${dca.n_months}个月）</p>
+      <p style="margin:6px 0;font-size:0.85rem;color:#666;border-left:3px solid #e0e0e0;padding-left:8px">💡 大白话：模拟两种每月定投策略。等额定投：每月固定投入 1 万元。逆情绪 DCA：市场越恐慌（FGI 低）投入越多（最多 2 万），越贪婪（FGI 高）投入越少。核心逻辑是「别人恐惧我加仓，别人贪婪我减仓」。对比两者的收益和风险，看 FGI 择时定投是否有价值。</p>
       <table class="signal-table">
         <thead><tr><th>策略</th><th>总收益</th><th>年化收益</th><th>最大回撤</th><th>夏普</th></tr></thead>
         <tbody>
