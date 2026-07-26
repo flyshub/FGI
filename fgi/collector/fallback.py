@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Dict, List, Optional, Set
+
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ LONG_COOLDOWN = 3600    # 长禁用秒数
 # 单字段: 直接从 value 列映射
 # 多字段: 从多个 raw_key 拼接，按 date 对齐
 # 未列入的 method 在 offline 模式下保持原 FAILED 行为。
-OFFLINE_RAW_MAPPING: Dict[str, tuple] = {
+OFFLINE_RAW_MAPPING: dict[str, tuple] = {
     "fetch_margin_data": (("f1_margin_balance",), ("融资余额",)),
     "fetch_market_cap": (("f1_market_cap",), ("market_cap",)),
     "fetch_fund_position": (("f2_fund_position",), ("position",)),
@@ -31,14 +31,14 @@ OFFLINE_RAW_MAPPING: Dict[str, tuple] = {
 }
 
 # fetch_index_daily 被 m3/v2/f3 共用，按 indicator 名分流到不同的 raw_key
-INDEX_DAILY_CHAINS: Dict[str, tuple] = {
+INDEX_DAILY_CHAINS: dict[str, tuple] = {
     "m3_index": (("m3_close",), ("close",)),
     "f3_index": (("f3_proxy_close", "f3_proxy_volume"), ("close", "volume")),
 }
 
 # Indicator → raw_key 单一来源（用于 forward-fill 溯源到 raw_data 真实日期）。
 # 必须与 OFFLINE_RAW_MAPPING / INDEX_DAILY_CHAINS 的 raw_key 保持一致 — 改 raw_key 时同步。
-INDICATOR_RAW_KEY: Dict[str, str] = {
+INDICATOR_RAW_KEY: dict[str, str] = {
     "M1": "m1_zt_count",
     "M2": "m2_up_num",
     "M3": "m3_close",
@@ -55,12 +55,12 @@ INDICATOR_RAW_KEY: Dict[str, str] = {
 
 
 class FallbackChain:
-    def __init__(self, sources: List[DataSource]):
+    def __init__(self, sources: list[DataSource]):
         self._sources = list(sources)
-        self._status: Dict[int, DataSourceStatus] = {}
-        self._failures: Dict[int, int] = {}
-        self._last_failure: Dict[int, float] = {}
-        self._unsupported: Set[int] = set()
+        self._status: dict[int, DataSourceStatus] = {}
+        self._failures: dict[int, int] = {}
+        self._last_failure: dict[int, float] = {}
+        self._unsupported: set[int] = set()
         self._cooldown = COOLDOWN
         self._max_failures = MAX_FAILURES
         self._long_cooldown = LONG_COOLDOWN
@@ -99,9 +99,8 @@ class FallbackChain:
                     self._record_success(i)
                     return result
                 self._record_failure(i, result.status)
-                if result.status == DataSourceStatus.DEGRADED and result.data is not None:
-                    if degraded is None:
-                        degraded = result
+                if result.status == DataSourceStatus.DEGRADED and result.data is not None and degraded is None:
+                    degraded = result
             except Exception:
                 self._record_failure(i, DataSourceStatus.FAILED)
                 continue
@@ -109,7 +108,7 @@ class FallbackChain:
             return degraded
         return DataSourceResult(None, DataSourceStatus.FAILED, "fallback_chain", "All sources failed")
 
-    def health_check(self) -> Dict[int, DataSourceStatus]:
+    def health_check(self) -> dict[int, DataSourceStatus]:
         statuses = {}
         for i, source in enumerate(self._sources):
             statuses[i] = source.health_check()
@@ -119,8 +118,8 @@ class FallbackChain:
 
 class DataSourceManager:
     def __init__(self):
-        self._chains: Dict[str, FallbackChain] = {}
-        self._sources: Dict[str, DataSource] = {}
+        self._chains: dict[str, FallbackChain] = {}
+        self._sources: dict[str, DataSource] = {}
         self._db = None  # 可选：注入 Database 用于 offline 重构
 
     def register_source(self, name: str, source: DataSource):
@@ -133,11 +132,11 @@ class DataSourceManager:
     def has_source(self, name: str) -> bool:
         return name in self._sources
 
-    def configure_chain(self, indicator: str, source_names: List[str]):
+    def configure_chain(self, indicator: str, source_names: list[str]):
         sources = [self._sources[name] for name in source_names if name in self._sources]
         self._chains[indicator] = FallbackChain(sources)
 
-    def _offline_reconstruct(self, indicator: str, method: str, start_date: str, end_date: str) -> Optional[DataSourceResult]:
+    def _offline_reconstruct(self, indicator: str, method: str, start_date: str, end_date: str) -> DataSourceResult | None:
         """从 raw_data 重构 DataFrame；找不到映射或无数据返回 None。"""
         if self._db is None:
             return None
@@ -156,13 +155,10 @@ class DataSourceManager:
             else:
                 # 多字段：按 date 对齐拼接
                 merged = None
-                for key, name in zip(raw_keys, field_names):
+                for key, name in zip(raw_keys, field_names, strict=False):
                     sub = self._db.get_raw_data(key, start_date, end_date)
                     sub = sub.rename(columns={"value": name})
-                    if merged is None:
-                        merged = sub
-                    else:
-                        merged = merged.merge(sub, on="date", how="outer")
+                    merged = sub if merged is None else merged.merge(sub, on="date", how="outer")
                 df = merged
                 if df is None or df.empty:
                     return None
@@ -187,5 +183,5 @@ class DataSourceManager:
             return DataSourceResult(None, DataSourceStatus.FAILED, "manager", f"No chain for {indicator}")
         return self._chains[indicator].fetch(method, *args, **kwargs)
 
-    def health_check(self) -> Dict[str, Dict[int, DataSourceStatus]]:
+    def health_check(self) -> dict[str, dict[int, DataSourceStatus]]:
         return {name: chain.health_check() for name, chain in self._chains.items()}
