@@ -110,14 +110,17 @@ def _zone_context(stats: dict, zone_name: str, total_days: int | None) -> dict |
     """Extract current zone's signal reference from engine stats (string keys after JSON serialization)."""
     if not stats:
         return None
-    total = total_days or stats.get("metadata", {}).get("total_days", 0)
-    h5 = stats.get("5", stats.get(5, []))
+    zs = stats.get("zone_stats")
+    if not zs:
+        return None
+    total = total_days or zs.get("metadata", {}).get("total_days", 0)
+    h5 = zs.get("5", zs.get(5, []))
     zone_data = next((z for z in h5 if z["zone"] == zone_name), None)
     if zone_data is None:
         return None
     horizons = {}
     for h in ["5", "20", "60"]:
-        h_stats = stats.get(h, [])
+        h_stats = zs.get(h, zs.get(int(h), []))
         hd = next((z for z in h_stats if z["zone"] == zone_name), None)
         if hd:
             horizons[h] = {
