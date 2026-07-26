@@ -65,21 +65,26 @@ def _get_fgi_percentile(db: Database, fgi: float) -> tuple[float, str, str]:
         if total == 0:
             return 0.0, "无历史数据", ""
         pct = below / total * 100
-        tiers = [
-            (10,   f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
-            (25,   f"低于历史上 {100-pct:.0f}% 的日子（偏低）", ""),
-            (40,   f"位于历史中下区域（{pct:.0f}%分位）", ""),
-            (60,   f"位于历史中部（{pct:.0f}%分位）", ""),
-            (75,   f"位于历史中上区域（{pct:.0f}%分位）", ""),
-            (90,   f"高于历史上 {pct:.0f}% 的日子（偏高）", ""),
-            (100,  f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"),
-        ]
-        for limit, label, note in tiers:
-            if pct <= limit:
-                return pct, label, note
-        return pct, "暂无历史参考", ""
+        return _compute_percentile_label(pct)
     except Exception:
         return 0.0, "暂无历史参考", ""
+
+
+def _compute_percentile_label(pct: float) -> tuple[float, str, str]:
+    """Return (pct, human_label, extreme_note) for a given percentile (0-100)."""
+    tiers = [
+        (10,   f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
+        (25,   f"低于历史上 {100-pct:.0f}% 的日子（偏低）", ""),
+        (40,   f"位于历史中下区域（{pct:.0f}%分位）", ""),
+        (60,   f"位于历史中部（{pct:.0f}%分位）", ""),
+        (75,   f"位于历史中上区域（{pct:.0f}%分位）", ""),
+        (90,   f"高于历史上 {pct:.0f}% 的日子（偏高）", ""),
+        (100,  f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"),
+    ]
+    for limit, label, note in tiers:
+        if pct <= limit:
+            return pct, label, note
+    return pct, "暂无历史参考", ""
 
 
 def _get_trend(fgi: float, prev: dict | None) -> tuple[str, float | None]:
@@ -268,14 +273,8 @@ def export_latest(db: Database, date_str: str | None = None, stats: dict | None 
     return result
 
 
-def export_history(db: Database) -> list[dict]:
-    """Export all historical FGI data + 上证综指 close price."""
-    df = db.get_scores("2000-01-01", "2099-12-31")
-    if df.empty:
-        return []
-    df = df.dropna(subset=["FGI_final"]).sort_values("date")
-
-    # Attach close price from raw_data
+def _attach_close_prices(db: Database, df: pd.DataFrame) -> pd.DataFrame:
+    """Attach m3_close prices to a DataFrame keyed by 'date' column."""
     try:
         close_df = db.get_raw_data("m3_close", "2000-01-01", "2099-12-31")
         if not close_df.empty:
@@ -285,6 +284,16 @@ def export_history(db: Database) -> list[dict]:
             df["close"] = None
     except Exception:
         df["close"] = None
+    return df
+
+
+def export_history(db: Database) -> list[dict]:
+    """Export all historical FGI data + 上证综指 close price."""
+    df = db.get_scores("2000-01-01", "2099-12-31")
+    if df.empty:
+        return []
+    df = df.dropna(subset=["FGI_final"]).sort_values("date")
+    df = _attach_close_prices(db, df)
 
     records = []
     for _, r in df.iterrows():
@@ -347,15 +356,7 @@ def export_indicators_history(db: Database) -> dict:
     if df.empty:
         return {}
     df = df.sort_values("date")
-
-    # Add close price
-    try:
-        close_df = db.get_raw_data("m3_close", "2000-01-01", "2099-12-31")
-        if not close_df.empty:
-            close_map = dict(zip(close_df["date"], close_df["value"]))
-            df["close"] = df["date"].map(close_map)
-    except Exception:
-        df["close"] = None
+    df = _attach_close_prices(db, df)
 
     indicators = list(INDICATOR_NAMES.keys())
 
@@ -416,19 +417,7 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
             total_before = sum(1 for s in all_scores_list if s["date"] < date_str and s["FGI_final"] is not None)
             if total_before > 0:
                 pct = below / total_before * 100
-                tiers = [
-                    (10,   f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
-                    (25,   f"低于历史上 {100-pct:.0f}% 的日子（偏低）", ""),
-                    (40,   f"位于历史中下区域（{pct:.0f}%分位）", ""),
-                    (60,   f"位于历史中部（{pct:.0f}%分位）", ""),
-                    (75,   f"位于历史中上区域（{pct:.0f}%分位）", ""),
-                    (90,   f"高于历史上 {pct:.0f}% 的日子（偏高）", ""),
-                    (100,  f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"),
-                ]
-                for limit, label, note in tiers:
-                    if pct <= limit:
-                        pct_label, extreme_note = label, note
-                        break
+                _, pct_label, extreme_note = _compute_percentile_label(pct)
         except Exception:
             pass
 
