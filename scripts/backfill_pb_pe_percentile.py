@@ -73,7 +73,7 @@ def main():
     db.connect()
 
     # write PB raw
-    n_existing_pb = db.count_rows("raw_data", "indicator='v1_pb'")
+    n_existing_pb = db.count_raw_data_by_indicator("v1_pb")
     if n_existing_pb:
         db.delete_raw_data("v1_pb")
         print(f"Deleted {n_existing_pb} old v1_pb rows", flush=True)
@@ -88,7 +88,7 @@ def main():
 
     # write PE percentile raw
     for key in ("v1_pe_percentile", "v1_pb_percentile"):
-        n_old = db.count_rows("raw_data", f"indicator='{key}'")
+        n_old = db.count_raw_data_by_indicator(key)
         if n_old:
             db.delete_raw_data(key)
             print(f"Deleted {n_old} old {key} rows", flush=True)
