@@ -33,8 +33,8 @@ function initHistoryChart(history) {
         return html;
       }
     },
-    legend: { data: ['FGI', '上证综指'], bottom: 0, left: 'center', icon: 'line', itemWidth: 20 },
-    grid: { left: 45, right: 55, top: 10, bottom: 40 },
+    legend: { data: ['FGI', '上证综指'], bottom: 5, left: 'center', icon: 'line', itemWidth: 20 },
+    grid: { left: 45, right: 55, top: 10, bottom: 55 },
     xAxis: {
       type: 'category', data: dates, boundaryGap: false,
       axisLabel: { fontSize: 10, interval: 'auto', rotate: 0 },
@@ -57,7 +57,7 @@ function initHistoryChart(history) {
     ],
     dataZoom: [
       { type: 'inside', start: 70, end: 100 },
-      { type: 'slider', show: true, height: 20, bottom: 22, start: 70, end: 100 },
+      { type: 'slider', show: true, height: 22, bottom: 28, start: 70, end: 100 },
     ],
     series: [
       {
@@ -134,25 +134,38 @@ function updateHistoryMarkLine(dateStr) {
   const idx = state.history.findIndex(d => d.date === dateStr);
   if (idx < 0) return;
 
+  // Use ECharts action to update markLine without replacing series data
+  chart.dispatchAction({
+    type: 'legendSelect',
+    name: 'FGI',
+  });
+
+  // Direct markLine data update via setOption with notMerge=true would replace
+  // everything. Instead, rebuild markLine on the existing renderer.
+  // Alternative: use setOption merge (default) — only pass the markLine part.
   chart.setOption({
-    series: [{
-      type: 'line',
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        data: [{
-          xAxis: idx,
-          label: {
-            formatter: `⬅ ${dateStr}`,
-            position: 'start',
-            color: '#ff9800',
-            fontSize: 11,
-            fontWeight: 'bold',
-          },
-          lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
-        }],
+    series: [
+      {
+        // Index 0 — FGI series: only update markLine, keep everything else
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          animation: false,
+          data: [{
+            xAxis: idx,
+            label: {
+              formatter: `⬅ ${dateStr}`,
+              position: 'start',
+              color: '#ff9800',
+              fontSize: 11,
+              fontWeight: 'bold',
+            },
+            lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
+          }],
+        },
       },
-    }],
+      // Don't touch series[1] (上证综指)
+    ],
   });
 }
 
