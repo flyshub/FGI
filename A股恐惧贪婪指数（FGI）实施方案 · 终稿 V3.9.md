@@ -553,4 +553,6 @@ CREATE TABLE daily_status (
 
 **文档结束。**
 
+📊 Web 前端（历史走势与详细图表）：[https://flyshub.github.io/FGI/](https://flyshub.github.io/FGI/)
+
 本方案已修正 V3.7 中的所有 P1 逻辑硬伤，恢复了估值维度的利率锚与变化速度双重结构，消除了情绪维度的同源重复，并明确了各代理指标的局限性。V3.8.7 新增波动率维度（V4 QVIX），扩展为 5 维度 12 指标体系。可直接交付开发团队进行编码实现。
