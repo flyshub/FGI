@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A股恐贪指数 (FGI)</title>
+  <meta name="description" content="A股恐惧贪婪指数（FGI）——基于12项指标、5大维度的市场情绪实时监测工具">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="header">
+      <h1>A股恐贪指数</h1>
+      <div class="header-meta">
+        <span id="last-update">加载中...</span>
+        <span class="quality-badge" id="quality-badge"></span>
+      </div>
+    </header>
+
+    <!-- Date Picker — at top, controls all sections -->
+    <section id="datepicker-section" class="section card datepicker-top">
+      <div class="date-controls">
+        <label for="date-picker" style="font-weight:600;white-space:nowrap">📅 日期</label>
+        <input type="date" id="date-picker" />
+        <button id="date-go-btn">查看</button>
+        <span id="current-date-label" style="font-size:0.85rem;color:#888;margin-left:8px"></span>
+      </div>
+    </section>
+
+    <!-- FGI Dashboard -->
+    <section id="dashboard" class="section card">
+      <div class="fgi-hero">
+        <div class="fgi-number">
+          <span class="fgi-value" id="fgi-value">--</span>
+          <span class="fgi-unit">FGI</span>
+        </div>
+        <div class="fgi-zone" id="fgi-zone">--</div>
+      </div>
+      <div class="dashboard-grid" id="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-label">趋势</div>
+          <div class="stat-value" id="stat-trend">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">数据健康度</div>
+          <div class="stat-value" id="stat-health"><div class="health-bar"><div class="health-fill" id="health-fill" style="width:0%"></div></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">历史位置</div>
+          <div class="stat-value-small" id="stat-percentile">--</div>
+        </div>
+      </div>
+      <div class="extreme-note" id="extreme-note" style="display:none"></div>
+    </section>
+
+    <!-- Decision Matrix -->
+    <section id="dm-section" class="section card">
+      <h2>🎯 情绪-估值决策矩阵</h2>
+      <div id="matrix-container" class="matrix-grid"></div>
+      <div id="matrix-info" class="matrix-info"></div>
+      <p class="footnote">※ 软性建议，不构成投资指令</p>
+    </section>
+
+    <!-- Historical Signal Reference + Anchor -->
+    <section id="signal-section" class="section card">
+      <h2>📈 历史信号参考</h2>
+      <div id="signal-ref"></div>
+      <div id="time-anchor"></div>
+    </section>
+
+    <!-- Full History Line Chart -->
+    <section id="history-section" class="section card full-width">
+      <h2>📊 FGI 历史走势</h2>
+      <div id="history-chart" class="chart-large"></div>
+    </section>
+
+    <!-- Radar + Indicator Bar side by side on desktop -->
+    <div class="chart-row">
+      <section id="radar-section" class="section card">
+        <h2>📐 五维度评分</h2>
+        <div id="radar-chart" class="chart"></div>
+      </section>
+      <section id="indicator-section" class="section card">
+        <h2>🔍 指标明细</h2>
+        <div id="extreme-signals" class="extreme-signals"></div>
+        <div id="indicator-chart" class="chart"></div>
+      </section>
+    </div>
+
+    <!-- Distribution + Trend Explorer -->
+    <div class="chart-row">
+      <section id="distribution-section" class="section card">
+        <h2>📊 FGI 历史分布</h2>
+        <div id="distribution-chart" class="chart"></div>
+      </section>
+      <section id="trend-section" class="section card">
+        <h2>📈 维度/指标趋势</h2>
+        <div class="trend-controls">
+          <select id="trend-type">
+            <option value="dimension">维度</option>
+            <option value="indicator">指标</option>
+          </select>
+          <select id="trend-series"></select>
+        </div>
+        <div id="trend-chart" class="chart"></div>
+      </section>
+    </div>
+
+    </div>
+
+    <!-- Loading / Error overlay -->
+    <div id="loading-overlay" class="overlay">
+      <div class="spinner"></div>
+      <p>正在加载数据...</p>
+    </div>
+    <div id="error-overlay" class="overlay" style="display:none">
+      <div class="error-box">
+        <h2>⚠️ 数据加载失败</h2>
+        <p id="error-message"></p>
+        <button onclick="location.reload()">重试</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>数据来源：A股恐惧贪婪指数 (FGI) · 基于 12 项指标、5 大维度 · 仅供研究参考，不构成投资建议</p>
+    <p class="footer-links"><a href="https://github.com/flyshub/FGI" target="_blank">GitHub</a></p>
+  </footer>
+
+  <script src="scripts/main.js"></script>
+  <script src="scripts/charts.js"></script>
+  <script src="scripts/components.js"></script>
+</body>
+</html>

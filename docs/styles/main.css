@@ -1,0 +1,192 @@
+/* ============================================
+   FGI Web Frontend — Main Stylesheet
+   ============================================ */
+
+:root {
+  --extreme-fear: #d32f2f;
+  --fear: #ef5350;
+  --neutral: #9e9e9e;
+  --greed: #66bb6a;
+  --extreme-greed: #2e7d32;
+  --extreme-fear-bg: #ffebee;
+  --fear-bg: #fff3e0;
+  --neutral-bg: #f5f5f5;
+  --greed-bg: #e8f5e9;
+  --extreme-greed-bg: #e8f5e9;
+
+  --bg: #f0f2f5;
+  --card-bg: #ffffff;
+  --text: #1a1a2e;
+  --text-secondary: #555;
+  --text-muted: #888;
+  --border: #e0e0e0;
+  --accent: #1976d2;
+  --header-bg: #1a1a2e;
+  --header-text: #ffffff;
+  --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+/* 1. Reset & Base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* 2. Layout */
+#app { max-width: 1100px; margin: 0 auto; padding: 0 12px 24px; }
+
+header#header {
+  background: var(--header-bg); color: var(--header-text);
+  padding: 16px 20px; margin: 0 -12px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 8px;
+}
+header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px; }
+.header-meta { font-size: 0.85rem; color: #aaa; display: flex; align-items: center; gap: 10px; }
+.quality-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+.quality-badge.ok { background: #2e7d32; color: #fff; }
+.quality-badge.warn { background: #e65100; color: #fff; }
+.quality-badge.bad { background: #c62828; color: #fff; }
+
+/* 3. Section cards */
+.section { margin-bottom: 16px; }
+.card {
+  background: var(--card-bg); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 16px 18px;
+}
+.card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); }
+
+/* 4. Dashboard */
+.fgi-hero { text-align: center; padding: 12px 0 8px; }
+.fgi-number { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.fgi-value { font-size: 4rem; font-weight: 800; line-height: 1; }
+.fgi-unit { font-size: 1.2rem; font-weight: 600; color: var(--text-secondary); }
+.fgi-zone { font-size: 1.1rem; font-weight: 600; margin-top: 4px; }
+
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.stat-card { text-align: center; padding: 8px; background: var(--bg); border-radius: var(--radius-sm); }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+.stat-value { font-size: 1.1rem; font-weight: 700; }
+.stat-value-small { font-size: 0.85rem; color: var(--text-secondary); word-break: break-all; }
+
+.health-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin: 4px 0; }
+.health-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #d32f2f, #e65100, #fdd835, #66bb6a, #2e7d32); transition: width 0.5s; }
+
+.extreme-note { margin-top: 8px; text-align: center; font-size: 0.8rem; color: var(--extreme-fear); }
+
+/* 5. Decision Matrix */
+.matrix-grid {
+  display: grid;
+  grid-template-columns: 100px repeat(3, 1fr);
+  gap: 0;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+.matrix-cell {
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px;
+}
+.matrix-header { background: #ececec; font-weight: 700; color: #333; }
+.matrix-row-header { background: #ececec; font-weight: 700; color: #333; min-width: 80px; }
+.matrix-cell.highlight { background: #ffe082; font-weight: 700; }
+
+.matrix-info { font-size: 0.9rem; margin-top: 6px; }
+.matrix-info p { margin: 2px 0; }
+
+/* 6. Charts */
+.chart { width: 100%; height: 280px; }
+.chart-large { width: 100%; height: 380px; }
+.chart-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.chart-row .section { flex: 1; margin-bottom: 0; }
+
+/* 7. Signal Reference table */
+.signal-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.signal-table th, .signal-table td {
+  padding: 8px 10px; border: 1px solid var(--border); text-align: center;
+}
+.signal-table th { background: #ececec; font-weight: 600; }
+.signal-table td { background: #fff; }
+
+.anchor-card {
+  margin-top: 12px; padding: 12px; background: #f5f5f5;
+  border-radius: var(--radius-sm); font-size: 0.9rem;
+}
+.anchor-card strong { color: var(--text); }
+.anchor-table-wrap { margin-top: 8px; }
+
+/* 8. Extreme signals */
+.extreme-signals { margin-bottom: 8px; }
+.extreme-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin: 2px; font-weight: 600; }
+.extreme-tag.high { background: #c8e6c9; color: #1b5e20; }
+.extreme-tag.low { background: #ffcdd2; color: #b71c1c; }
+
+/* 9. Trend controls */
+.trend-controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.trend-controls select {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 0.85rem; background: #fff; flex: 1; min-width: 100px;
+}
+
+/* 10. Date picker */
+.date-controls { display: flex; gap: 8px; align-items: center; }
+.date-controls input[type="date"] { max-width: 180px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.9rem; }
+.date-controls button {
+  padding: 6px 16px; border: none; border-radius: var(--radius-sm);
+  background: var(--accent); color: #fff; font-size: 0.9rem; cursor: pointer;
+}
+.date-controls button:hover { opacity: 0.9; }
+.datepicker-top { padding: 10px 16px !important; }
+
+/* 11. Overlays */
+.overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.9); display: flex;
+  flex-direction: column; align-items: center; justify-content: center; z-index: 999;
+}
+.spinner {
+  width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-box { text-align: center; padding: 24px; }
+.error-box h2 { color: var(--extreme-fear); margin-bottom: 8px; }
+.error-box button { margin-top: 12px; padding: 8px 24px; border: none; background: var(--accent); color: #fff; border-radius: var(--radius-sm); cursor: pointer; }
+
+/* 12. Footer */
+footer {
+  text-align: center; padding: 20px 12px 12px;
+  font-size: 0.75rem; color: var(--text-muted);
+}
+.footer-links { margin-top: 4px; }
+
+/* 13. Footnote */
+.footnote { font-size: 0.7rem; color: var(--text-muted); margin-top: 8px; }
+
+/* 14. Responsive */
+@media (max-width: 767px) {
+  .fgi-value { font-size: 3rem; }
+  .dashboard-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .stat-card { padding: 6px; }
+  .chart-row { flex-direction: column; }
+  .chart-row .section { margin-bottom: 16px; }
+  .chart { height: 240px; }
+  .chart-large { height: 300px; }
+  matrix-grid { font-size: 0.7rem; grid-template-columns: 70px repeat(3, 1fr); }
+  .matrix-cell { padding: 6px 4px; min-height: 36px; }
+  header#header { flex-direction: column; text-align: center; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .chart-row { flex-direction: column; }
+  .chart-row .section { margin-bottom: 16px; }
+}
