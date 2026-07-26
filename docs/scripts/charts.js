@@ -61,6 +61,7 @@ function initHistoryChart(history) {
     ],
     series: [
       {
+        id: 'fgi',
         name: 'FGI',
         type: 'line',
         yAxisIndex: 0,
@@ -91,23 +92,9 @@ function initHistoryChart(history) {
           symbolSize: 10,
           label: { show: false },
         },
-        markLine: {
-          silent: true,
-          symbol: 'none',
-          data: [{
-            xAxis: history.length - 1,
-            label: {
-              formatter: `⬅ ${history[history.length - 1].date}`,
-              position: 'start',
-              color: '#ff9800',
-              fontSize: 11,
-              fontWeight: 'bold',
-            },
-            lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
-          }],
-        },
       },
       {
+        id: 'shanghai',
         name: '上证综指',
         type: 'line',
         yAxisIndex: 1,
@@ -128,25 +115,15 @@ function initHistoryChart(history) {
 }
 
 // ── Update mark line on history chart ──
-function updateHistoryMarkLine(dateStr) {
+function _updateHistoryMarkLine(dateStr) {
   const chart = getChart('history');
   if (!chart) return;
   const idx = state.history.findIndex(d => d.date === dateStr);
   if (idx < 0) return;
 
-  // Use ECharts action to update markLine without replacing series data
-  chart.dispatchAction({
-    type: 'legendSelect',
-    name: 'FGI',
-  });
-
-  // Direct markLine data update via setOption with notMerge=true would replace
-  // everything. Instead, rebuild markLine on the existing renderer.
-  // Alternative: use setOption merge (default) — only pass the markLine part.
   chart.setOption({
     series: [
-      {
-        // Index 0 — FGI series: only update markLine, keep everything else
+      { id: 'fgi',
         markLine: {
           silent: true,
           symbol: 'none',
@@ -164,7 +141,6 @@ function updateHistoryMarkLine(dateStr) {
           }],
         },
       },
-      // Don't touch series[1] (上证综指)
     ],
   });
 }

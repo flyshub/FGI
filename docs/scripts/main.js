@@ -96,7 +96,7 @@ function init() {
   // Setup date picker
   setupDatePicker(latestDate);
 
-  // Render initial
+  // Render initial — triggers markLine via _updateHistoryMarkLine
   switchToDate(latestDate);
 }
 
@@ -126,41 +126,13 @@ function switchToDate(dateStr) {
   initRadarChart(data.dimensions);
   initIndicatorChart(data.scores, data.statuses, data.extreme_signals);
   initDistributionChart(state.history, data.fgi_final, dateStr);
-  updateHistoryMarkLine(dateStr);
+  _updateHistoryMarkLine(dateStr);
 }
 
 // ── History chart mark line ──────────────────────────
 function updateHistoryMarkLine(dateStr) {
-  // Find the index in history
-  const idx = state.history.findIndex(d => d.date === dateStr);
-  if (idx < 0) return;
-
-  // Update the history chart's markLine if it exists
-  const chartIdx = chartInstances.findIndex((ch, i) => i === 0);
-  if (chartIdx < 0) return;
-  const chart = chartInstances[0];
-  if (!chart) return;
-
-  chart.setOption({
-    series: [{
-      type: 'line',
-      markLine: {
-        silent: true,
-        symbol: 'none',
-        data: [{
-          xAxis: idx,
-          label: {
-            formatter: `⬅ ${dateStr}`,
-            position: 'start',
-            color: '#ff9800',
-            fontSize: 11,
-            fontWeight: 'bold',
-          },
-          lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
-        }],
-      },
-    }],
-  });
+  // Delegated to charts.js
+  _updateHistoryMarkLine(dateStr);
 }
 
 // ── History chart init (called once) ────────────────
