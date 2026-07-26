@@ -53,16 +53,28 @@ def _post(token: str, title: str, content: str, to: str | None = None) -> bool:
 def _broadcast(title: str, content: str) -> bool:
     """Push to primary account and all friend subscribers via friend-message API.
 
-    Uses a single API call with `to` parameter instead of per-token loops.
-    Returns True on success.
+    Sends two API calls when friends are configured:
+    1. To self (without to parameter) — guarantees the main account receives it
+    2. To friends (with to parameter) — optional, only if FGI_PUSHPLUS_FRIENDS set
+    Returns True if at least one succeeded.
     """
     primary = os.getenv("FGI_PUSHPLUS_TOKEN", "")
     if not primary:
         logger.info("no PushPlus token configured, skipping push")
         return False
 
+    # 1. Always send to self first
+    ok = _post(primary, title, content)
+
+    # 2. Optionally send to friends via to parameter
     friends = os.getenv("FGI_PUSHPLUS_FRIENDS", "")
-    return _post(primary, title, content, to=friends or None)
+    if friends:
+        if _post(primary, title, content, to=friends):
+            ok = True
+        else:
+            logger.warning("PushPlus friend push failed, but self push may have succeeded")
+
+    return ok
 
 
 def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
