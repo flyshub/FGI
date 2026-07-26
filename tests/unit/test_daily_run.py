@@ -73,7 +73,7 @@ class TestAnomalyGating:
         monkeypatch.setattr("fgi.output.alert.Alert.check_and_alert",
                             lambda self, d, r: anomaly_detected)
         monkeypatch.setattr(daily_run, "send_fgi_report",
-                            lambda *a, **k: calls.setdefault("pushed", True) or True)
+                            lambda db, *a, **k: calls.setdefault("pushed", True) or True)
         monkeypatch.setattr("sys.argv", ["daily_run", "--date", "2024-01-02"])
 
     def test_no_anomaly_sends_push(self, monkeypatch, capsys):
