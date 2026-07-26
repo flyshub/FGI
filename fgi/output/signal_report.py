@@ -485,17 +485,20 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                                             d = str(cr["date"])
                                             r = _get_forward_return(db, d, horizon=20)
                                             if r is not None:
-                                                marker = " ← 最近似" if d == closest_date else ""
+                                                is_closest = d == closest_date
                                                 arrow = "📈" if r > 0 else "📉"
-                                                detail_rows.append((d, f"{arrow} {r*100:+.1f}%", marker))
+                                                ret_label = f"{arrow} {r*100:+.1f}%"
+                                                date_label = f"**{d}**" if is_closest else d
+                                                detail_rows.append((date_label, ret_label))
                                         if len(detail_rows) >= 3:
-                                            r_vals = [float(r[1].replace("📈 ","").replace("📉 ","").replace("%","")) for r in detail_rows]
+                                            r_vals = [float(r.replace("📈 ","").replace("📉 ","").replace("%","")) for _, r in detail_rows]
                                             r_min = min(r_vals)
                                             r_max = max(r_vals)
-                                            table = "\n其他同向接近情形：\n| 日期 | 后市20日 |\n|------|---------|\n"
-                                            for d, ret_s, marker in detail_rows:
-                                                table += f"| {d} | {ret_s} |{marker}|\n"
+                                            table = '\n\n其他同向接近情形：\n\n| 日期 | 后市20日 |\n|------|---------|\n'
+                                            for date_label, ret_s in detail_rows:
+                                                table += f"| {date_label} | {ret_s} |\n"
                                             table += f"| **区间** | **{r_min:+.0f}% ~ {r_max:+.0f}%** |"
+                                            table += '\n\n<sub>最近似日期以**加粗**标注</sub>'
                                             anchor_line += table
                                     except Exception:
                                         pass
