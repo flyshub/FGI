@@ -1,5 +1,7 @@
 # FGI — A股恐惧贪婪指数
 
+![CI](https://github.com/flyshub/FGI/actions/workflows/ci.yml/badge.svg)
+
 全自动 A 股市场情绪量化指数。每日从 4 大数据源采集 12 个指标，合成 0–100 的情绪读数，通过 PushPlus 推送至手机。
 
 > 极度恐惧时买入，极度贪婪时卖出——前提是恐惧/贪婪信号真的有效。FGI 的目标是用数据验证这个假设，并给出可量化的决策辅助。

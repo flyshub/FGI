@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-pyyaml]
+
+  - repo: local
+    hooks:
+      - id: check-no-external-conn
+        name: Check no external DB connection
+        entry: bash scripts/check_no_external_conn.sh
+        language: system
+        pass_filenames: false
