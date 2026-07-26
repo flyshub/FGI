@@ -31,6 +31,7 @@ let state = {
 };
 let chartInstances = {};
 let currentDate = null; // YYYY-MM-DD
+let _switchingDate = false; // guard re-entrancy for chart click → switchToDate → setOption → redraw → click
 
 function registerChart(id, chart) {
   chartInstances[id] = chart;
@@ -101,9 +102,11 @@ function init() {
 }
 
 function switchToDate(dateStr) {
+  if (dateStr === currentDate) return;
+  _switchingDate = true;
   currentDate = dateStr;
   const data = getDataForDate(dateStr);
-  if (!data) return;
+  if (!data) { _switchingDate = false; return; }
 
   // Update header label
   document.getElementById('last-update').textContent = `数据截止 ${dateStr}`;
@@ -127,6 +130,7 @@ function switchToDate(dateStr) {
   initIndicatorChart(data.scores, data.statuses, data.extreme_signals);
   initDistributionChart(state.history, data.fgi_final, dateStr);
   _updateHistoryMarkLine(dateStr);
+  _switchingDate = false;
 }
 
 // ── History chart mark line ──────────────────────────
