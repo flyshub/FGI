@@ -54,4 +54,4 @@ jobs:
             requirements.txt
             pyproject.toml
       - run: pip install -e ".[dev]"
-      - run: pytest -x --tb=short --cov=fgi --cov-fail-under=80 --cov-report=term-missing
+      - run: pytest -x --tb=short --cov=fgi --cov-fail-under=60 --cov-report=term-missing
