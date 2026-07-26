@@ -63,6 +63,8 @@ class M2Calculator:
 
         score = self.calculate_score(percentile)
 
+        self._db.upsert_raw_data(date, "m2_up_num", float(today["up_num"].iloc[0]))
+        self._db.upsert_raw_data(date, "m2_down_num", float(today["down_num"].iloc[0]))
         self._db.upsert_raw_data(date, "m2_percentile", percentile)
         self._db.upsert_score(date, {"M2": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
