@@ -1,23 +1,23 @@
 {
   "date": "2026-07-24",
-  "fgi_final": 38.92,
-  "fgi_raw": 38.92,
-  "health_score": 86.7,
+  "fgi_final": 35.7,
+  "fgi_raw": 35.7,
+  "health_score": 100.0,
   "zone": "恐惧",
   "trend": "↓",
-  "delta": -10.86,
-  "prev_fgi": 49.78,
-  "percentile": 10.4,
-  "percentile_label": "低于历史上 90% 的日子（偏低）",
-  "extreme_note": "",
+  "delta": -14.17,
+  "prev_fgi": 49.87,
+  "percentile": 7.3,
+  "percentile_label": "低于历史上 93% 的日子（极低）",
+  "extreme_note": "⚠️ 处于历史极低区间",
   "scores": {
     "M1": 28.4,
-    "M2": null,
+    "M2": 3.3,
     "M3": 3.3,
     "M4": 0.4,
     "S2": 3.5,
     "S3": 22.3,
-    "V1": null,
+    "V1": 77.2,
     "V2": 16.7,
     "V4": 53.3,
     "F1": 83.6,
@@ -25,9 +25,9 @@
     "F3": 2.9
   },
   "dimensions": {
-    "momentum": 10.7,
+    "momentum": 8.9,
     "sentiment": 12.9,
-    "valuation": 16.7,
+    "valuation": 46.9,
     "volatility": 53.3,
     "funding": 61.2
   },
@@ -36,17 +36,17 @@
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
-    "M2": "degraded",
+    "M2": "normal",
     "M3": "normal",
     "M4": "normal",
     "S2": "normal",
     "S3": "normal",
-    "V1": "degraded",
+    "V1": "normal",
     "V2": "normal",
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 38.922369296714095,
+    "fgi": 35.703188100847385,
     "sentiment_tier": "中性",
     "pe_pct": 0.9206349206349206,
     "pb_pct": 0.6841269841269841,
@@ -64,6 +64,11 @@
       ]
     ],
     "low": [
+      [
+        "M2",
+        "散户意愿",
+        3.3
+      ],
       [
         "M3",
         "偏离60日均线",
@@ -87,38 +92,6 @@
     ]
   },
   "zone_context": null,
-  "anchor": {
-    "closest_date": "2022-03-29",
-    "closest_fgi": 38.9,
-    "delta": -4.5,
-    "forward_20d_return": -7.1,
-    "detail_table": [
-      {
-        "date": "2022-03-29",
-        "fgi": 38.9,
-        "forward_20": -7.1
-      },
-      {
-        "date": "2018-12-11",
-        "fgi": 38.9,
-        "forward_20": -2.3
-      },
-      {
-        "date": "2018-10-30",
-        "fgi": 38.9,
-        "forward_20": 0.3
-      },
-      {
-        "date": "2023-09-13",
-        "fgi": 39.0,
-        "forward_20": -3.8
-      },
-      {
-        "date": "2019-07-16",
-        "fgi": 39.0,
-        "forward_20": -4.8
-      }
-    ]
-  },
-  "generated_at": "2026-07-26T20:56:45"
+  "anchor": null,
+  "generated_at": "2026-07-26T22:14:24"
 }

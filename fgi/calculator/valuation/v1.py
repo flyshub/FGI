@@ -68,6 +68,20 @@ class V1Calculator:
 
         df = self.calculate_erp(pe_result.data, bond_result.data)
 
+        # 回写完整 PE-TTM 历史序列（幂等 upsert），供 V2 和 OFFLINE_RAW_MAPPING 使用
+        pe_history = pd.DataFrame({
+            "date": pe_result.data["date"].astype(str),
+            "value": pd.to_numeric(pe_result.data["滚动市盈率"], errors="coerce"),
+        }).dropna()
+        self._db.upsert_raw_data_batch(pe_history, "v1_pe_ttm")
+
+        # 回写完整债券收益率历史序列，供 OFFLINE_RAW_MAPPING 使用
+        bond_history = pd.DataFrame({
+            "date": bond_result.data["date"].astype(str),
+            "value": pd.to_numeric(bond_result.data["yield_10y"], errors="coerce"),
+        }).dropna()
+        self._db.upsert_raw_data_batch(bond_history, "v1_bond_yield")
+
         # 回写完整 ERP 历史序列（幂等 upsert），供 V2 的 250 日 ΔERP 窗口使用
         erp_history = pd.DataFrame({
             "date": df["date"].astype(str),
