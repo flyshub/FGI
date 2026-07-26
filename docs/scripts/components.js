@@ -197,3 +197,72 @@ function renderExtremeSignals(data) {
   }
   el.innerHTML = html;
 }
+
+// ── Signal Report ──
+function renderSignalReport(sr) {
+  if (!sr || sr.error) {
+    document.getElementById('signal-report-section').style.display = 'none';
+    return;
+  }
+  document.getElementById('signal-report-section').style.display = '';
+
+  // Rank IC
+  const ic = sr.rank_ic;
+  if (ic && ic.full) {
+    const d = ic.full;
+    document.getElementById('signal-report-ic').innerHTML = `
+      <p><strong>Rank IC 分析</strong>（FGI vs 上证综指20日前瞻收益）</p>
+      <table class="signal-table">
+        <thead><tr><th>指标</th><th>值</th></tr></thead>
+        <tbody>
+          <tr><td>全样本 IC</td><td>${d.ic.toFixed(4)} (n=${d.n})</td></tr>
+          <tr><td>IC 均值（20日滚动）</td><td>${d.mean.toFixed(4)}</td></tr>
+          <tr><td>IR</td><td>${d.ir.toFixed(4)}</td></tr>
+          <tr><td>IC 胜率</td><td>${(d.win_rate * 100).toFixed(1)}%</td></tr>
+        </tbody>
+      </table>
+      ${d.rolling && d.rolling.length ? `
+      <p style="margin-top:8px;font-size:0.85rem;color:#888">滚动 IC（每半年，3年回顾窗，最近5个）</p>
+      <table class="signal-table">
+        <thead><tr><th>日期</th><th>IC</th><th>IR</th><th>胜率</th></tr></thead>
+        <tbody>${d.rolling.slice(-5).map(r => `
+          <tr><td>${r.date}</td><td>${r.ic.toFixed(4)}</td><td>${r.ir != null ? r.ir.toFixed(3) : '—'}</td><td>${(r.win_rate * 100).toFixed(0)}%</td></tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+    `;
+  }
+
+  // Layer backtest
+  const layers = sr.layer_backtest;
+  if (layers && layers.full) {
+    let html = '<p style="margin-top:12px"><strong>10档分层回测</strong>（FGI分档 × 前瞻收益）</p>';
+    [5, 20, 60].forEach(h => {
+      const data = layers.full[String(h)];
+      if (!data || !data.length) return;
+      html += `<table class="signal-table" style="margin-top:6px">
+        <caption style="caption-side:top;font-size:0.85rem;text-align:left;padding:4px 0">${h}日前瞻</caption>
+        <thead><tr><th>分档</th><th>N</th><th>平均收益</th><th>胜率</th></tr></thead>
+        <tbody>${data.map(d => `
+          <tr><td>${d.layer}</td><td>${d.n}</td><td>${(d.mean_return * 100).toFixed(2)}%</td><td>${(d.win_rate * 100).toFixed(0)}%</td></tr>`).join('')}
+        </tbody>
+      </table>`;
+    });
+    document.getElementById('signal-report-layer').innerHTML = html;
+  }
+
+  // DCA
+  const dca = sr.dca;
+  if (dca && !dca.error) {
+    const _pct = v => `${(v * 100).toFixed(2)}%`;
+    document.getElementById('signal-report-dca').innerHTML = `
+      <p style="margin-top:12px"><strong>逆情绪 DCA vs 等额定投</strong>（${dca.n_months}个月）</p>
+      <table class="signal-table">
+        <thead><tr><th>策略</th><th>总收益</th><th>年化收益</th><th>最大回撤</th><th>夏普</th></tr></thead>
+        <tbody>
+          <tr><td>逆情绪 DCA</td><td>${_pct(dca.dca_total_return)}</td><td>${_pct(dca.dca_annualized)}</td><td>${_pct(dca.dca_max_drawdown)}</td><td>${dca.dca_sharpe.toFixed(2)}</td></tr>
+          <tr><td>等额定投</td><td>${_pct(dca.benchmark_total_return)}</td><td>${_pct(dca.benchmark_annualized)}</td><td>${_pct(dca.benchmark_max_drawdown)}</td><td>${dca.benchmark_sharpe.toFixed(2)}</td></tr>
+        </tbody>
+      </table>
+    `;
+  }
+}

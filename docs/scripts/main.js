@@ -138,6 +138,7 @@ function _doSwitchDate(dateStr) {
   initIndicatorChart(data.scores, data.statuses, data.extreme_signals);
   initDistributionChart(state.history, data.fgi_final, dateStr);
   _updateHistoryMarkLine(dateStr);
+  renderSignalReport(state.signalReport);
 }
 
 // ── History chart mark line ──────────────────────────
