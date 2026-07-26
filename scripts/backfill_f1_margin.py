@@ -14,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import akshare as ak
 import pandas as pd
 
-from fgi.storage.database import Database
 from fgi.config.settings import DB_PATH
+from fgi.storage.database import Database
 
 
 def main():
@@ -35,10 +35,8 @@ def main():
     print(f"Deleted {n_old} old SSE f1_margin_balance rows (rowcount={deleted})", flush=True)
 
     # 写入东财新值
-    inserted = 0
-    for _, row in df.iterrows():
+    for inserted, (_, row) in enumerate(df.iterrows(), 1):
         db.upsert_raw_data(row["date"], "f1_margin_balance", float(row["margin_balance"]))
-        inserted += 1
         if inserted % 500 == 0:
             db.commit()
             print(f"  {inserted}/{len(df)}", flush=True)
