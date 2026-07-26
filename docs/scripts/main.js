@@ -133,6 +133,7 @@ function _doSwitchDate(dateStr) {
   renderDecisionMatrix(data);
   renderSignalRef(data);
   renderAnchor(data);
+  renderExtremeSignals(data);
   initRadarChart(data.dimensions);
   initIndicatorChart(data.scores, data.statuses, data.extreme_signals);
   initDistributionChart(state.history, data.fgi_final, dateStr);

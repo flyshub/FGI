@@ -175,3 +175,25 @@ function renderAnchor(data) {
   html += `</div>`;
   el.innerHTML = html;
 }
+
+// ── Extreme Signals ──
+function renderExtremeSignals(data) {
+  const el = document.getElementById('extreme-signals');
+  const ext = data.extreme_signals;
+  if (!ext || (!ext.high.length && !ext.low.length)) {
+    el.innerHTML = '<span style="color:#888;font-size:0.85rem">无极端信号</span>';
+    return;
+  }
+  let html = '';
+  if (ext.high.length) {
+    html += ext.high.map(([, label, score]) =>
+      `<span class="extreme-tag high">🔴 ${label} ${score}</span>`
+    ).join(' ');
+  }
+  if (ext.low.length) {
+    html += ext.low.map(([, label, score]) =>
+      `<span class="extreme-tag low">🟢 ${label} ${score}</span>`
+    ).join(' ');
+  }
+  el.innerHTML = html;
+}
