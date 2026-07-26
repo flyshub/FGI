@@ -375,6 +375,7 @@ function enableHistoryChartClick() {
   if (!chart) return;
 
   chart.on('click', params => {
+    if (_switchingDate) return;
     if (params.componentType === 'series') {
       const dateStr = params.name;
       if (dateStr && state.allDatesIndex[dateStr]) {
