@@ -54,13 +54,14 @@ def main():
         print(f"  {name}: score={s} status={st}")
 
     print("\nSending PushPlus...")
-    ok = send_fgi_report(
-        result["fgi_raw"],
-        result["dimension_scores"],
-        result["indicator_results"],
-        result["health_score"],
-        date_str=target_date,
-    )
+    with Database(DB_PATH) as db:
+        ok = send_fgi_report(
+            db, result["fgi_raw"],
+            result["dimension_scores"],
+            result["indicator_results"],
+            result["health_score"],
+            date_str=target_date,
+        )
     print(f"PushPlus: {'OK' if ok else 'FAILED'}")
 
 
