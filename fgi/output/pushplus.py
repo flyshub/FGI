@@ -24,8 +24,8 @@ from fgi.output.renderer import (
 logger = logging.getLogger(__name__)
 
 
-def _post(token: str, title: str, content: str) -> bool:
-    """Send to a single PushPlus token. Returns True on success."""
+def _post(token: str, title: str, content: str, to: str | None = None) -> bool:
+    """Send to a single PushPlus token (optionally to friend tokens). Returns True on success."""
     if not token:
         return False
 
@@ -35,6 +35,8 @@ def _post(token: str, title: str, content: str) -> bool:
         "content": content,
         "template": "markdown",
     }
+    if to:
+        payload["to"] = to
 
     try:
         resp = requests.post("https://www.pushplus.plus/send", json=payload, timeout=10)
@@ -49,24 +51,18 @@ def _post(token: str, title: str, content: str) -> bool:
 
 
 def _broadcast(title: str, content: str) -> bool:
-    """Push to all configured subscribers. Returns True if at least one succeeded."""
-    tokens = []
-    primary = os.getenv("FGI_PUSHPLUS_TOKEN", "")
-    if primary:
-        tokens.append(primary)
-    extra = os.getenv("FGI_PUSHPLUS_TOKENS", "")
-    if extra:
-        tokens.extend(t for t in extra.split(",") if t.strip())
+    """Push to primary account and all friend subscribers via friend-message API.
 
-    if not tokens:
-        logger.info("no PushPlus tokens configured, skipping push")
+    Uses a single API call with `to` parameter instead of per-token loops.
+    Returns True on success.
+    """
+    primary = os.getenv("FGI_PUSHPLUS_TOKEN", "")
+    if not primary:
+        logger.info("no PushPlus token configured, skipping push")
         return False
 
-    ok = False
-    for t in tokens:
-        if _post(t.strip(), title, content):
-            ok = True
-    return ok
+    friends = os.getenv("FGI_PUSHPLUS_FRIENDS", "")
+    return _post(primary, title, content, to=friends or None)
 
 
 def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
