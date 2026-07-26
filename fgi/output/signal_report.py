@@ -274,9 +274,13 @@ def render_markdown(result: dict) -> str:
 
     # Zone distribution
     parts.append(_distribution_table(stats, meta.get("total_days", 0)))
+    parts.append("> 💡 **大白话**：FGI 把每个交易日的情绪打分到 0-100 分。上面这张表告诉我们：历史上大多数日子（约 58%）市场情绪比较平淡（40-60 分），真正恐慌（<20）和真正疯狂（≥80）的日子非常少，加起来不到 1%。")
+    parts.append("")
 
     # Combined (full sample) forward returns
     parts.append(_zone_table(stats, "全量样本前瞻收益分析"))
+    parts.append("> 💡 **大白话**：这张表回答一个核心问题——当市场情绪处于某个区间时，接下来一段时间大盘会怎么走？比如看 60 日那张表，恐惧区间的股票平均涨 2.86%（胜率 57%），贪婪区间的股票平均跌 -0.44%（胜率 46%）。简单说：别人恐惧时你买入，60 天后大概率赚钱；别人贪婪时你追高，60 天后大概率亏钱。")
+    parts.append("")
     parts.append("> ⚠️ 注：日频滚动窗口下观测非独立，置信区间需谨慎解读。")
     parts.append("")
     parts.append("---")
@@ -294,6 +298,8 @@ def render_markdown(result: dict) -> str:
     parts.append("---")
     parts.append("")
     parts.append("## 极端信号专项")
+    parts.append("")
+    parts.append('> 💡 **大白话**：极端信号就是市场情绪的"极端值"——极度恐慌（FGI<20）或极度贪婪（FGI≥80）。历史上这样的日子屈指可数，说明市场真正疯狂或恐惧的时刻非常罕见。正因为罕见，每次出现都值得特别关注。但要注意：样本太少（不到 12 天），统计结论仅供参考，不能当成可靠买卖信号。')
     parts.append("")
     parts.append("> 注：极端恐惧（FGI<20）仅 8 个交易日、极端贪婪（FGI≥80）仅约 12 个交易日。样本量极小，统计结论仅供参考。")
     parts.append("")
@@ -321,6 +327,8 @@ def render_markdown(result: dict) -> str:
 
     parts.append("")
     parts.append("### 方法与数据局限")
+    parts.append("")
+    parts.append("> 💡 **大白话**：下面列出了这份报告的六大局限。简单说：这份报告只看了上证综指一个指数、样本量有限（尤其是极端行情太少了）、统计方法有一定假设前提。FGI 是一个参考信号，不是精准预测工具——别拿它当买卖依据。")
     parts.append("")
     parts.append("1. **基准局限**：使用上证综指（m3_close），未纳入沪深 300/中证 500/中证 1000 全收益指数。")
     parts.append("2. **重叠观测**：日频滚动窗口产生重叠样本，各观测非独立，显著性检验需谨慎解读。")
@@ -760,6 +768,7 @@ def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
         "",
         "FGI_final 与上证综指 20 日前瞻收益的 Spearman Rank IC：",
         "",
+        '> 💡 **大白话**：Rank IC 衡量的是「FGI 分数和未来市场涨跌之间的关联有多强」。IC 为负数说明 FGI 越高（市场越贪婪），未来越容易跌——这正是我们希望看到的反向预测能力。IR（信息比率）衡量这种关联是否稳定，绝对值越大越稳定。IC 胜率指「有多少个时间段里 FGI 和未来涨跌是反向关联的」，低于 50% 说明 FGI 大多数时候方向正确（反向指标）。',
     ]
     if ic_result.get("error"):
         lines.append(f"**数据不足**：{ic_result['error']}")
@@ -790,6 +799,8 @@ def _render_layer_section(layer_result: dict, title: str = "10 档分层回测")
     lines = [
         f"### 📊 {title}",
         "",
+        '> 💡 **大白话**：把历史上所有交易日按 FGI 分数从低到高排成 10 档（第 1 档最恐慌，第 10 档最贪婪），然后看每档在接下来 5/20/60 天的平均涨跌。理想情况下应该是"第 1 档涨最多、第 10 档跌最多"——像下楼梯一样严格递减。如果中段档位的收益互相交叉，说明 FGI 在中间区域的区分度不够精细。',
+        "",
     ]
     if not layer_result:
         lines.append("数据不足。")
@@ -815,6 +826,8 @@ def _render_dca_section(dca_result: dict, title: str = "逆情绪 DCA vs 等额�
     """Render DCA simulation section."""
     lines = [
         f"### 💰 {title}",
+        "",
+        '> 💡 **大白话**：模拟两种每月定投策略。**等额定投**：每月固定投入 1 万元买指数基金，不管涨跌。**逆情绪 DCA**：根据 FGI 调整投入金额——市场越恐慌（FGI 低），投入越多（最多 2 万元）；市场越贪婪（FGI 高），投入越少（最少 0 元）。核心逻辑是「别人恐惧我加仓，别人贪婪我减仓」。通过对比两种策略的总收益、最大回撤和夏普比率，看 FGI 作为定投择时信号是否有实际价值。',
         "",
     ]
     if dca_result.get("error"):
