@@ -1656,60 +1656,68 @@
     "forward_20": 4.5
   },
   {
-    "date": "2018-05-31",
-    "fgi": 61.6,
-    "anchor_date": "2016-12-07",
-    "anchor_fgi": 61.6,
-    "anchor_delta": 2.5,
-    "forward_20": -1.8
+    "date": "2018-06-01",
+    "fgi": 31.4,
+    "anchor_date": "2015-12-22",
+    "anchor_fgi": 31.3,
+    "anchor_delta": -4.0,
+    "forward_20": -18.5
+  },
+  {
+    "date": "2018-06-08",
+    "fgi": 38.8,
+    "anchor_date": "2017-11-27",
+    "anchor_fgi": 38.6,
+    "anchor_delta": -7.1,
+    "forward_20": -1.3
   },
   {
     "date": "2018-06-13",
-    "fgi": 36.5,
-    "anchor_date": "2018-04-26",
-    "anchor_fgi": 36.8,
-    "anchor_delta": -7.0,
-    "forward_20": 2.0
+    "fgi": 34.9,
+    "anchor_date": "2016-02-19",
+    "anchor_fgi": 35.2,
+    "anchor_delta": -2.1,
+    "forward_20": 3.3
   },
   {
     "date": "2018-06-15",
-    "fgi": 39.3,
-    "anchor_date": "2018-04-12",
-    "anchor_fgi": 39.4,
-    "anchor_delta": -14.1,
-    "forward_20": -0.2
+    "fgi": 38.1,
+    "anchor_date": "2016-03-09",
+    "anchor_fgi": 37.8,
+    "anchor_delta": -7.3,
+    "forward_20": 5.1
   },
   {
     "date": "2018-06-19",
-    "fgi": 27.4,
-    "anchor_date": "2016-01-13",
-    "anchor_fgi": 26.8,
-    "anchor_delta": -3.2,
-    "forward_20": -2.8
+    "fgi": 25.9,
+    "anchor_date": "2016-02-05",
+    "anchor_fgi": 25.8,
+    "anchor_delta": -9.9,
+    "forward_20": 1.7
   },
   {
     "date": "2018-06-21",
-    "fgi": 30.7,
-    "anchor_date": "2015-12-30",
-    "anchor_fgi": 30.8,
-    "anchor_delta": -0.5,
-    "forward_20": -25.7
+    "fgi": 29.4,
+    "anchor_date": "2015-12-31",
+    "anchor_fgi": 29.1,
+    "anchor_delta": -1.7,
+    "forward_20": -22.6
   },
   {
     "date": "2018-06-27",
-    "fgi": 36.5,
-    "anchor_date": "2018-06-13",
-    "anchor_fgi": 36.5,
-    "anchor_delta": -21.7,
-    "forward_20": -7.0
+    "fgi": 36.0,
+    "anchor_date": "2018-05-04",
+    "anchor_fgi": 35.7,
+    "anchor_delta": -10.9,
+    "forward_20": -0.5
   },
   {
     "date": "2018-06-28",
-    "fgi": 33.7,
-    "anchor_date": "2016-01-06",
-    "anchor_fgi": 33.9,
-    "anchor_delta": -3.5,
-    "forward_20": -18.5
+    "fgi": 33.1,
+    "anchor_date": "2016-03-10",
+    "anchor_fgi": 33.5,
+    "anchor_delta": -4.4,
+    "forward_20": 6.4
   },
   {
     "date": "2018-06-29",
@@ -1721,31 +1729,31 @@
   },
   {
     "date": "2018-07-02",
-    "fgi": 37.9,
-    "anchor_date": "2016-03-09",
-    "anchor_fgi": 37.8,
-    "anchor_delta": -7.3,
-    "forward_20": 5.1
+    "fgi": 37.7,
+    "anchor_date": "2018-05-02",
+    "anchor_fgi": 37.7,
+    "anchor_delta": -5.0,
+    "forward_20": -1.3
   },
   {
     "date": "2018-07-04",
-    "fgi": 37.8,
-    "anchor_date": "2016-03-09",
-    "anchor_fgi": 37.8,
-    "anchor_delta": -7.3,
-    "forward_20": 5.1
+    "fgi": 37.5,
+    "anchor_date": "2018-07-02",
+    "anchor_fgi": 37.7,
+    "anchor_delta": -24.8,
+    "forward_20": 3.4
   },
   {
     "date": "2018-07-05",
-    "fgi": 32.5,
-    "anchor_date": "2016-02-25",
-    "anchor_fgi": 32.6,
-    "anchor_delta": -17.2,
-    "forward_20": 8.0
+    "fgi": 32.1,
+    "anchor_date": "2016-01-20",
+    "anchor_fgi": 32.0,
+    "anchor_delta": -16.3,
+    "forward_20": -1.6
   },
   {
     "date": "2018-07-11",
-    "fgi": 31.0,
+    "fgi": 30.5,
     "anchor_date": "2015-12-30",
     "anchor_fgi": 30.8,
     "anchor_delta": -0.5,
@@ -1761,47 +1769,55 @@
   },
   {
     "date": "2018-07-19",
-    "fgi": 31.5,
-    "anchor_date": "2015-12-22",
-    "anchor_fgi": 31.3,
-    "anchor_delta": -4.0,
-    "forward_20": -18.5
+    "fgi": 30.9,
+    "anchor_date": "2015-12-30",
+    "anchor_fgi": 30.8,
+    "anchor_delta": -0.5,
+    "forward_20": -25.7
   },
   {
     "date": "2018-07-24",
-    "fgi": 63.2,
+    "fgi": 63.1,
     "anchor_date": "2016-03-21",
     "anchor_fgi": 63.2,
     "anchor_delta": 1.5,
     "forward_20": 0.8
   },
   {
+    "date": "2018-07-27",
+    "fgi": 39.9,
+    "anchor_date": "2018-05-16",
+    "anchor_fgi": 40.0,
+    "anchor_delta": -11.7,
+    "forward_20": -3.8
+  },
+  {
     "date": "2018-07-30",
-    "fgi": 35.0,
-    "anchor_date": "2016-02-19",
-    "anchor_fgi": 35.2,
-    "anchor_delta": -2.1,
-    "forward_20": 3.3
+    "fgi": 34.6,
+    "anchor_date": "2018-05-30",
+    "anchor_fgi": 34.6,
+    "anchor_delta": -6.3,
+    "forward_20": -8.4
   },
   {
     "date": "2018-07-31",
-    "fgi": 32.9,
-    "anchor_date": "2016-02-29",
-    "anchor_fgi": 32.7,
-    "anchor_delta": -11.8,
-    "forward_20": 10.0
+    "fgi": 32.5,
+    "anchor_date": "2016-02-25",
+    "anchor_fgi": 32.6,
+    "anchor_delta": -17.2,
+    "forward_20": 8.0
   },
   {
     "date": "2018-08-01",
-    "fgi": 30.5,
-    "anchor_date": "2018-06-21",
-    "anchor_fgi": 30.7,
-    "anchor_delta": -23.5,
-    "forward_20": -3.6
+    "fgi": 30.2,
+    "anchor_date": "2018-07-11",
+    "anchor_fgi": 30.5,
+    "anchor_delta": -21.9,
+    "forward_20": -1.2
   },
   {
     "date": "2018-08-02",
-    "fgi": 32.9,
+    "fgi": 32.5,
     "anchor_date": "2015-12-29",
     "anchor_fgi": 31.3,
     "anchor_delta": 5.1,
@@ -1809,15 +1825,15 @@
   },
   {
     "date": "2018-08-03",
-    "fgi": 26.0,
-    "anchor_date": "2015-12-24",
-    "anchor_fgi": 26.2,
-    "anchor_delta": -8.4,
-    "forward_20": -19.3
+    "fgi": 25.6,
+    "anchor_date": "2016-02-05",
+    "anchor_fgi": 25.8,
+    "anchor_delta": -9.9,
+    "forward_20": 1.7
   },
   {
     "date": "2018-08-06",
-    "fgi": 23.7,
+    "fgi": 23.3,
     "anchor_date": "2016-01-15",
     "anchor_fgi": 23.8,
     "anchor_delta": -18.5,
@@ -1825,7 +1841,7 @@
   },
   {
     "date": "2018-08-08",
-    "fgi": 28.7,
+    "fgi": 28.4,
     "anchor_date": "2016-02-03",
     "anchor_fgi": 28.4,
     "anchor_delta": -10.1,
@@ -1841,23 +1857,23 @@
   },
   {
     "date": "2018-08-14",
-    "fgi": 36.6,
-    "anchor_date": "2018-06-13",
-    "anchor_fgi": 36.5,
-    "anchor_delta": -21.7,
-    "forward_20": -7.0
+    "fgi": 36.4,
+    "anchor_date": "2018-06-27",
+    "anchor_fgi": 36.0,
+    "anchor_delta": -10.1,
+    "forward_20": 3.2
   },
   {
     "date": "2018-08-15",
-    "fgi": 24.9,
-    "anchor_date": "2016-02-15",
-    "anchor_fgi": 24.7,
-    "anchor_delta": -1.0,
-    "forward_20": 4.1
+    "fgi": 24.6,
+    "anchor_date": "2016-01-21",
+    "anchor_fgi": 24.6,
+    "anchor_delta": -7.4,
+    "forward_20": -4.8
   },
   {
     "date": "2018-08-16",
-    "fgi": 28.3,
+    "fgi": 27.9,
     "anchor_date": "2015-12-25",
     "anchor_fgi": 29.2,
     "anchor_delta": 3.0,
@@ -1865,15 +1881,15 @@
   },
   {
     "date": "2018-08-17",
-    "fgi": 23.3,
+    "fgi": 23.0,
     "anchor_date": "2018-08-06",
-    "anchor_fgi": 23.7,
+    "anchor_fgi": 23.3,
     "anchor_delta": -2.3,
     "forward_20": 0.6
   },
   {
     "date": "2018-08-20",
-    "fgi": 37.6,
+    "fgi": 37.3,
     "anchor_date": "2016-01-05",
     "anchor_fgi": 37.5,
     "anchor_delta": 22.0,
@@ -1881,63 +1897,63 @@
   },
   {
     "date": "2018-08-22",
-    "fgi": 27.3,
-    "anchor_date": "2018-06-19",
-    "anchor_fgi": 27.4,
-    "anchor_delta": -11.9,
-    "forward_20": -3.8
+    "fgi": 27.0,
+    "anchor_date": "2016-01-13",
+    "anchor_fgi": 26.8,
+    "anchor_delta": -3.2,
+    "forward_20": -2.8
   },
   {
     "date": "2018-08-24",
-    "fgi": 35.5,
-    "anchor_date": "2015-12-21",
-    "anchor_fgi": 35.3,
-    "anchor_delta": -5.3,
-    "forward_20": -17.4
+    "fgi": 35.2,
+    "anchor_date": "2016-02-19",
+    "anchor_fgi": 35.2,
+    "anchor_delta": -2.1,
+    "forward_20": 3.3
   },
   {
     "date": "2018-08-28",
-    "fgi": 33.8,
-    "anchor_date": "2018-06-28",
-    "anchor_fgi": 33.7,
-    "anchor_delta": -2.8,
-    "forward_20": 3.4
+    "fgi": 33.5,
+    "anchor_date": "2016-03-10",
+    "anchor_fgi": 33.5,
+    "anchor_delta": -4.4,
+    "forward_20": 6.4
   },
   {
     "date": "2018-08-29",
-    "fgi": 30.4,
+    "fgi": 30.2,
     "anchor_date": "2018-08-01",
-    "anchor_fgi": 30.5,
-    "anchor_delta": -2.4,
+    "anchor_fgi": 30.2,
+    "anchor_delta": -2.3,
     "forward_20": -2.0
   },
   {
     "date": "2018-08-30",
-    "fgi": 25.1,
-    "anchor_date": "2018-08-15",
-    "anchor_fgi": 24.9,
-    "anchor_delta": -11.7,
-    "forward_20": -2.5
+    "fgi": 24.8,
+    "anchor_date": "2016-02-15",
+    "anchor_fgi": 24.7,
+    "anchor_delta": -1.0,
+    "forward_20": 4.1
   },
   {
     "date": "2018-08-31",
-    "fgi": 28.0,
+    "fgi": 27.8,
     "anchor_date": "2018-08-16",
-    "anchor_fgi": 28.3,
+    "anchor_fgi": 27.9,
     "anchor_delta": 3.3,
     "forward_20": -0.7
   },
   {
     "date": "2018-09-03",
-    "fgi": 32.9,
+    "fgi": 32.7,
     "anchor_date": "2018-08-02",
-    "anchor_fgi": 32.9,
+    "anchor_fgi": 32.5,
     "anchor_delta": 2.3,
     "forward_20": -1.1
   },
   {
     "date": "2018-09-05",
-    "fgi": 30.9,
+    "fgi": 30.7,
     "anchor_date": "2015-12-30",
     "anchor_fgi": 30.8,
     "anchor_delta": -0.5,
@@ -1945,7 +1961,7 @@
   },
   {
     "date": "2018-09-06",
-    "fgi": 35.3,
+    "fgi": 35.1,
     "anchor_date": "2016-01-18",
     "anchor_fgi": 35.2,
     "anchor_delta": 11.3,
@@ -1953,47 +1969,47 @@
   },
   {
     "date": "2018-09-10",
-    "fgi": 26.2,
+    "fgi": 25.9,
+    "anchor_date": "2018-06-19",
+    "anchor_fgi": 25.9,
+    "anchor_delta": -12.2,
+    "forward_20": -3.8
+  },
+  {
+    "date": "2018-09-11",
+    "fgi": 32.3,
+    "anchor_date": "2018-08-02",
+    "anchor_fgi": 32.5,
+    "anchor_delta": 2.3,
+    "forward_20": -1.1
+  },
+  {
+    "date": "2018-09-12",
+    "fgi": 26.1,
     "anchor_date": "2015-12-24",
     "anchor_fgi": 26.2,
     "anchor_delta": -8.4,
     "forward_20": -19.3
   },
   {
-    "date": "2018-09-11",
-    "fgi": 32.5,
-    "anchor_date": "2018-08-02",
-    "anchor_fgi": 32.9,
-    "anchor_delta": 2.3,
-    "forward_20": -1.1
-  },
-  {
-    "date": "2018-09-12",
-    "fgi": 26.3,
-    "anchor_date": "2015-12-28",
-    "anchor_fgi": 26.2,
-    "anchor_delta": -3.0,
-    "forward_20": -22.2
-  },
-  {
     "date": "2018-09-14",
-    "fgi": 31.7,
-    "anchor_date": "2018-07-19",
-    "anchor_fgi": 31.5,
-    "anchor_delta": -9.0,
-    "forward_20": -2.4
+    "fgi": 31.4,
+    "anchor_date": "2018-06-01",
+    "anchor_fgi": 31.4,
+    "anchor_delta": -20.6,
+    "forward_20": -9.7
   },
   {
     "date": "2018-09-17",
-    "fgi": 29.6,
-    "anchor_date": "2015-12-31",
-    "anchor_fgi": 29.1,
-    "anchor_delta": -1.7,
-    "forward_20": -22.6
+    "fgi": 29.4,
+    "anchor_date": "2018-06-21",
+    "anchor_fgi": 29.4,
+    "anchor_delta": -24.5,
+    "forward_20": -3.6
   },
   {
     "date": "2018-09-25",
-    "fgi": 34.1,
+    "fgi": 34.0,
     "anchor_date": "2016-01-06",
     "anchor_fgi": 33.9,
     "anchor_delta": -3.5,
@@ -2001,63 +2017,63 @@
   },
   {
     "date": "2018-09-27",
-    "fgi": 36.4,
+    "fgi": 36.2,
     "anchor_date": "2018-06-27",
-    "anchor_fgi": 36.5,
-    "anchor_delta": -9.8,
+    "anchor_fgi": 36.0,
+    "anchor_delta": -10.1,
     "forward_20": 3.2
   },
   {
     "date": "2018-10-08",
-    "fgi": 25.2,
+    "fgi": 25.0,
     "anchor_date": "2018-08-30",
-    "anchor_fgi": 25.1,
-    "anchor_delta": -5.3,
+    "anchor_fgi": 24.8,
+    "anchor_delta": -5.4,
     "forward_20": 3.1
   },
   {
     "date": "2018-10-09",
-    "fgi": 37.5,
-    "anchor_date": "2016-01-05",
-    "anchor_fgi": 37.5,
-    "anchor_delta": 22.0,
-    "forward_20": -16.4
+    "fgi": 37.3,
+    "anchor_date": "2018-08-20",
+    "anchor_fgi": 37.3,
+    "anchor_delta": 14.4,
+    "forward_20": -1.7
   },
   {
     "date": "2018-10-11",
-    "fgi": 34.6,
-    "anchor_date": "2018-05-30",
+    "fgi": 34.4,
+    "anchor_date": "2018-07-30",
     "anchor_fgi": 34.6,
-    "anchor_delta": -6.3,
-    "forward_20": -8.4
+    "anchor_delta": -5.3,
+    "forward_20": -3.1
   },
   {
     "date": "2018-10-15",
-    "fgi": 29.9,
-    "anchor_date": "2018-09-17",
-    "anchor_fgi": 29.6,
-    "anchor_delta": -2.1,
-    "forward_20": -2.1
+    "fgi": 29.8,
+    "anchor_date": "2018-08-29",
+    "anchor_fgi": 30.2,
+    "anchor_delta": -3.3,
+    "forward_20": 0.8
   },
   {
     "date": "2018-10-16",
-    "fgi": 33.3,
+    "fgi": 33.2,
     "anchor_date": "2018-09-03",
-    "anchor_fgi": 32.9,
-    "anchor_delta": 4.8,
+    "anchor_fgi": 32.7,
+    "anchor_delta": 4.9,
     "forward_20": 0.0
   },
   {
     "date": "2018-10-18",
-    "fgi": 28.7,
+    "fgi": 28.6,
     "anchor_date": "2018-08-08",
-    "anchor_fgi": 28.7,
-    "anchor_delta": -24.5,
+    "anchor_fgi": 28.4,
+    "anchor_delta": -24.7,
     "forward_20": -1.4
   },
   {
     "date": "2018-10-23",
-    "fgi": 33.9,
+    "fgi": 33.8,
     "anchor_date": "2016-01-06",
     "anchor_fgi": 33.9,
     "anchor_delta": -3.5,
@@ -2066,18 +2082,18 @@
   {
     "date": "2018-10-25",
     "fgi": 36.7,
-    "anchor_date": "2018-08-14",
-    "anchor_fgi": 36.6,
-    "anchor_delta": -6.2,
-    "forward_20": -4.2
+    "anchor_date": "2018-04-26",
+    "anchor_fgi": 36.8,
+    "anchor_delta": -7.0,
+    "forward_20": 2.0
   },
   {
     "date": "2018-10-26",
     "fgi": 32.8,
-    "anchor_date": "2018-07-31",
-    "anchor_fgi": 32.9,
-    "anchor_delta": -2.1,
-    "forward_20": -3.4
+    "anchor_date": "2016-02-29",
+    "anchor_fgi": 32.7,
+    "anchor_delta": -11.8,
+    "forward_20": 10.0
   },
   {
     "date": "2018-10-29",
@@ -2098,10 +2114,10 @@
   {
     "date": "2018-10-31",
     "fgi": 37.9,
-    "anchor_date": "2018-07-04",
+    "anchor_date": "2016-03-09",
     "anchor_fgi": 37.8,
-    "anchor_delta": -18.2,
-    "forward_20": 2.4
+    "anchor_delta": -7.3,
+    "forward_20": 5.1
   },
   {
     "date": "2018-11-05",
@@ -2114,18 +2130,18 @@
   {
     "date": "2018-11-06",
     "fgi": 35.5,
-    "anchor_date": "2018-08-24",
-    "anchor_fgi": 35.5,
-    "anchor_delta": -4.7,
-    "forward_20": 2.5
+    "anchor_date": "2015-12-21",
+    "anchor_fgi": 35.3,
+    "anchor_delta": -5.3,
+    "forward_20": -17.4
   },
   {
     "date": "2018-11-07",
     "fgi": 34.2,
-    "anchor_date": "2018-09-25",
-    "anchor_fgi": 34.1,
-    "anchor_delta": -16.4,
-    "forward_20": -7.7
+    "anchor_date": "2018-10-11",
+    "anchor_fgi": 34.4,
+    "anchor_delta": -8.6,
+    "forward_20": 2.0
   },
   {
     "date": "2018-11-08",
@@ -2146,34 +2162,34 @@
   {
     "date": "2018-11-14",
     "fgi": 33.1,
-    "anchor_date": "2018-07-31",
-    "anchor_fgi": 32.9,
-    "anchor_delta": -2.1,
-    "forward_20": -3.4
+    "anchor_date": "2018-06-28",
+    "anchor_fgi": 33.1,
+    "anchor_delta": -2.9,
+    "forward_20": 3.4
   },
   {
     "date": "2018-11-20",
     "fgi": 32.3,
-    "anchor_date": "2018-07-05",
+    "anchor_date": "2018-07-31",
     "anchor_fgi": 32.5,
-    "anchor_delta": -5.3,
-    "forward_20": 1.2
+    "anchor_delta": -2.1,
+    "forward_20": -3.4
   },
   {
     "date": "2018-11-22",
     "fgi": 37.4,
-    "anchor_date": "2016-02-18",
-    "anchor_fgi": 37.3,
-    "anchor_delta": -5.1,
-    "forward_20": 1.5
+    "anchor_date": "2018-07-04",
+    "anchor_fgi": 37.5,
+    "anchor_delta": -18.5,
+    "forward_20": 2.4
   },
   {
     "date": "2018-11-23",
     "fgi": 29.7,
-    "anchor_date": "2018-09-17",
-    "anchor_fgi": 29.6,
-    "anchor_delta": -2.1,
-    "forward_20": -2.1
+    "anchor_date": "2018-10-15",
+    "anchor_fgi": 29.8,
+    "anchor_delta": -18.0,
+    "forward_20": 2.4
   },
   {
     "date": "2018-11-26",
@@ -2194,26 +2210,26 @@
   {
     "date": "2018-11-29",
     "fgi": 30.2,
-    "anchor_date": "2018-08-29",
-    "anchor_fgi": 30.4,
-    "anchor_delta": -3.3,
-    "forward_20": 0.8
+    "anchor_date": "2018-08-01",
+    "anchor_fgi": 30.2,
+    "anchor_delta": -2.3,
+    "forward_20": -2.0
   },
   {
     "date": "2018-11-30",
     "fgi": 37.8,
-    "anchor_date": "2018-08-20",
-    "anchor_fgi": 37.6,
-    "anchor_delta": 14.3,
-    "forward_20": -1.7
+    "anchor_date": "2016-01-05",
+    "anchor_fgi": 37.5,
+    "anchor_delta": 22.0,
+    "forward_20": -16.4
   },
   {
     "date": "2018-12-06",
     "fgi": 34.5,
-    "anchor_date": "2018-10-11",
+    "anchor_date": "2018-07-30",
     "anchor_fgi": 34.6,
-    "anchor_delta": -8.6,
-    "forward_20": 2.0
+    "anchor_delta": -5.3,
+    "forward_20": -3.1
   },
   {
     "date": "2018-12-07",
@@ -2250,18 +2266,18 @@
   {
     "date": "2018-12-18",
     "fgi": 30.6,
-    "anchor_date": "2018-06-21",
+    "anchor_date": "2018-09-05",
     "anchor_fgi": 30.7,
-    "anchor_delta": -23.5,
-    "forward_20": -3.6
+    "anchor_delta": -22.5,
+    "forward_20": -4.5
   },
   {
     "date": "2018-12-19",
     "fgi": 27.8,
-    "anchor_date": "2018-06-19",
-    "anchor_fgi": 27.4,
-    "anchor_delta": -11.9,
-    "forward_20": -3.8
+    "anchor_date": "2016-02-03",
+    "anchor_fgi": 28.4,
+    "anchor_delta": -10.1,
+    "forward_20": 4.5
   },
   {
     "date": "2018-12-20",
@@ -2275,17 +2291,17 @@
     "date": "2018-12-24",
     "fgi": 33.3,
     "anchor_date": "2018-10-16",
-    "anchor_fgi": 33.3,
+    "anchor_fgi": 33.2,
     "anchor_delta": 3.4,
     "forward_20": 4.3
   },
   {
     "date": "2018-12-25",
     "fgi": 29.8,
-    "anchor_date": "2018-11-23",
-    "anchor_fgi": 29.7,
-    "anchor_delta": -7.7,
-    "forward_20": -2.5
+    "anchor_date": "2018-10-15",
+    "anchor_fgi": 29.8,
+    "anchor_delta": -18.0,
+    "forward_20": 2.4
   },
   {
     "date": "2018-12-28",
@@ -2299,7 +2315,7 @@
     "date": "2019-01-02",
     "fgi": 22.7,
     "anchor_date": "2018-08-17",
-    "anchor_fgi": 23.3,
+    "anchor_fgi": 23.0,
     "anchor_delta": -4.9,
     "forward_20": 0.5
   },
@@ -2307,8 +2323,8 @@
     "date": "2019-01-03",
     "fgi": 32.2,
     "anchor_date": "2018-09-11",
-    "anchor_fgi": 32.5,
-    "anchor_delta": 6.3,
+    "anchor_fgi": 32.3,
+    "anchor_delta": 6.4,
     "forward_20": -3.9
   },
   {
@@ -2322,26 +2338,26 @@
   {
     "date": "2019-01-14",
     "fgi": 38.8,
-    "anchor_date": "2017-11-27",
-    "anchor_fgi": 38.6,
-    "anchor_delta": -7.1,
-    "forward_20": -1.3
+    "anchor_date": "2018-06-08",
+    "anchor_fgi": 38.8,
+    "anchor_delta": -7.2,
+    "forward_20": -8.2
   },
   {
     "date": "2019-01-22",
     "fgi": 36.5,
-    "anchor_date": "2018-06-13",
-    "anchor_fgi": 36.5,
-    "anchor_delta": -21.7,
-    "forward_20": -7.0
+    "anchor_date": "2018-08-14",
+    "anchor_fgi": 36.4,
+    "anchor_delta": -6.3,
+    "forward_20": -4.2
   },
   {
     "date": "2019-01-30",
     "fgi": 35.9,
-    "anchor_date": "2018-05-04",
-    "anchor_fgi": 35.7,
-    "anchor_delta": -10.9,
-    "forward_20": -0.5
+    "anchor_date": "2018-06-27",
+    "anchor_fgi": 36.0,
+    "anchor_delta": -10.1,
+    "forward_20": 3.2
   },
   {
     "date": "2019-02-13",
@@ -2395,17 +2411,17 @@
     "date": "2019-05-06",
     "fgi": 27.3,
     "anchor_date": "2018-08-22",
-    "anchor_fgi": 27.3,
-    "anchor_delta": -20.4,
+    "anchor_fgi": 27.0,
+    "anchor_delta": -20.6,
     "forward_20": 0.6
   },
   {
     "date": "2019-05-08",
     "fgi": 34.4,
-    "anchor_date": "2018-12-06",
-    "anchor_fgi": 34.5,
-    "anchor_delta": -5.8,
-    "forward_20": -2.8
+    "anchor_date": "2018-10-11",
+    "anchor_fgi": 34.4,
+    "anchor_delta": -8.6,
+    "forward_20": 2.0
   },
   {
     "date": "2019-05-09",
@@ -2418,10 +2434,10 @@
   {
     "date": "2019-05-13",
     "fgi": 31.5,
-    "anchor_date": "2018-07-19",
-    "anchor_fgi": 31.5,
-    "anchor_delta": -9.0,
-    "forward_20": -2.4
+    "anchor_date": "2018-09-14",
+    "anchor_fgi": 31.4,
+    "anchor_delta": -13.4,
+    "forward_20": -1.0
   },
   {
     "date": "2019-05-14",
@@ -2450,10 +2466,10 @@
   {
     "date": "2019-05-23",
     "fgi": 34.4,
-    "anchor_date": "2019-05-08",
+    "anchor_date": "2018-10-11",
     "anchor_fgi": 34.4,
-    "anchor_delta": -11.8,
-    "forward_20": -1.1
+    "anchor_delta": -8.6,
+    "forward_20": 2.0
   },
   {
     "date": "2019-05-30",
@@ -2467,17 +2483,17 @@
     "date": "2019-06-03",
     "fgi": 36.2,
     "anchor_date": "2018-09-27",
-    "anchor_fgi": 36.4,
-    "anchor_delta": -14.1,
+    "anchor_fgi": 36.2,
+    "anchor_delta": -14.2,
     "forward_20": -6.6
   },
   {
     "date": "2019-06-04",
     "fgi": 31.4,
-    "anchor_date": "2018-07-19",
-    "anchor_fgi": 31.5,
-    "anchor_delta": -9.0,
-    "forward_20": -2.4
+    "anchor_date": "2018-06-01",
+    "anchor_fgi": 31.4,
+    "anchor_delta": -20.6,
+    "forward_20": -9.7
   },
   {
     "date": "2019-06-05",
@@ -2490,18 +2506,18 @@
   {
     "date": "2019-06-06",
     "fgi": 29.3,
-    "anchor_date": "2015-12-31",
-    "anchor_fgi": 29.1,
-    "anchor_delta": -1.7,
-    "forward_20": -22.6
+    "anchor_date": "2018-09-17",
+    "anchor_fgi": 29.4,
+    "anchor_delta": -2.0,
+    "forward_20": -2.1
   },
   {
     "date": "2019-06-12",
     "fgi": 39.2,
-    "anchor_date": "2018-06-15",
-    "anchor_fgi": 39.3,
-    "anchor_delta": -9.5,
-    "forward_20": -6.9
+    "anchor_date": "2018-04-12",
+    "anchor_fgi": 39.4,
+    "anchor_delta": -14.1,
+    "forward_20": -0.2
   },
   {
     "date": "2019-06-14",
@@ -2514,18 +2530,18 @@
   {
     "date": "2019-06-25",
     "fgi": 38.1,
-    "anchor_date": "2018-07-02",
-    "anchor_fgi": 37.9,
-    "anchor_delta": -24.5,
-    "forward_20": 3.4
+    "anchor_date": "2018-06-15",
+    "anchor_fgi": 38.1,
+    "anchor_delta": -10.4,
+    "forward_20": -6.9
   },
   {
     "date": "2019-06-26",
     "fgi": 40.0,
-    "anchor_date": "2018-03-26",
-    "anchor_fgi": 39.8,
-    "anchor_delta": 1.4,
-    "forward_20": -0.5
+    "anchor_date": "2018-08-23",
+    "anchor_fgi": 40.0,
+    "anchor_delta": 13.0,
+    "forward_20": 0.2
   },
   {
     "date": "2019-06-28",
@@ -2538,10 +2554,10 @@
   {
     "date": "2019-07-03",
     "fgi": 37.6,
-    "anchor_date": "2019-03-25",
+    "anchor_date": "2018-07-02",
     "anchor_fgi": 37.7,
-    "anchor_delta": -7.7,
-    "forward_20": 5.1
+    "anchor_delta": -24.8,
+    "forward_20": 3.4
   },
   {
     "date": "2019-07-04",
@@ -2554,10 +2570,10 @@
   {
     "date": "2019-07-08",
     "fgi": 31.4,
-    "anchor_date": "2019-06-04",
+    "anchor_date": "2018-06-01",
     "anchor_fgi": 31.4,
-    "anchor_delta": -4.8,
-    "forward_20": 5.3
+    "anchor_delta": -20.6,
+    "forward_20": -9.7
   },
   {
     "date": "2019-07-09",
@@ -2594,10 +2610,10 @@
   {
     "date": "2019-07-18",
     "fgi": 32.2,
-    "anchor_date": "2018-11-20",
-    "anchor_fgi": 32.3,
-    "anchor_delta": -18.2,
-    "forward_20": -2.6
+    "anchor_date": "2018-07-05",
+    "anchor_fgi": 32.1,
+    "anchor_delta": -5.4,
+    "forward_20": 1.2
   },
   {
     "date": "2019-07-19",
@@ -2610,18 +2626,18 @@
   {
     "date": "2019-07-22",
     "fgi": 31.0,
-    "anchor_date": "2018-07-11",
-    "anchor_fgi": 31.0,
-    "anchor_delta": -21.4,
-    "forward_20": -1.2
+    "anchor_date": "2018-07-19",
+    "anchor_fgi": 30.9,
+    "anchor_delta": -9.2,
+    "forward_20": -2.4
   },
   {
     "date": "2019-07-31",
     "fgi": 36.5,
-    "anchor_date": "2018-06-13",
+    "anchor_date": "2019-01-22",
     "anchor_fgi": 36.5,
-    "anchor_delta": -21.7,
-    "forward_20": -7.0
+    "anchor_delta": -9.9,
+    "forward_20": 14.0
   },
   {
     "date": "2019-08-01",
@@ -2635,7 +2651,7 @@
     "date": "2019-08-02",
     "fgi": 34.1,
     "anchor_date": "2018-09-25",
-    "anchor_fgi": 34.1,
+    "anchor_fgi": 34.0,
     "anchor_delta": -16.4,
     "forward_20": -7.7
   },
@@ -2658,10 +2674,10 @@
   {
     "date": "2019-08-09",
     "fgi": 30.8,
-    "anchor_date": "2018-09-05",
-    "anchor_fgi": 30.9,
-    "anchor_delta": -22.4,
-    "forward_20": -4.5
+    "anchor_date": "2015-12-30",
+    "anchor_fgi": 30.8,
+    "anchor_delta": -0.5,
+    "forward_20": -25.7
   },
   {
     "date": "2019-08-13",
@@ -2922,10 +2938,10 @@
   {
     "date": "2020-02-03",
     "fgi": 23.2,
-    "anchor_date": "2018-08-17",
+    "anchor_date": "2018-08-06",
     "anchor_fgi": 23.3,
-    "anchor_delta": -4.9,
-    "forward_20": 0.5
+    "anchor_delta": -2.3,
+    "forward_20": 0.6
   },
   {
     "date": "2020-02-17",
@@ -2962,10 +2978,10 @@
   {
     "date": "2020-03-02",
     "fgi": 63.2,
-    "anchor_date": "2018-07-24",
+    "anchor_date": "2016-03-21",
     "anchor_fgi": 63.2,
-    "anchor_delta": 8.4,
-    "forward_20": -5.9
+    "anchor_delta": 1.5,
+    "forward_20": 0.8
   },
   {
     "date": "2020-03-03",
@@ -2994,10 +3010,10 @@
   {
     "date": "2020-03-12",
     "fgi": 35.0,
-    "anchor_date": "2018-07-30",
-    "anchor_fgi": 35.0,
-    "anchor_delta": -5.2,
-    "forward_20": -3.1
+    "anchor_date": "2018-06-13",
+    "anchor_fgi": 34.9,
+    "anchor_delta": -22.7,
+    "forward_20": -7.0
   },
   {
     "date": "2020-03-16",
@@ -3058,10 +3074,10 @@
   {
     "date": "2020-03-30",
     "fgi": 28.6,
-    "anchor_date": "2018-08-08",
-    "anchor_fgi": 28.7,
-    "anchor_delta": -24.5,
-    "forward_20": -1.4
+    "anchor_date": "2018-10-18",
+    "anchor_fgi": 28.6,
+    "anchor_delta": -13.5,
+    "forward_20": 7.3
   },
   {
     "date": "2020-03-31",
@@ -3074,10 +3090,10 @@
   {
     "date": "2020-04-01",
     "fgi": 28.5,
-    "anchor_date": "2016-02-03",
+    "anchor_date": "2018-08-08",
     "anchor_fgi": 28.4,
-    "anchor_delta": -10.1,
-    "forward_20": 4.5
+    "anchor_delta": -24.7,
+    "forward_20": -1.4
   },
   {
     "date": "2020-04-03",
@@ -3090,18 +3106,18 @@
   {
     "date": "2020-04-08",
     "fgi": 38.8,
-    "anchor_date": "2019-01-14",
+    "anchor_date": "2018-06-08",
     "anchor_fgi": 38.8,
-    "anchor_delta": -8.8,
-    "forward_20": 8.6
+    "anchor_delta": -7.2,
+    "forward_20": -8.2
   },
   {
     "date": "2020-04-10",
     "fgi": 35.6,
-    "anchor_date": "2018-08-24",
+    "anchor_date": "2018-12-14",
     "anchor_fgi": 35.5,
-    "anchor_delta": -4.7,
-    "forward_20": 2.5
+    "anchor_delta": -14.8,
+    "forward_20": -0.9
   },
   {
     "date": "2020-04-13",
@@ -3130,10 +3146,10 @@
   {
     "date": "2020-04-24",
     "fgi": 39.9,
-    "anchor_date": "2018-05-16",
-    "anchor_fgi": 40.0,
-    "anchor_delta": -11.7,
-    "forward_20": -3.8
+    "anchor_date": "2018-07-27",
+    "anchor_fgi": 39.9,
+    "anchor_delta": -6.1,
+    "forward_20": -5.0
   },
   {
     "date": "2020-05-22",
@@ -3258,10 +3274,10 @@
   {
     "date": "2020-07-24",
     "fgi": 37.9,
-    "anchor_date": "2018-07-02",
+    "anchor_date": "2019-08-26",
     "anchor_fgi": 37.9,
-    "anchor_delta": -24.5,
-    "forward_20": 3.4
+    "anchor_delta": -12.0,
+    "forward_20": 4.3
   },
   {
     "date": "2020-07-29",
@@ -3553,7 +3569,7 @@
   },
   {
     "date": "2021-01-26",
-    "fgi": 62.5,
+    "fgi": 62.4,
     "anchor_date": "2017-08-29",
     "anchor_fgi": 62.5,
     "anchor_delta": -11.7,
@@ -3585,7 +3601,7 @@
   },
   {
     "date": "2021-02-03",
-    "fgi": 60.2,
+    "fgi": 60.1,
     "anchor_date": "2017-08-23",
     "anchor_fgi": 60.2,
     "anchor_delta": -3.6,
@@ -3593,7 +3609,7 @@
   },
   {
     "date": "2021-02-08",
-    "fgi": 67.3,
+    "fgi": 67.2,
     "anchor_date": "2020-12-17",
     "anchor_fgi": 67.3,
     "anchor_delta": 12.6,
@@ -3601,7 +3617,7 @@
   },
   {
     "date": "2021-02-09",
-    "fgi": 72.1,
+    "fgi": 72.0,
     "anchor_date": "2021-02-02",
     "anchor_fgi": 71.9,
     "anchor_delta": 2.3,
@@ -3633,7 +3649,7 @@
   },
   {
     "date": "2021-02-22",
-    "fgi": 65.1,
+    "fgi": 65.0,
     "anchor_date": "2019-12-27",
     "anchor_fgi": 65.1,
     "anchor_delta": -1.7,
@@ -3649,7 +3665,7 @@
   },
   {
     "date": "2021-02-25",
-    "fgi": 66.6,
+    "fgi": 66.5,
     "anchor_date": "2020-12-25",
     "anchor_fgi": 66.5,
     "anchor_delta": 12.1,
@@ -3673,7 +3689,7 @@
   },
   {
     "date": "2021-03-05",
-    "fgi": 64.1,
+    "fgi": 64.0,
     "anchor_date": "2017-02-10",
     "anchor_fgi": 64.1,
     "anchor_delta": 2.3,
@@ -3708,15 +3724,15 @@
     "fgi": 62.5,
     "anchor_date": "2018-06-29",
     "anchor_fgi": 62.5,
-    "anchor_delta": 28.7,
+    "anchor_delta": 29.3,
     "forward_20": 0.9
   },
   {
     "date": "2021-04-14",
     "fgi": 63.1,
     "anchor_date": "2018-07-24",
-    "anchor_fgi": 63.2,
-    "anchor_delta": 8.4,
+    "anchor_fgi": 63.1,
+    "anchor_delta": 8.5,
     "forward_20": -5.9
   },
   {
@@ -3740,7 +3756,7 @@
     "fgi": 64.3,
     "anchor_date": "2018-07-12",
     "anchor_fgi": 64.1,
-    "anchor_delta": 33.1,
+    "anchor_delta": 33.6,
     "forward_20": -1.5
   },
   {
@@ -3809,7 +3825,7 @@
   },
   {
     "date": "2021-05-26",
-    "fgi": 68.0,
+    "fgi": 67.9,
     "anchor_date": "2018-01-24",
     "anchor_fgi": 68.1,
     "anchor_delta": -1.9,
@@ -3818,10 +3834,10 @@
   {
     "date": "2021-05-27",
     "fgi": 69.6,
-    "anchor_date": "2021-02-01",
+    "anchor_date": "2019-12-30",
     "anchor_fgi": 69.6,
-    "anchor_delta": 13.8,
-    "forward_20": -2.4
+    "anchor_delta": 4.6,
+    "forward_20": -7.3
   },
   {
     "date": "2021-05-31",
@@ -3841,7 +3857,7 @@
   },
   {
     "date": "2021-06-04",
-    "fgi": 66.0,
+    "fgi": 65.9,
     "anchor_date": "2017-05-25",
     "anchor_fgi": 65.9,
     "anchor_delta": 11.8,
@@ -3884,7 +3900,7 @@
     "fgi": 64.2,
     "anchor_date": "2018-07-12",
     "anchor_fgi": 64.1,
-    "anchor_delta": 33.1,
+    "anchor_delta": 33.6,
     "forward_20": -1.5
   },
   {
@@ -3938,14 +3954,14 @@
   {
     "date": "2021-06-25",
     "fgi": 74.6,
-    "anchor_date": "2021-01-21",
+    "anchor_date": "2021-05-14",
     "anchor_fgi": 74.5,
-    "anchor_delta": 2.3,
-    "forward_20": -1.0
+    "anchor_delta": 18.7,
+    "forward_20": 2.8
   },
   {
     "date": "2021-06-28",
-    "fgi": 70.0,
+    "fgi": 69.9,
     "anchor_date": "2017-09-05",
     "anchor_fgi": 69.5,
     "anchor_delta": -2.0,
@@ -3953,7 +3969,7 @@
   },
   {
     "date": "2021-06-30",
-    "fgi": 70.6,
+    "fgi": 70.5,
     "anchor_date": "2020-01-09",
     "anchor_fgi": 70.7,
     "anchor_delta": 11.6,
@@ -3994,10 +4010,10 @@
   {
     "date": "2021-07-09",
     "fgi": 68.3,
-    "anchor_date": "2021-05-31",
+    "anchor_date": "2017-02-21",
     "anchor_fgi": 68.3,
-    "anchor_delta": 8.4,
-    "forward_20": -1.2
+    "anchor_delta": 1.7,
+    "forward_20": 0.3
   },
   {
     "date": "2021-07-12",
@@ -4033,7 +4049,7 @@
   },
   {
     "date": "2021-07-20",
-    "fgi": 61.8,
+    "fgi": 61.7,
     "anchor_date": "2019-12-25",
     "anchor_fgi": 61.7,
     "anchor_delta": -1.3,
@@ -4155,7 +4171,7 @@
     "date": "2021-08-24",
     "fgi": 68.0,
     "anchor_date": "2021-05-26",
-    "anchor_fgi": 68.0,
+    "anchor_fgi": 67.9,
     "anchor_delta": -4.7,
     "forward_20": -0.7
   },
@@ -4292,7 +4308,7 @@
     "fgi": 61.2,
     "anchor_date": "2018-08-09",
     "anchor_fgi": 61.3,
-    "anchor_delta": 32.6,
+    "anchor_delta": 32.9,
     "forward_20": -3.7
   },
   {
@@ -4352,14 +4368,6 @@
     "forward_20": 4.9
   },
   {
-    "date": "2021-12-02",
-    "fgi": 60.0,
-    "anchor_date": "2020-09-15",
-    "anchor_fgi": 60.0,
-    "anchor_delta": -3.9,
-    "forward_20": 0.9
-  },
-  {
     "date": "2021-12-03",
     "fgi": 68.1,
     "anchor_date": "2017-08-14",
@@ -4394,10 +4402,10 @@
   {
     "date": "2021-12-13",
     "fgi": 72.6,
-    "anchor_date": "2021-03-01",
-    "anchor_fgi": 72.5,
-    "anchor_delta": 18.3,
-    "forward_20": -3.3
+    "anchor_date": "2021-05-25",
+    "anchor_fgi": 72.7,
+    "anchor_delta": 5.5,
+    "forward_20": -0.4
   },
   {
     "date": "2021-12-14",
@@ -4522,10 +4530,10 @@
   {
     "date": "2022-01-17",
     "fgi": 73.3,
-    "anchor_date": "2021-06-22",
-    "anchor_fgi": 73.2,
-    "anchor_delta": 5.2,
-    "forward_20": -0.6
+    "anchor_date": "2021-08-02",
+    "anchor_fgi": 73.3,
+    "anchor_delta": 15.0,
+    "forward_20": 1.8
   },
   {
     "date": "2022-01-18",
@@ -4546,14 +4554,14 @@
   {
     "date": "2022-01-25",
     "fgi": 36.3,
-    "anchor_date": "2018-09-27",
-    "anchor_fgi": 36.4,
-    "anchor_delta": -14.1,
-    "forward_20": -6.6
+    "anchor_date": "2019-07-10",
+    "anchor_fgi": 36.2,
+    "anchor_delta": -1.7,
+    "forward_20": -5.0
   },
   {
     "date": "2022-01-27",
-    "fgi": 32.2,
+    "fgi": 32.1,
     "anchor_date": "2019-07-18",
     "anchor_fgi": 32.2,
     "anchor_delta": -9.0,
@@ -4602,10 +4610,10 @@
   {
     "date": "2022-03-01",
     "fgi": 63.3,
-    "anchor_date": "2022-02-21",
+    "anchor_date": "2018-01-16",
     "anchor_fgi": 63.3,
-    "anchor_delta": 4.8,
-    "forward_20": -6.8
+    "anchor_delta": 2.4,
+    "forward_20": -7.3
   },
   {
     "date": "2022-03-07",
@@ -4618,10 +4626,10 @@
   {
     "date": "2022-03-08",
     "fgi": 31.0,
-    "anchor_date": "2018-07-11",
+    "anchor_date": "2019-07-22",
     "anchor_fgi": 31.0,
-    "anchor_delta": -21.4,
-    "forward_20": -1.2
+    "anchor_delta": -8.6,
+    "forward_20": -0.1
   },
   {
     "date": "2022-03-09",
@@ -4666,30 +4674,30 @@
   {
     "date": "2022-04-07",
     "fgi": 33.5,
-    "anchor_date": "2016-03-10",
+    "anchor_date": "2018-08-28",
     "anchor_fgi": 33.5,
-    "anchor_delta": -4.4,
-    "forward_20": 6.4
+    "anchor_delta": -17.6,
+    "forward_20": 1.0
   },
   {
     "date": "2022-04-11",
     "fgi": 28.8,
-    "anchor_date": "2018-10-18",
-    "anchor_fgi": 28.7,
-    "anchor_delta": -13.5,
-    "forward_20": 7.3
+    "anchor_date": "2020-03-26",
+    "anchor_fgi": 28.9,
+    "anchor_delta": -16.6,
+    "forward_20": 1.6
   },
   {
     "date": "2022-04-13",
     "fgi": 34.1,
-    "anchor_date": "2018-09-25",
+    "anchor_date": "2019-08-02",
     "anchor_fgi": 34.1,
-    "anchor_delta": -16.4,
-    "forward_20": -7.7
+    "anchor_delta": -5.6,
+    "forward_20": 0.6
   },
   {
     "date": "2022-04-15",
-    "fgi": 33.5,
+    "fgi": 33.4,
     "anchor_date": "2016-03-10",
     "anchor_fgi": 33.5,
     "anchor_delta": -4.4,
@@ -4739,8 +4747,8 @@
     "date": "2022-04-26",
     "fgi": 22.7,
     "anchor_date": "2018-08-31",
-    "anchor_fgi": 28.0,
-    "anchor_delta": 2.9,
+    "anchor_fgi": 27.8,
+    "anchor_delta": 3.0,
     "forward_20": -0.3
   },
   {
@@ -4794,16 +4802,16 @@
   {
     "date": "2022-06-27",
     "fgi": 65.0,
-    "anchor_date": "2019-12-27",
-    "anchor_fgi": 65.1,
-    "anchor_delta": -1.7,
-    "forward_20": -7.4
+    "anchor_date": "2021-02-22",
+    "anchor_fgi": 65.0,
+    "anchor_delta": -10.8,
+    "forward_20": -5.5
   },
   {
     "date": "2022-06-28",
     "fgi": 67.2,
     "anchor_date": "2021-02-08",
-    "anchor_fgi": 67.3,
+    "anchor_fgi": 67.2,
     "anchor_delta": 7.5,
     "forward_20": -3.2
   },
@@ -4842,18 +4850,18 @@
   {
     "date": "2022-08-02",
     "fgi": 35.4,
-    "anchor_date": "2018-11-06",
-    "anchor_fgi": 35.5,
-    "anchor_delta": -1.6,
-    "forward_20": 0.2
+    "anchor_date": "2015-12-21",
+    "anchor_fgi": 35.3,
+    "anchor_delta": -5.3,
+    "forward_20": -17.4
   },
   {
     "date": "2022-08-03",
     "fgi": 37.2,
-    "anchor_date": "2016-01-22",
-    "anchor_fgi": 37.1,
-    "anchor_delta": 12.5,
-    "forward_20": -5.1
+    "anchor_date": "2018-10-09",
+    "anchor_fgi": 37.3,
+    "anchor_delta": 12.3,
+    "forward_20": -2.3
   },
   {
     "date": "2022-08-11",
@@ -4890,10 +4898,10 @@
   {
     "date": "2022-09-16",
     "fgi": 31.0,
-    "anchor_date": "2019-07-22",
-    "anchor_fgi": 31.0,
-    "anchor_delta": -8.6,
-    "forward_20": -0.1
+    "anchor_date": "2018-07-19",
+    "anchor_fgi": 30.9,
+    "anchor_delta": -9.2,
+    "forward_20": -2.4
   },
   {
     "date": "2022-09-19",
@@ -4906,26 +4914,26 @@
   {
     "date": "2022-09-21",
     "fgi": 39.8,
-    "anchor_date": "2020-04-24",
+    "anchor_date": "2018-07-27",
     "anchor_fgi": 39.9,
-    "anchor_delta": -5.8,
-    "forward_20": 1.0
+    "anchor_delta": -6.1,
+    "forward_20": -5.0
   },
   {
     "date": "2022-09-22",
     "fgi": 36.4,
-    "anchor_date": "2018-06-27",
-    "anchor_fgi": 36.5,
-    "anchor_delta": -9.8,
-    "forward_20": 3.2
+    "anchor_date": "2018-08-14",
+    "anchor_fgi": 36.4,
+    "anchor_delta": -6.3,
+    "forward_20": -4.2
   },
   {
     "date": "2022-09-23",
     "fgi": 35.5,
-    "anchor_date": "2018-12-14",
+    "anchor_date": "2018-11-06",
     "anchor_fgi": 35.5,
-    "anchor_delta": -14.8,
-    "forward_20": -0.9
+    "anchor_delta": -1.6,
+    "forward_20": 0.2
   },
   {
     "date": "2022-09-26",
@@ -4946,10 +4954,10 @@
   {
     "date": "2022-09-29",
     "fgi": 33.0,
-    "anchor_date": "2018-09-03",
-    "anchor_fgi": 32.9,
-    "anchor_delta": 4.8,
-    "forward_20": 0.0
+    "anchor_date": "2018-10-16",
+    "anchor_fgi": 33.2,
+    "anchor_delta": 3.4,
+    "forward_20": 4.3
   },
   {
     "date": "2022-09-30",
@@ -4962,10 +4970,10 @@
   {
     "date": "2022-10-10",
     "fgi": 26.3,
-    "anchor_date": "2018-09-12",
-    "anchor_fgi": 26.3,
-    "anchor_delta": -6.2,
-    "forward_20": -6.4
+    "anchor_date": "2015-12-28",
+    "anchor_fgi": 26.2,
+    "anchor_delta": -3.0,
+    "forward_20": -22.2
   },
   {
     "date": "2022-10-13",
@@ -4978,18 +4986,18 @@
   {
     "date": "2022-10-24",
     "fgi": 23.7,
-    "anchor_date": "2018-08-06",
-    "anchor_fgi": 23.7,
-    "anchor_delta": -2.3,
-    "forward_20": 0.6
+    "anchor_date": "2016-01-15",
+    "anchor_fgi": 23.8,
+    "anchor_delta": -18.5,
+    "forward_20": -1.4
   },
   {
     "date": "2022-10-25",
     "fgi": 37.3,
-    "anchor_date": "2022-08-03",
-    "anchor_fgi": 37.2,
-    "anchor_delta": 1.8,
-    "forward_20": 1.2
+    "anchor_date": "2018-10-09",
+    "anchor_fgi": 37.3,
+    "anchor_delta": 12.3,
+    "forward_20": -2.3
   },
   {
     "date": "2022-10-27",
@@ -5010,10 +5018,10 @@
   {
     "date": "2022-10-31",
     "fgi": 32.6,
-    "anchor_date": "2018-09-11",
+    "anchor_date": "2018-08-02",
     "anchor_fgi": 32.5,
-    "anchor_delta": 6.3,
-    "forward_20": -3.9
+    "anchor_delta": 2.3,
+    "forward_20": -1.1
   },
   {
     "date": "2022-11-03",
@@ -5058,10 +5066,10 @@
   {
     "date": "2022-12-19",
     "fgi": 38.2,
-    "anchor_date": "2019-06-25",
+    "anchor_date": "2018-06-15",
     "anchor_fgi": 38.1,
-    "anchor_delta": -9.2,
-    "forward_20": -2.8
+    "anchor_delta": -10.4,
+    "forward_20": -6.9
   },
   {
     "date": "2023-01-03",
@@ -5082,10 +5090,10 @@
   {
     "date": "2023-02-01",
     "fgi": 70.1,
-    "anchor_date": "2017-03-16",
+    "anchor_date": "2021-01-27",
     "anchor_fgi": 70.1,
-    "anchor_delta": 5.9,
-    "forward_20": -1.4
+    "anchor_delta": 7.6,
+    "forward_20": 0.1
   },
   {
     "date": "2023-02-07",
@@ -5122,18 +5130,18 @@
   {
     "date": "2023-02-15",
     "fgi": 61.6,
-    "anchor_date": "2018-05-31",
+    "anchor_date": "2016-12-07",
     "anchor_fgi": 61.6,
-    "anchor_delta": 27.0,
-    "forward_20": -8.0
+    "anchor_delta": 2.5,
+    "forward_20": -1.8
   },
   {
     "date": "2023-02-20",
     "fgi": 65.8,
-    "anchor_date": "2016-11-03",
+    "anchor_date": "2020-06-19",
     "anchor_fgi": 65.8,
-    "anchor_delta": 11.3,
-    "forward_20": 4.6
+    "anchor_delta": 5.8,
+    "forward_20": 11.9
   },
   {
     "date": "2023-03-01",
@@ -5156,16 +5164,16 @@
     "fgi": 61.2,
     "anchor_date": "2021-11-11",
     "anchor_fgi": 61.2,
-    "anchor_delta": 13.2,
+    "anchor_delta": 13.3,
     "forward_20": 4.0
   },
   {
     "date": "2023-03-21",
     "fgi": 62.0,
-    "anchor_date": "2021-08-27",
+    "anchor_date": "2017-10-27",
     "anchor_fgi": 62.0,
-    "anchor_delta": 10.5,
-    "forward_20": 2.3
+    "anchor_delta": 3.3,
+    "forward_20": -1.8
   },
   {
     "date": "2023-03-23",
@@ -5433,7 +5441,7 @@
   },
   {
     "date": "2023-08-14",
-    "fgi": 39.5,
+    "fgi": 39.4,
     "anchor_date": "2018-12-07",
     "anchor_fgi": 39.4,
     "anchor_delta": 4.9,
@@ -5450,18 +5458,18 @@
   {
     "date": "2023-08-18",
     "fgi": 31.3,
-    "anchor_date": "2019-07-08",
+    "anchor_date": "2018-06-01",
     "anchor_fgi": 31.4,
-    "anchor_delta": -11.6,
-    "forward_20": -3.8
+    "anchor_delta": -20.6,
+    "forward_20": -9.7
   },
   {
     "date": "2023-08-21",
     "fgi": 27.0,
-    "anchor_date": "2020-03-16",
-    "anchor_fgi": 27.2,
-    "anchor_delta": -7.6,
-    "forward_20": 1.4
+    "anchor_date": "2018-08-22",
+    "anchor_fgi": 27.0,
+    "anchor_delta": -20.6,
+    "forward_20": 0.6
   },
   {
     "date": "2023-08-23",
@@ -5474,10 +5482,10 @@
   {
     "date": "2023-08-25",
     "fgi": 31.8,
-    "anchor_date": "2018-09-14",
-    "anchor_fgi": 31.7,
-    "anchor_delta": -13.2,
-    "forward_20": -1.0
+    "anchor_date": "2016-01-20",
+    "anchor_fgi": 32.0,
+    "anchor_delta": -16.3,
+    "forward_20": -1.6
   },
   {
     "date": "2023-09-05",
@@ -5490,10 +5498,10 @@
   {
     "date": "2023-09-07",
     "fgi": 36.1,
-    "anchor_date": "2019-06-03",
+    "anchor_date": "2018-09-27",
     "anchor_fgi": 36.2,
-    "anchor_delta": -3.2,
-    "forward_20": 5.3
+    "anchor_delta": -14.2,
+    "forward_20": -6.6
   },
   {
     "date": "2023-09-13",
@@ -5506,18 +5514,18 @@
   {
     "date": "2023-09-20",
     "fgi": 37.5,
-    "anchor_date": "2019-07-03",
-    "anchor_fgi": 37.6,
-    "anchor_delta": -5.2,
-    "forward_20": -2.7
+    "anchor_date": "2018-07-04",
+    "anchor_fgi": 37.5,
+    "anchor_delta": -18.5,
+    "forward_20": 2.4
   },
   {
     "date": "2023-09-21",
     "fgi": 34.9,
-    "anchor_date": "2020-03-12",
-    "anchor_fgi": 35.0,
-    "anchor_delta": -5.8,
-    "forward_20": -4.3
+    "anchor_date": "2018-06-13",
+    "anchor_fgi": 34.9,
+    "anchor_delta": -22.7,
+    "forward_20": -7.0
   },
   {
     "date": "2023-10-12",
@@ -5554,10 +5562,10 @@
   {
     "date": "2023-10-26",
     "fgi": 66.8,
-    "anchor_date": "2020-07-20",
+    "anchor_date": "2019-12-26",
     "anchor_fgi": 66.8,
-    "anchor_delta": 10.6,
-    "forward_20": 3.8
+    "anchor_delta": 5.1,
+    "forward_20": -8.7
   },
   {
     "date": "2023-10-27",
@@ -5698,10 +5706,10 @@
   {
     "date": "2024-01-05",
     "fgi": 37.7,
-    "anchor_date": "2019-03-25",
+    "anchor_date": "2018-07-02",
     "anchor_fgi": 37.7,
-    "anchor_delta": -7.7,
-    "forward_20": 5.1
+    "anchor_delta": -24.8,
+    "forward_20": 3.4
   },
   {
     "date": "2024-01-08",
@@ -5778,10 +5786,10 @@
   {
     "date": "2024-01-31",
     "fgi": 27.9,
-    "anchor_date": "2018-08-31",
-    "anchor_fgi": 28.0,
-    "anchor_delta": 2.9,
-    "forward_20": -0.3
+    "anchor_date": "2018-08-16",
+    "anchor_fgi": 27.9,
+    "anchor_delta": 3.3,
+    "forward_20": -0.7
   },
   {
     "date": "2024-02-02",
@@ -5979,7 +5987,7 @@
     "date": "2024-04-02",
     "fgi": 62.4,
     "anchor_date": "2021-01-26",
-    "anchor_fgi": 62.5,
+    "anchor_fgi": 62.4,
     "anchor_delta": -8.5,
     "forward_20": -1.7
   },
@@ -6010,18 +6018,18 @@
   {
     "date": "2024-04-17",
     "fgi": 72.1,
-    "anchor_date": "2021-02-09",
-    "anchor_fgi": 72.1,
-    "anchor_delta": 4.8,
-    "forward_20": -4.4
+    "anchor_date": "2021-12-30",
+    "anchor_fgi": 72.2,
+    "anchor_delta": 14.9,
+    "forward_20": -7.1
   },
   {
     "date": "2024-04-24",
     "fgi": 64.1,
-    "anchor_date": "2021-03-05",
+    "anchor_date": "2017-02-10",
     "anchor_fgi": 64.1,
-    "anchor_delta": 9.5,
-    "forward_20": -0.5
+    "anchor_delta": 2.3,
+    "forward_20": 0.5
   },
   {
     "date": "2024-04-26",
@@ -6035,7 +6043,7 @@
     "date": "2024-04-29",
     "fgi": 69.8,
     "anchor_date": "2021-06-28",
-    "anchor_fgi": 70.0,
+    "anchor_fgi": 69.9,
     "anchor_delta": -4.6,
     "forward_20": -3.9
   },
@@ -6044,7 +6052,7 @@
     "fgi": 69.1,
     "anchor_date": "2021-12-28",
     "anchor_fgi": 69.1,
-    "anchor_delta": 3.6,
+    "anchor_delta": 3.7,
     "forward_20": -4.8
   },
   {
@@ -6154,10 +6162,10 @@
   {
     "date": "2024-08-06",
     "fgi": 60.5,
-    "anchor_date": "2021-05-20",
+    "anchor_date": "2021-08-31",
     "anchor_fgi": 60.5,
-    "anchor_delta": 0.5,
-    "forward_20": 0.5
+    "anchor_delta": 2.8,
+    "forward_20": 0.7
   },
   {
     "date": "2024-08-15",
@@ -6171,7 +6179,7 @@
     "date": "2024-08-16",
     "fgi": 61.7,
     "anchor_date": "2021-07-20",
-    "anchor_fgi": 61.8,
+    "anchor_fgi": 61.7,
     "anchor_delta": -2.4,
     "forward_20": -2.5
   },
@@ -6194,18 +6202,18 @@
   {
     "date": "2024-09-02",
     "fgi": 37.9,
-    "anchor_date": "2018-07-02",
+    "anchor_date": "2020-07-24",
     "anchor_fgi": 37.9,
-    "anchor_delta": -24.5,
-    "forward_20": 3.4
+    "anchor_delta": -15.2,
+    "forward_20": 5.8
   },
   {
     "date": "2024-09-04",
     "fgi": 39.9,
-    "anchor_date": "2022-09-21",
-    "anchor_fgi": 39.8,
-    "anchor_delta": -7.8,
-    "forward_20": -3.8
+    "anchor_date": "2018-07-27",
+    "anchor_fgi": 39.9,
+    "anchor_delta": -6.1,
+    "forward_20": -5.0
   },
   {
     "date": "2024-09-06",
@@ -6218,10 +6226,10 @@
   {
     "date": "2024-09-11",
     "fgi": 30.9,
-    "anchor_date": "2018-09-05",
-    "anchor_fgi": 30.9,
-    "anchor_delta": -22.4,
-    "forward_20": -4.5
+    "anchor_date": "2019-08-09",
+    "anchor_fgi": 30.8,
+    "anchor_delta": -10.8,
+    "forward_20": 8.1
   },
   {
     "date": "2024-09-12",
@@ -6266,10 +6274,10 @@
   {
     "date": "2024-09-27",
     "fgi": 66.7,
-    "anchor_date": "2017-03-24",
-    "anchor_fgi": 66.6,
-    "anchor_delta": -0.2,
-    "forward_20": -4.1
+    "anchor_date": "2023-04-04",
+    "anchor_fgi": 66.7,
+    "anchor_delta": -6.7,
+    "forward_20": 2.5
   },
   {
     "date": "2024-09-30",
@@ -6332,7 +6340,7 @@
     "fgi": 62.5,
     "anchor_date": "2018-06-29",
     "anchor_fgi": 62.5,
-    "anchor_delta": 28.7,
+    "anchor_delta": 29.3,
     "forward_20": 0.9
   },
   {
@@ -6378,10 +6386,10 @@
   {
     "date": "2024-11-27",
     "fgi": 61.0,
-    "anchor_date": "2023-04-11",
+    "anchor_date": "2019-09-12",
     "anchor_fgi": 61.0,
-    "anchor_delta": 3.1,
-    "forward_20": -1.2
+    "anchor_delta": 8.4,
+    "forward_20": -3.1
   },
   {
     "date": "2024-11-29",
@@ -6674,10 +6682,10 @@
   {
     "date": "2025-06-16",
     "fgi": 61.6,
-    "anchor_date": "2018-05-31",
+    "anchor_date": "2016-12-07",
     "anchor_fgi": 61.6,
-    "anchor_delta": 27.0,
-    "forward_20": -8.0
+    "anchor_delta": 2.5,
+    "forward_20": -1.8
   },
   {
     "date": "2025-06-23",
@@ -6843,7 +6851,7 @@
     "date": "2025-07-23",
     "fgi": 70.1,
     "anchor_date": "2021-06-28",
-    "anchor_fgi": 70.0,
+    "anchor_fgi": 69.9,
     "anchor_delta": -4.6,
     "forward_20": -3.9
   },
@@ -6891,7 +6899,7 @@
     "date": "2025-07-31",
     "fgi": 61.8,
     "anchor_date": "2021-07-20",
-    "anchor_fgi": 61.8,
+    "anchor_fgi": 61.7,
     "anchor_delta": -2.4,
     "forward_20": -2.5
   },
@@ -6987,7 +6995,7 @@
     "date": "2025-08-19",
     "fgi": 67.9,
     "anchor_date": "2021-05-26",
-    "anchor_fgi": 68.0,
+    "anchor_fgi": 67.9,
     "anchor_delta": -4.7,
     "forward_20": -0.7
   },
@@ -7004,7 +7012,7 @@
     "fgi": 63.9,
     "anchor_date": "2021-12-15",
     "anchor_fgi": 63.9,
-    "anchor_delta": -0.4,
+    "anchor_delta": -0.5,
     "forward_20": -2.5
   },
   {
@@ -7042,10 +7050,10 @@
   {
     "date": "2025-09-01",
     "fgi": 66.5,
-    "anchor_date": "2020-12-25",
+    "anchor_date": "2021-02-25",
     "anchor_fgi": 66.5,
-    "anchor_delta": 12.1,
-    "forward_20": 6.7
+    "anchor_delta": 10.4,
+    "forward_20": -6.2
   },
   {
     "date": "2025-09-05",
@@ -7114,10 +7122,10 @@
   {
     "date": "2025-09-29",
     "fgi": 64.1,
-    "anchor_date": "2017-02-10",
+    "anchor_date": "2018-07-12",
     "anchor_fgi": 64.1,
-    "anchor_delta": 2.3,
-    "forward_20": 0.5
+    "anchor_delta": 33.6,
+    "forward_20": -1.5
   },
   {
     "date": "2025-09-30",
@@ -7138,10 +7146,10 @@
   {
     "date": "2025-10-15",
     "fgi": 65.4,
-    "anchor_date": "2016-12-09",
+    "anchor_date": "2021-12-27",
     "anchor_fgi": 65.4,
-    "anchor_delta": 7.2,
-    "forward_20": -1.9
+    "anchor_delta": 5.6,
+    "forward_20": -5.1
   },
   {
     "date": "2025-10-20",
@@ -7171,7 +7179,7 @@
     "date": "2025-10-24",
     "fgi": 70.5,
     "anchor_date": "2021-06-30",
-    "anchor_fgi": 70.6,
+    "anchor_fgi": 70.5,
     "anchor_delta": 11.3,
     "forward_20": -6.4
   },
@@ -7588,7 +7596,7 @@
     "fgi": 75.5,
     "anchor_date": "2021-03-03",
     "anchor_fgi": 75.6,
-    "anchor_delta": 21.3,
+    "anchor_delta": 21.4,
     "forward_20": -3.8
   },
   {
@@ -7634,18 +7642,18 @@
   {
     "date": "2026-01-27",
     "fgi": 66.6,
-    "anchor_date": "2021-02-25",
-    "anchor_fgi": 66.6,
-    "anchor_delta": 10.4,
-    "forward_20": -6.2
+    "anchor_date": "2025-09-01",
+    "anchor_fgi": 66.5,
+    "anchor_delta": 3.3,
+    "forward_20": -0.3
   },
   {
     "date": "2026-01-28",
     "fgi": 69.6,
-    "anchor_date": "2021-02-01",
+    "anchor_date": "2021-05-27",
     "anchor_fgi": 69.6,
-    "anchor_delta": 13.8,
-    "forward_20": -2.4
+    "anchor_delta": 1.7,
+    "forward_20": -0.0
   },
   {
     "date": "2026-01-29",
@@ -7738,10 +7746,10 @@
   {
     "date": "2026-03-02",
     "fgi": 74.4,
-    "anchor_date": "2021-05-14",
+    "anchor_date": "2021-01-21",
     "anchor_fgi": 74.5,
-    "anchor_delta": 18.7,
-    "forward_20": 2.8
+    "anchor_delta": 2.3,
+    "forward_20": -1.0
   },
   {
     "date": "2026-03-05",
@@ -7794,10 +7802,10 @@
   {
     "date": "2026-03-23",
     "fgi": 30.7,
-    "anchor_date": "2018-06-21",
+    "anchor_date": "2018-09-05",
     "anchor_fgi": 30.7,
-    "anchor_delta": -23.5,
-    "forward_20": -3.6
+    "anchor_delta": -22.5,
+    "forward_20": -4.5
   },
   {
     "date": "2026-03-25",
@@ -7834,10 +7842,10 @@
   {
     "date": "2026-04-10",
     "fgi": 70.1,
-    "anchor_date": "2023-02-01",
+    "anchor_date": "2021-01-27",
     "anchor_fgi": 70.1,
-    "anchor_delta": 18.4,
-    "forward_20": 0.8
+    "anchor_delta": 7.6,
+    "forward_20": 0.1
   },
   {
     "date": "2026-04-13",
@@ -8058,10 +8066,10 @@
   {
     "date": "2026-05-28",
     "fgi": 66.6,
-    "anchor_date": "2021-02-25",
+    "anchor_date": "2026-01-27",
     "anchor_fgi": 66.6,
-    "anchor_delta": 10.4,
-    "forward_20": -6.2
+    "anchor_delta": 3.3,
+    "forward_20": -1.4
   },
   {
     "date": "2026-06-01",
@@ -8186,41 +8194,41 @@
   {
     "date": "2026-07-07",
     "fgi": 36.6,
-    "anchor_date": "2018-08-14",
-    "anchor_fgi": 36.6,
-    "anchor_delta": -6.2,
-    "forward_20": -4.2
+    "anchor_date": "2018-10-25",
+    "anchor_fgi": 36.7,
+    "anchor_delta": -3.6,
+    "forward_20": 1.6
   },
   {
     "date": "2026-07-13",
     "fgi": 32.9,
-    "anchor_date": "2018-07-31",
-    "anchor_fgi": 32.9,
-    "anchor_delta": -2.1,
-    "forward_20": -3.4
+    "anchor_date": "2018-12-10",
+    "anchor_fgi": 33.0,
+    "anchor_delta": -6.4,
+    "forward_20": -1.6
   },
   {
     "date": "2026-07-16",
     "fgi": 33.7,
-    "anchor_date": "2018-06-28",
-    "anchor_fgi": 33.7,
-    "anchor_delta": -2.8,
-    "forward_20": 3.4
+    "anchor_date": "2018-10-23",
+    "anchor_fgi": 33.8,
+    "anchor_delta": -20.0,
+    "forward_20": 2.0
   },
   {
     "date": "2026-07-17",
     "fgi": 27.5,
-    "anchor_date": "2018-06-19",
-    "anchor_fgi": 27.4,
-    "anchor_delta": -11.9,
-    "forward_20": -3.8
+    "anchor_date": "2024-02-01",
+    "anchor_fgi": 27.8,
+    "anchor_delta": -0.1,
+    "forward_20": 9.9
   },
   {
     "date": "2026-07-24",
-    "fgi": 38.9,
-    "anchor_date": "2022-03-29",
-    "anchor_fgi": 38.9,
-    "anchor_delta": -4.5,
-    "forward_20": -7.1
+    "fgi": 35.7,
+    "anchor_date": "2016-02-23",
+    "anchor_fgi": 35.7,
+    "anchor_delta": -13.7,
+    "forward_20": 3.3
   }
 ]
