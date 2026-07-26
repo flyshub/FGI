@@ -142,7 +142,7 @@ function _updateHistoryMarkLine(dateStr) {
         },
       },
     ],
-  });
+  }, { lazyUpdate: true });  // ← lazyUpdate avoids synchronous re-render
 }
 
 // ── Radar (re-renderable) ──
@@ -375,7 +375,6 @@ function enableHistoryChartClick() {
   if (!chart) return;
 
   chart.on('click', params => {
-    if (_switchingDate) return;
     if (params.componentType === 'series') {
       const dateStr = params.name;
       if (dateStr && state.allDatesIndex[dateStr]) {
