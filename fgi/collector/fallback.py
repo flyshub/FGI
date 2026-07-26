@@ -26,6 +26,7 @@ OFFLINE_RAW_MAPPING: dict[str, tuple] = {
     "fetch_pe_data": (("v1_pe_ttm",), ("滚动市盈率",)),
     "fetch_pb_data": (("v1_pb",), ("市净率",)),
     "fetch_bond_yield": (("v1_bond_yield",), ("yield_10y",)),
+    "fetch_cyb_daily": (("m4_volume",), ("volume",)),
     "fetch_open_sentiment": (("m2_up_num", "m2_down_num"), ("up_num", "down_num")),
     "fetch_qvix": (("v4_qvix",), ("close",)),
 }

@@ -19,7 +19,6 @@ DEFAULT_CHAINS: dict[str, list[str]] = {
     "v1_pe": ["akshare"],
     "v1_bond": ["akshare"],
     "v1_pb": ["akshare"],
-    "v2_index": ["akshare"],
     "v4_qvix": ["akshare"],
     "f1_margin": ["akshare"],
     "f1_market_cap": ["akshare"],
