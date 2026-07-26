@@ -1,15 +1,16 @@
 import argparse
 import time
-import levistock as ls
-from datetime import datetime, timedelta
-from typing import Optional, Dict
+from datetime import datetime
 from pathlib import Path
-from fgi.storage.database import Database
-from fgi.config.settings import DB_PATH
+
+import levistock as ls
+
 from fgi.collector.trading_calendar import resolve_trading_days
+from fgi.config.settings import DB_PATH
+from fgi.storage.database import Database
 
 
-def fetch_m1_s3(date_str: str) -> Dict:
+def fetch_m1_s3(date_str: str) -> dict:
     """M1/S3 同来源同字段：zt 家数取 market_emotion_kph（sjzt/zt，缺失回退
     limit_up 列表长度），封单额取 limit_up_his_kph 的 seal_money 合计（亿元）。
     与日线 fetch_zt_daily_summary 路径保持一致。
@@ -44,7 +45,7 @@ def get_existing_dates(db: Database, start_date: str, end_date: str) -> set:
     return existing
 
 
-def zt_backfill(start_date: str, end_date: str, db_path: Optional[Path] = None):
+def zt_backfill(start_date: str, end_date: str, db_path: Path | None = None):
     db = Database(db_path or DB_PATH)
     with db:
         db.init_schema()

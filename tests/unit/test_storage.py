@@ -1,8 +1,10 @@
-import pytest
 import tempfile
 from pathlib import Path
-from fgi.storage.database import Database
+
 import pandas as pd
+import pytest
+
+from fgi.storage.database import Database
 
 
 @pytest.fixture

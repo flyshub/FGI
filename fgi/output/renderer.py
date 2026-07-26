@@ -5,9 +5,7 @@ All data must be pre-fetched and passed in.
 """
 from __future__ import annotations
 
-from typing import Optional
-
-from fgi.output.decision_matrix import QUADRANT_TABLE, QUADRANT_EMOJI
+from fgi.output.decision_matrix import QUADRANT_EMOJI, QUADRANT_TABLE
 
 # --- Static mapping data ---
 
@@ -161,8 +159,8 @@ def fgi_header(
         "",
         f"`{bar} `",
         "",
-        f"| 项目 | 值 |",
-        f"|------|----|",
+        "| 项目 | 值 |",
+        "|------|----|",
         *rows,
     ])
 
@@ -231,7 +229,7 @@ def build_fgi_markdown(
     prev_scores: dict | None = None,
     fgi_percentile_result: tuple[str, str] | None = None,
     movers: list | None = None,
-    decision_matrix: Optional[dict] = None,
+    decision_matrix: dict | None = None,
     signal_card: str = "",
 ) -> str:
     """主渲染函数：接收预计算数据，返回完整 Markdown 内容。"""
@@ -306,8 +304,8 @@ def build_fgi_markdown(
             parts.append("🟢 **极度恐惧（≤15）**: " + " · ".join(f"{l}（{s:.0f}）" for _, l, s in extreme_low))
         parts.append("")
         parts.append("**说明：** " + "；".join([
-            "、".join(f"{l}" for _, l, _ in extreme_high) + "高于 85 分阈值，属于" + "、".join(sorted(set(_INDICATOR_DIM[n] for n, _, _ in extreme_high))) + "历史高位区间" if extreme_high else "",
-            "、".join(f"{l}" for _, l, _ in extreme_low) + "低于 15 分阈值，属于" + "、".join(sorted(set(_INDICATOR_DIM[n] for n, _, _ in extreme_low))) + "历史低位区间" if extreme_low else "",
+            "、".join(f"{l}" for _, l, _ in extreme_high) + "高于 85 分阈值，属于" + "、".join(sorted({_INDICATOR_DIM[n] for n, _, _ in extreme_high})) + "历史高位区间" if extreme_high else "",
+            "、".join(f"{l}" for _, l, _ in extreme_low) + "低于 15 分阈值，属于" + "、".join(sorted({_INDICATOR_DIM[n] for n, _, _ in extreme_low})) + "历史低位区间" if extreme_low else "",
         ]))
 
     # --- 最大变动 ---

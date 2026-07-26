@@ -4,7 +4,6 @@ import sys
 import types
 
 import pandas as pd
-import pytest
 
 from fgi.collector.trading_calendar import TradingCalendar, resolve_trading_days
 

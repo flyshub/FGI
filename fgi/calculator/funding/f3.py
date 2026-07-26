@@ -1,10 +1,12 @@
 from datetime import datetime
+
 import pandas as pd
+
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
-from fgi.storage.database import Database
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.storage.database import Database
 
 
 class F3Calculator:

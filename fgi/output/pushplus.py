@@ -5,21 +5,24 @@ Markdown/HTML rendering lives in renderer.py.
 """
 from __future__ import annotations
 
-import os
 import logging
-import requests
+import os
 from datetime import datetime
-from typing import Optional
+
+import requests
 
 from fgi.config.settings import DB_PATH
-from fgi.storage.database import Database
 from fgi.output.data_service import (
-    get_prev_scores, get_fgi_percentile, get_most_changed_indicators,
+    get_fgi_percentile,
+    get_most_changed_indicators,
+    get_prev_scores,
     get_zone_context_card,
 )
 from fgi.output.renderer import (
-    INDICATOR_NAMES, build_fgi_markdown,
+    INDICATOR_NAMES,
+    build_fgi_markdown,
 )
+from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +82,7 @@ def _broadcast(title: str, content: str) -> bool:
 
 def send_fgi_report(fgi_raw: float, dimension_scores: dict, indicator_results: dict,
                     health: float, *, date_str: str | None = None,
-                    decision_matrix: Optional[dict] = None) -> bool:
+                    decision_matrix: dict | None = None) -> bool:
     """Send FGI daily report via PushPlus.
 
     Returns True on success, False otherwise.

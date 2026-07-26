@@ -9,16 +9,23 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sys
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 
+from fgi.output.signal_report import (
+    SignalReportEngine,
+    _render_dca_section,
+    _render_ic_section,
+    _render_layer_section,
+    compute_rank_ic,
+    compute_rolling_ic_window,
+    layer_backtest_10,
+    render_markdown,
+    simulate_dca,
+)
 from fgi.storage.database import Database
-from fgi.output.signal_report import (SignalReportEngine, render_markdown,
-    compute_rank_ic, compute_rolling_ic_window, layer_backtest_10, simulate_dca,
-    _render_ic_section, _render_layer_section, _render_dca_section)
 
 
 def main() -> None:
@@ -32,7 +39,7 @@ def main() -> None:
     date_str = datetime.now().strftime("%Y-%m-%d")
     out_path = Path(args.output) if args.output else output_dir / f"fgi_signal_validation_{date_str}.md"
 
-    print(f"Generating FGI signal validation report...")
+    print("Generating FGI signal validation report...")
     with Database() as db:
         engine = SignalReportEngine(db)
         result = engine.run()

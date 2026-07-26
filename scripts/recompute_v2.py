@@ -31,12 +31,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # 强制 offline 模式，杜绝 calculator 内部 fetch 触发网络
 os.environ["FGI_OFFLINE"] = "1"
 
-from fgi.storage.database import Database
-from fgi.output.backfill import setup_data_manager
 from fgi.calculator.fgi import FGICalculator
-from fgi.output.status import record_indicator_status
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.common.utils import calculate_health_score
+from fgi.output.backfill import setup_data_manager
+from fgi.output.status import record_indicator_status
+from fgi.storage.database import Database
 
 HEARTBEAT_FILE = Path("/tmp/fgi_recompute_heartbeat.txt")
 PROGRESS_FILE = Path("/tmp/fgi_recompute_progress.json")

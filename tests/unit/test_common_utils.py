@@ -1,17 +1,16 @@
-import pytest
-from fgi.common.utils import (
-    rolling_percentile,
-    zscore,
-    sigmoid,
-    normalized_diff,
-    winsorize,
-    mad_filter,
-    calculate_fgi,
-    apply_consistency_adjustment,
-    calculate_health_score,
-)
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
+from fgi.common.utils import (
+    apply_consistency_adjustment,
+    calculate_fgi,
+    calculate_health_score,
+    normalized_diff,
+    rolling_percentile,
+    sigmoid,
+    zscore,
+)
 
 
 class TestRollingPercentile:

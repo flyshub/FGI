@@ -16,9 +16,10 @@ raise NotImplementedError(
     "Rank IC analysis, layer backtest, and DCA simulation (ADR-0003)."
 )
 
-import pandas as pd
+
 import numpy as np
-from typing import Dict, List, Optional
+import pandas as pd
+
 from fgi.storage.database import Database
 
 
@@ -29,7 +30,7 @@ class BacktestEngine:
     def get_score_series(self, start_date: str, end_date: str) -> pd.DataFrame:
         return self._db.get_scores(start_date, end_date)
 
-    def calculate_ic(self, scores: pd.DataFrame, forward_days: int = 5) -> Dict[str, float]:
+    def calculate_ic(self, scores: pd.DataFrame, forward_days: int = 5) -> dict[str, float]:
         if len(scores) < forward_days + 1:
             return {"ic_mean": 0.0, "ic_std": 0.0, "icir": 0.0}
 
@@ -60,7 +61,7 @@ class BacktestEngine:
         return {"ic_mean": ic_mean, "ic_std": ic_std, "icir": icir}
 
     def layer_backtest(self, scores: pd.DataFrame, n_layers: int = 5,
-                       holding_days: int = 5) -> Dict[str, List[float]]:
+                       holding_days: int = 5) -> dict[str, list[float]]:
         if len(scores) < holding_days + 1:
             return {"layer_returns": [0.0] * n_layers}
 
@@ -83,7 +84,7 @@ class BacktestEngine:
         return {"layer_returns": layer_returns}
 
     def strategy_simulation(self, scores: pd.DataFrame, holding_days: int = 5,
-                           threshold_high: float = 70, threshold_low: float = 30) -> Dict[str, float]:
+                           threshold_high: float = 70, threshold_low: float = 30) -> dict[str, float]:
         if len(scores) < holding_days + 1:
             return {"total_return": 0.0, "win_rate": 0.0, "sharpe": 0.0}
 
@@ -112,7 +113,7 @@ class BacktestEngine:
 
         return {"total_return": total_return, "win_rate": win_rate, "sharpe": sharpe}
 
-    def run_full_backtest(self, start_date: str, end_date: str) -> Dict[str, any]:
+    def run_full_backtest(self, start_date: str, end_date: str) -> dict[str, any]:
         scores = self.get_score_series(start_date, end_date)
         if scores.empty:
             return {"error": "No data"}

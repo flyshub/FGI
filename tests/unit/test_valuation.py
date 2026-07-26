@@ -1,8 +1,10 @@
-import pytest
 import tempfile
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from fgi.calculator.valuation.v1 import V1Calculator
 from fgi.calculator.valuation.v2 import V2Calculator
 from fgi.collector.fallback import DataSourceManager
@@ -108,7 +110,7 @@ class TestV2Calculator:
     def test_run_with_db_data(self, v2_calculator, db):
         np.random.seed(42)
         dates = pd.date_range("2024-01-01", periods=400).strftime("%Y-%m-%d")
-        for i, d in enumerate(dates):
+        for _i, d in enumerate(dates):
             db.upsert_raw_data(d, "v1_erp", 0.06 + np.random.normal(0, 0.002))
         db.commit()
 

@@ -1,5 +1,7 @@
 import time
+
 import pandas as pd
+
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 

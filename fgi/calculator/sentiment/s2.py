@@ -1,12 +1,13 @@
 from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from typing import Optional
-from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
+
+from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
+from fgi.config.settings import PERCENTILE_WINDOW_YEARS
 from fgi.storage.database import Database
-from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class S2Calculator:
@@ -52,7 +53,7 @@ class S2Calculator:
     def calculate_score(self, percentile: float) -> float:
         return percentile * 100
 
-    def run(self, date: str, lookback_days: Optional[int] = None) -> dict:
+    def run(self, date: str, lookback_days: int | None = None) -> dict:
         if lookback_days is None:
             lookback_days = self._window + self.ZSCORE_WINDOW + 60
 

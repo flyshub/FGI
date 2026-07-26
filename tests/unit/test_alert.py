@@ -1,9 +1,11 @@
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-from fgi.storage.database import Database
+from unittest.mock import patch
+
+import pytest
+
 from fgi.output.alert import Alert
+from fgi.storage.database import Database
 
 
 @pytest.fixture

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import logging
 import numpy as np
 import pandas as pd
 
-from fgi.config.settings import FGI_EXTREME_LOW, FGI_EXTREME_HIGH
+from fgi.config.settings import FGI_EXTREME_HIGH, FGI_EXTREME_LOW
 
 _PERCENTILE_CACHE: dict = {}
 

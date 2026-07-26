@@ -1,9 +1,10 @@
 import logging
-import requests
-import pandas as pd
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
-from fgi.config.settings import WEBHOOK_URL, ANOMALY_PERCENTILE, DB_PATH
+from typing import Any
+
+import requests
+
+from fgi.config.settings import ANOMALY_PERCENTILE, DB_PATH, WEBHOOK_URL
 from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class Alert:
         self.anomaly_percentile = ANOMALY_PERCENTILE
         self.db_path = db_path
 
-    def check_and_alert(self, date: str, fgi_result: Dict[str, Any]) -> bool:
+    def check_and_alert(self, date: str, fgi_result: dict[str, Any]) -> bool:
         """异常检测为真时记 warning 并推送（PushPlus / Webhook），不打断写入。返回是否异常。"""
         if not self._is_anomaly(date, fgi_result):
             return False
@@ -35,7 +36,7 @@ class Alert:
             logger.error(f"PushPlus alert skipped: {e}")
         return True
 
-    def _is_anomaly(self, date: str, fgi_result: Dict[str, Any]) -> bool:
+    def _is_anomaly(self, date: str, fgi_result: dict[str, Any]) -> bool:
         """spec line 263: |ΔFGI| over rolling 5y 99-percentile = anomaly → suppress push."""
         try:
             db_path = self.db_path or DB_PATH
@@ -58,15 +59,15 @@ class Alert:
             # webhook/PushPlus 通知运维（spec L343: 暂停自动发布）
             return True
 
-    def _build_alert_message(self, date: str, fgi_result: Dict[str, Any]) -> str:
+    def _build_alert_message(self, date: str, fgi_result: dict[str, Any]) -> str:
         fgi_final = fgi_result.get("fgi_final", 0)
         health_score = fgi_result.get("health_score", 0)
 
         message = f"FGI anomaly alert for {date}\n"
-        message += f"|ΔFGI| exceeded the rolling 5y 99-percentile.\n"
+        message += "|ΔFGI| exceeded the rolling 5y 99-percentile.\n"
         message += f"FGI Final: {fgi_final:.2f}\n"
         message += f"Health Score: {health_score:.2f}\n"
-        message += f"\nPush suppressed, manual review required (spec line 262)."
+        message += "\nPush suppressed, manual review required (spec line 262)."
 
         return message.strip()
 

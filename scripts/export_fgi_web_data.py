@@ -12,21 +12,16 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 
-from fgi.common.utils import extract_indicator_score
 from fgi.output.decision_matrix import compute_decision_matrix
 from fgi.output.renderer import (
     DIMENSION_INDICATORS,
-    DIMENSION_NAMES,
     INDICATOR_NAMES,
-    fgi_level,
 )
 from fgi.output.signal_report import (
     SignalReportEngine,
@@ -278,7 +273,7 @@ def _attach_close_prices(db: Database, df: pd.DataFrame) -> pd.DataFrame:
     try:
         close_df = db.get_raw_data("m3_close", "2000-01-01", "2099-12-31")
         if not close_df.empty:
-            close_map = dict(zip(close_df["date"], close_df["value"]))
+            close_map = dict(zip(close_df["date"], close_df["value"], strict=False))
             df["close"] = df["date"].map(close_map)
         else:
             df["close"] = None

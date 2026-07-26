@@ -1,8 +1,10 @@
-import pandas as pd
-import pytest
 import tempfile
 from pathlib import Path
-from fgi.calculator.fgi import FGICalculator, INDICATOR_WEIGHTS, DIMENSION_WEIGHTS
+
+import pandas as pd
+import pytest
+
+from fgi.calculator.fgi import FGICalculator
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
 from fgi.storage.database import Database

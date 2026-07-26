@@ -1,16 +1,17 @@
-import pytest
 import tempfile
-from datetime import datetime
 from pathlib import Path
-from fgi.storage.database import Database
+
+import pytest
+
 from fgi.output.backfill import (
-    setup_data_manager,
-    is_trading_day,
-    get_date_range,
-    batch_dates,
     backfill_indicator,
+    batch_dates,
     compute_fgi_daily,
+    get_date_range,
+    is_trading_day,
+    setup_data_manager,
 )
+from fgi.storage.database import Database
 
 
 @pytest.fixture
@@ -30,7 +31,7 @@ def mock_calculator():
         def __init__(self):
             self.call_count = 0
             self.last_date = None
-            
+
         def run(self, date: str):
             self.call_count += 1
             self.last_date = date
@@ -41,19 +42,19 @@ def mock_calculator():
                 "dimension_scores": {"momentum": 50.0, "sentiment": 50.0, "valuation": 50.0, "funding": 50.0},
                 "indicator_results": {}
             }
-    
+
     return MockCalculator()
 
 
 class TestBackfillUtilities:
     def test_is_trading_day(self):
-        assert is_trading_day("2024-01-01") == True
-        assert is_trading_day("2024-01-02") == True
-        assert is_trading_day("2024-01-03") == True
-        assert is_trading_day("2024-01-04") == True
-        assert is_trading_day("2024-01-05") == True
-        assert is_trading_day("2024-01-06") == False
-    
+        assert is_trading_day("2024-01-01")
+        assert is_trading_day("2024-01-02")
+        assert is_trading_day("2024-01-03")
+        assert is_trading_day("2024-01-04")
+        assert is_trading_day("2024-01-05")
+        assert not is_trading_day("2024-01-06")
+
     def test_get_date_range(self):
         dates = get_date_range("2024-01-01", "2024-01-10")
         assert len(dates) == 8
@@ -61,7 +62,7 @@ class TestBackfillUtilities:
         assert "2024-01-10" in dates
         assert "2024-01-06" not in dates
         assert "2024-01-07" not in dates
-    
+
     def test_batch_dates(self):
         dates = ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
         batches = batch_dates(dates, 2)
@@ -74,12 +75,12 @@ class TestBackfillUtilities:
 class TestBackfillIndicator:
     def test_backfill_indicator_success(self, db, mock_calculator):
         dates = ["2024-01-01", "2024-01-02", "2024-01-03"]
-        
+
         backfill_indicator(db, mock_calculator, "test_indicator", dates)
-        
+
         assert mock_calculator.call_count == 3
         assert mock_calculator.last_date == "2024-01-03"
-    
+
     def test_backfill_indicator_empty(self, db, mock_calculator):
         backfill_indicator(db, mock_calculator, "test_indicator", [])
         assert mock_calculator.call_count == 0
@@ -96,7 +97,7 @@ class TestSetupDataManager:
 
     def test_chains_reference_only_registered_sources(self):
         manager = setup_data_manager()
-        for indicator, chain in manager._chains.items():
+        for _indicator, chain in manager._chains.items():
             assert len(chain._sources) > 0
 
 
@@ -124,6 +125,6 @@ class TestComputeFgiDailyStatus:
 
         compute_fgi_daily(Calculator(), db, ["2024-01-02"])
         status = db.get_status("2024-01-02")
-        by_indicator = dict(zip(status["indicator"], status["status"]))
+        by_indicator = dict(zip(status["indicator"], status["status"], strict=False))
         assert by_indicator["m3"] == "normal"
         assert by_indicator["f2"] == "missing"

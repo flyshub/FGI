@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 
 import fgi.collector.zzshare_source as zzs
-from fgi.collector.zzshare_source import ZZShareSource
 from fgi.collector.base import DataSourceStatus
+from fgi.collector.zzshare_source import ZZShareSource
 
 
 class FakeDataApi:

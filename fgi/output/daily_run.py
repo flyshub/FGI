@@ -1,30 +1,35 @@
 import argparse
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from dotenv import load_dotenv
+
 load_dotenv()
-from fgi.collector.fallback import DataSourceManager
+from fgi.calculator.fgi import FGICalculator
 from fgi.collector.akshare_source import AKShareSource
+from fgi.collector.chains import configure_manager
+from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mootdx_source import MootdxSource
 from fgi.collector.tencent_source import TencentSource
-from fgi.collector.zzshare_source import ZZShareSource
-from fgi.collector.chains import configure_manager
 from fgi.collector.trading_calendar import TradingCalendar
-from fgi.calculator.fgi import FGICalculator
-from fgi.storage.database import Database
+from fgi.collector.zzshare_source import ZZShareSource
 from fgi.config.settings import (
-    DB_PATH, AKSHARE_ENABLED, MOOTDX_ENABLED, TENCENT_ENABLED,
+    AKSHARE_ENABLED,
+    DB_PATH,
+    MOOTDX_ENABLED,
+    TENCENT_ENABLED,
 )
+from fgi.storage.database import Database
 
 try:
     import zzshare  # noqa: F401
     ZZSHARE_ENABLED = True
 except ImportError:
     ZZSHARE_ENABLED = False
-from fgi.output.pushplus import send_fgi_report
-from fgi.output.status import record_indicator_status
 from fgi.output.alert import Alert
 from fgi.output.decision_matrix import compute_decision_matrix
+from fgi.output.pushplus import send_fgi_report
+from fgi.output.status import record_indicator_status
 
 logger = logging.getLogger(__name__)
 

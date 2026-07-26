@@ -1,8 +1,10 @@
 import socket
 import time
-import pandas as pd
-from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
+import pandas as pd
+from requests.exceptions import Timeout
+
+from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 # 默认 socket 超时（秒）。akshare 内部走 requests 不透传 timeout 时，
 # socket.setdefaulttimeout 仍能兜底，避免单条 TCP 连接永久挂起。
@@ -396,8 +398,9 @@ class AKShareSource(DataSource):
     def fetch_zt_daily_summary(self, start_date: str, end_date: str) -> DataSourceResult:
         """Fetch daily 涨停板 summary via levistock."""
         try:
-            import levistock as lk
             import time
+
+            import levistock as lk
             dates = pd.date_range(start=start_date, end=end_date, freq="B")
             frames = []
             last_seal_fund = 0.0  # 跨日备用

@@ -12,12 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import numpy as np
 import akshare as ak
+import numpy as np
 import pandas as pd
 
-from fgi.storage.database import Database
 from fgi.config.settings import DB_PATH
+from fgi.storage.database import Database
 
 ROLLING_WINDOW = 5 * 252  # 5 years of trading days
 

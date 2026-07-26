@@ -1,7 +1,7 @@
 import pandas as pd
-import pytest
+
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
-from fgi.collector.fallback import FallbackChain, DataSourceManager
+from fgi.collector.fallback import DataSourceManager, FallbackChain
 from fgi.collector.mock_source import MockSource
 
 

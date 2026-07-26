@@ -1,13 +1,15 @@
-import pytest
 import tempfile
 from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from fgi.calculator.sentiment.s2 import S2Calculator
 from fgi.calculator.sentiment.s3 import S3Calculator
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
 from fgi.common.utils import clear_percentile_cache
 from fgi.storage.database import Database
-import pandas as pd
 
 
 @pytest.fixture(autouse=True)

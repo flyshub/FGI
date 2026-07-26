@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
+
 import pandas as pd
-from typing import Optional
-from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
+
+from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
+from fgi.config.settings import PERCENTILE_WINDOW_YEARS
 from fgi.storage.database import Database
-from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class S3Calculator:
@@ -66,7 +67,7 @@ class S3Calculator:
             return df
         return None
 
-    def run(self, date: str, lookback_days: Optional[int] = None) -> dict:
+    def run(self, date: str, lookback_days: int | None = None) -> dict:
         if lookback_days is None:
             lookback_days = self._window + 60
 

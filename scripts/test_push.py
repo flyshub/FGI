@@ -7,17 +7,18 @@ import argparse
 import os
 import sys
 from datetime import date, timedelta
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fgi.output.daily_run import setup_data_manager
 from fgi.calculator.fgi import FGICalculator
+from fgi.config.settings import DB_PATH
+from fgi.output.daily_run import setup_data_manager
 from fgi.output.pushplus import send_fgi_report
 from fgi.storage.database import Database
-from fgi.config.settings import DB_PATH
 
 
 def main():
@@ -46,7 +47,7 @@ def main():
     print(f"FGI_final:  {result['fgi_final']}")
     print(f"Health:     {result['health_score']:.1f}")
     print(f"Dimensions: {result['dimension_scores']}")
-    print(f"Indicators:")
+    print("Indicators:")
     for name, r in sorted(result["indicator_results"].items()):
         s = r.get("score") or r.get(name.lower())
         st = r.get("status", "?")

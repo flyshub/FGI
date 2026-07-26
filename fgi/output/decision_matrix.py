@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 import pandas as pd
 
@@ -40,16 +39,16 @@ ROLLING_WINDOW_DAYS = 5 * 252  # 5 年
 @dataclass(frozen=True)
 class DecisionMatrix:
     """决策矩阵输出。"""
-    fgi: Optional[float]
+    fgi: float | None
     sentiment_tier: str  # "恐惧" / "中性" / "贪婪"
-    pe_pct: Optional[float]
-    pb_pct: Optional[float]
-    valuation_pct: Optional[float]
+    pe_pct: float | None
+    pb_pct: float | None
+    valuation_pct: float | None
     valuation_tier: str  # "低估" / "合理" / "高估"
     quadrant: str  # 9 宫格之一，如 "强烈关注"
     advice: str  # 简短建议文本
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "fgi": self.fgi,
             "sentiment_tier": self.sentiment_tier,
@@ -62,7 +61,7 @@ class DecisionMatrix:
         }
 
 
-def _classify_sentiment(fgi: Optional[float]) -> Optional[str]:
+def _classify_sentiment(fgi: float | None) -> str | None:
     if fgi is None or pd.isna(fgi):
         return None
     if fgi < SENTIMENT_LOW:
@@ -72,7 +71,7 @@ def _classify_sentiment(fgi: Optional[float]) -> Optional[str]:
     return "中性"
 
 
-def _classify_valuation(pct: Optional[float]) -> Optional[str]:
+def _classify_valuation(pct: float | None) -> str | None:
     if pct is None or pd.isna(pct):
         return None
     if pct < VALUATION_LOW:
@@ -158,8 +157,8 @@ def _compute_pct_realtime(db: Database, date_str: str) -> tuple:
 def compute_decision_matrix(
     db: Database,
     date_str: str,
-    fgi: Optional[float],
-) -> Optional[DecisionMatrix]:
+    fgi: float | None,
+) -> DecisionMatrix | None:
     """计算决策矩阵。
 
     Args:

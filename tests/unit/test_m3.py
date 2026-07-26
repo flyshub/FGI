@@ -1,11 +1,13 @@
-import pytest
 import tempfile
 from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from fgi.calculator.momentum.m3 import M3Calculator
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
 from fgi.storage.database import Database
-import pandas as pd
 
 
 @pytest.fixture
