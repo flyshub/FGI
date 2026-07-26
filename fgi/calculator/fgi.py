@@ -4,15 +4,22 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from fgi.collector.fallback import DataSourceManager, INDICATOR_RAW_KEY
-from fgi.storage.database import Database
+from fgi.collector.fallback import INDICATOR_RAW_KEY, DataSourceManager
+from fgi.common.utils import (
+    adjust_fgi_with_mad_pct,
+    apply_consistency_adjustment,
+    calculate_fgi,
+    calculate_health_score,
+    extract_indicator_score,
+    rolling_percentile,
+)
 from fgi.config.settings import MISSING_DAY_LIMIT
-from fgi.common.utils import (calculate_fgi, apply_consistency_adjustment,
-                              adjust_fgi_with_mad_pct, rolling_percentile,
-                              calculate_health_score,
-                              extract_indicator_score)
+from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
+from fgi.calculator.funding.f1 import F1Calculator
+from fgi.calculator.funding.f2 import F2Calculator
+from fgi.calculator.funding.f3 import F3Calculator
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m3 import M3Calculator
@@ -22,10 +29,6 @@ from fgi.calculator.sentiment.s3 import S3Calculator
 from fgi.calculator.valuation.v1 import V1Calculator
 from fgi.calculator.valuation.v2 import V2Calculator
 from fgi.calculator.valuation.v4 import V4Calculator
-from fgi.calculator.funding.f1 import F1Calculator
-from fgi.calculator.funding.f2 import F2Calculator
-from fgi.calculator.funding.f3 import F3Calculator
-
 
 INDICATOR_WEIGHTS = {
     "momentum": {"M1": 0.25, "M2": 0.25, "M3": 0.25, "M4": 0.25},

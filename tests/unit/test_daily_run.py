@@ -1,4 +1,3 @@
-import pytest
 from fgi.output import daily_run
 from fgi.output.daily_run import is_trading_day, setup_data_manager
 

@@ -1,11 +1,11 @@
 from datetime import datetime
-import pandas as pd
+
 import numpy as np
-from fgi.collector.base import DataSourceResult, DataSourceStatus
+import pandas as pd
+
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import zscore
 from fgi.storage.database import Database
-from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class V2Calculator:

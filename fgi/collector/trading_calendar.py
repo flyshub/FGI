@@ -1,21 +1,21 @@
 """真实交易日历：akshare tool_trade_date_hist_sina，内存 + 磁盘缓存。"""
 import logging
 from pathlib import Path
-from typing import List, Optional
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
 class TradingCalendar:
-    def __init__(self, cache_dir: Optional[Path] = None):
+    def __init__(self, cache_dir: Path | None = None):
         if cache_dir is None:
             from fgi.config.settings import DATA_DIR
             cache_dir = DATA_DIR / "cache"
         self._cache_dir = Path(cache_dir)
-        self._days: Optional[List[str]] = None
+        self._days: list[str] | None = None
 
-    def load(self) -> Optional[List[str]]:
+    def load(self) -> list[str] | None:
         """返回全部交易日（升序）；akshare 与磁盘缓存均不可用时返回 None。"""
         if self._days is not None:
             return self._days
@@ -30,13 +30,13 @@ class TradingCalendar:
             return days
         return None
 
-    def trading_days(self, start_date: str, end_date: str) -> Optional[List[str]]:
+    def trading_days(self, start_date: str, end_date: str) -> list[str] | None:
         days = self.load()
         if days is None:
             return None
         return [d for d in days if start_date <= d <= end_date]
 
-    def _fetch_akshare(self) -> Optional[List[str]]:
+    def _fetch_akshare(self) -> list[str] | None:
         try:
             import akshare as ak
             df = ak.tool_trade_date_hist_sina()
@@ -50,14 +50,14 @@ class TradingCalendar:
     def _cache_path(self) -> Path:
         return self._cache_dir / "trade_calendar.csv"
 
-    def _save_disk(self, days: List[str]):
+    def _save_disk(self, days: list[str]):
         try:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
             pd.DataFrame({"trade_date": days}).to_csv(self._cache_path(), index=False)
         except Exception as e:
             logger.warning("Failed to save trading calendar cache: %s", e)
 
-    def _load_disk(self) -> Optional[List[str]]:
+    def _load_disk(self) -> list[str] | None:
         try:
             df = pd.read_csv(self._cache_path(), dtype={"trade_date": str})
             days = sorted(df["trade_date"].dropna().tolist())
@@ -67,7 +67,7 @@ class TradingCalendar:
 
 
 def resolve_trading_days(start_date: str, end_date: str, db=None,
-                         calendar: Optional[TradingCalendar] = None) -> List[str]:
+                         calendar: TradingCalendar | None = None) -> list[str]:
     """真实交易日历优先；失败时回退 raw_data 中 m3_close 已有日期；最后回退工作日。"""
     calendar = calendar or TradingCalendar()
     days = calendar.trading_days(start_date, end_date)

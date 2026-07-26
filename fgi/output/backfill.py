@@ -1,14 +1,15 @@
+import contextlib
 from datetime import datetime, timedelta
-from typing import List, Optional
-from fgi.config.settings import LOOKBACK_START
-from fgi.storage.database import Database
-from fgi.collector.fallback import DataSourceManager
+
 from fgi.collector.akshare_source import AKShareSource
-from fgi.collector.zzshare_source import ZZShareSource
-from fgi.collector.chains import configure_manager
-from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.collector.base import DataSourceStatus
+from fgi.collector.chains import configure_manager
+from fgi.collector.fallback import DataSourceManager
+from fgi.collector.trading_calendar import resolve_trading_days
+from fgi.collector.zzshare_source import ZZShareSource
+from fgi.config.settings import LOOKBACK_START
 from fgi.output.status import record_indicator_status
+from fgi.storage.database import Database
 
 
 def is_trading_day(date_str: str) -> bool:
@@ -16,7 +17,7 @@ def is_trading_day(date_str: str) -> bool:
     return dt.weekday() < 5
 
 
-def get_date_range(start_date: str, end_date: str) -> List[str]:
+def get_date_range(start_date: str, end_date: str) -> list[str]:
     start = datetime.strptime(start_date, "%Y-%m-%d")
     end = datetime.strptime(end_date, "%Y-%m-%d")
     dates = []
@@ -28,11 +29,11 @@ def get_date_range(start_date: str, end_date: str) -> List[str]:
     return dates
 
 
-def batch_dates(dates: List[str], batch_size: int) -> List[List[str]]:
+def batch_dates(dates: list[str], batch_size: int) -> list[list[str]]:
     return [dates[i:i + batch_size] for i in range(0, len(dates), batch_size)]
 
 
-def backfill_indicator(db: Database, calculator, indicator: str, dates: List[str]):
+def backfill_indicator(db: Database, calculator, indicator: str, dates: list[str]):
     for date in dates:
         calculator.run(date)
 
@@ -42,10 +43,8 @@ def setup_data_manager() -> DataSourceManager:
     MockSource 仅供测试使用。"""
     manager = DataSourceManager()
     manager.register_source("akshare", AKShareSource())
-    try:
+    with contextlib.suppress(Exception):
         manager.register_source("zzshare", ZZShareSource())
-    except Exception:
-        pass
     configure_manager(manager)
     return manager
 
@@ -98,7 +97,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             print(f"ERR: {e}")
 
     # M1/S3 涨停板 (levistock, DB-first, do per-date)
-    print(f"\n  [M1/S3 涨停板] s3_zt_daily (levistock, multi-day by calculator)...", end=" ")
+    print("\n  [M1/S3 涨停板] s3_zt_daily (levistock, multi-day by calculator)...", end=" ")
     try:
         result = data_manager.fetch("s3_zt_daily", "fetch_zt_daily_summary", "2020-01-01", today)
         if result.status == DataSourceStatus.HEALTHY and result.data is not None:
@@ -114,7 +113,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
         print(f"ERR: {e}")
 
     # M2 sentiment from zzshare（S1 指标已删除，不再写 s1_* 键）
-    print(f"\n  [M2 sentiment] zzshare...", end=" ")
+    print("\n  [M2 sentiment] zzshare...", end=" ")
     try:
         result = data_manager.fetch("m2_market_overview", "fetch_open_sentiment", "2020-01-01", today)
         if result.status in (DataSourceStatus.HEALTHY, DataSourceStatus.DEGRADED) \
@@ -131,7 +130,7 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
         print(f"ERR: {e}")
 
     # S2 股吧热度
-    print(f"  [S2 股吧热度] zzshare...", end=" ")
+    print("  [S2 股吧热度] zzshare...", end=" ")
     try:
         result = data_manager.fetch("s2_sentiment", "fetch_market_hot_sentiment", "2020-01-01", today)
         if result.status == DataSourceStatus.HEALTHY and result.data is not None:
@@ -143,12 +142,12 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
         print(f"ERR: {e}")
 
     db.commit()
-    print(f"\n  Raw data summary:")
+    print("\n  Raw data summary:")
     count = db.count_rows("raw_data")
     print(f"  Total raw_data records: {count}")
 
 
-def compute_fgi_daily(calculator, db, dates: List[str]):
+def compute_fgi_daily(calculator, db, dates: list[str]):
     total = len(dates)
     success = 0
     failed = 0
@@ -168,7 +167,7 @@ def compute_fgi_daily(calculator, db, dates: List[str]):
     return success, failed
 
 
-def backfill(start_date: Optional[str] = None, end_date: Optional[str] = None):
+def backfill(start_date: str | None = None, end_date: str | None = None):
     data_manager = setup_data_manager()
     db = Database()
     db.connect()
@@ -184,7 +183,7 @@ def backfill(start_date: Optional[str] = None, end_date: Optional[str] = None):
     print("--- Phase 1: Raw indicator data → DB ---")
     backfill_raw_all(db, data_manager)
 
-    print(f"\n--- Phase 2: FGI daily computation ---")
+    print("\n--- Phase 2: FGI daily computation ---")
     dates = resolve_trading_days(start_date, end_date, db=db)
     print(f"Trading days: {len(dates)}")
 

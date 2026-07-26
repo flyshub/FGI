@@ -6,9 +6,6 @@ No rendering, no HTTP — pure data retrieval only.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional
-
-import pandas as pd
 
 from fgi.common.utils import extract_indicator_score
 from fgi.output.signal_report import render_zone_context_card

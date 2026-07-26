@@ -2,10 +2,12 @@
 
 import tempfile
 from pathlib import Path
+
 import pandas as pd
 import pytest
-from fgi.storage.database import Database
+
 from fgi.output.backfill import store_indicator_data
+from fgi.storage.database import Database
 
 
 @pytest.fixture
@@ -38,7 +40,6 @@ class TestStoreIndicatorData:
         注意：DataFrame 中的 NaN 转为 np.float64('nan')，Python 的 `val is not None`
         为 True 所以进入写入。如果以后要跳过 NaN，需加 pd.isna() 检查。
         """
-        import numpy as np
         df = pd.DataFrame({
             "date": ["2024-01-02", "2024-01-03"],
             "close": [3000.0, None],

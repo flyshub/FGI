@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import sys
 import time
-import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -31,7 +30,7 @@ REPORT_PATH = Path("/tmp/f3_spike_report.md")
 def time_call(fn, n: int = RETRIES):
     """Call fn n times, return list of (ok, latency_s, error_or_shape)."""
     results = []
-    for i in range(n):
+    for _i in range(n):
         t0 = time.perf_counter()
         try:
             df = fn()

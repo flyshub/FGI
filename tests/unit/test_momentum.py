@@ -1,6 +1,9 @@
-import pytest
 import tempfile
 from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from fgi.calculator.momentum.m1 import M1Calculator
 from fgi.calculator.momentum.m2 import M2Calculator
 from fgi.calculator.momentum.m4 import M4Calculator
@@ -8,7 +11,6 @@ from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
 from fgi.common.utils import clear_percentile_cache
 from fgi.storage.database import Database
-import pandas as pd
 
 
 @pytest.fixture(autouse=True)

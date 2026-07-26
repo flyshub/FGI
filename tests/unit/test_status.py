@@ -2,10 +2,11 @@
 
 import tempfile
 from pathlib import Path
-import pandas as pd
+
 import pytest
-from fgi.storage.database import Database
+
 from fgi.output.status import record_indicator_status
+from fgi.storage.database import Database
 
 
 @pytest.fixture
@@ -72,7 +73,7 @@ class TestRecordIndicatorStatus:
         record_indicator_status(db, "2024-01-02", results)
         status = db.get_status("2024-01-02")
         assert len(status) == 3
-        by_indicator = dict(zip(status["indicator"], status["status"]))
+        by_indicator = dict(zip(status["indicator"], status["status"], strict=False))
         assert by_indicator["m1"] == "normal"
         assert by_indicator["m2"] == "normal"
         assert by_indicator["f2"] == "missing"

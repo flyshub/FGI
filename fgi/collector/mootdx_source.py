@@ -1,4 +1,5 @@
 import pandas as pd
+
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 
@@ -30,12 +31,7 @@ class MootdxSource(DataSource):
     def fetch_index_daily(self, symbol: str, start_date: str, end_date: str) -> DataSourceResult:
         try:
             client = self._get_client()
-            if symbol.startswith("sh"):
-                code = symbol[2:]
-            elif symbol.startswith("sz"):
-                code = symbol[2:]
-            else:
-                code = symbol
+            code = symbol[2:] if symbol.startswith("sh") or symbol.startswith("sz") else symbol
             df = client.bars(symbol=code, frequency=9, offset=800)
             if df is None or df.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "mootdx", "No data")

@@ -1,7 +1,8 @@
 import sqlite3
 from pathlib import Path
-from typing import Optional
+
 import pandas as pd
+
 from fgi.config.settings import DB_PATH
 
 
@@ -9,9 +10,9 @@ class Database:
     # NOTE: connection 字段刻意下划线前缀 + 完整名 _connection。
     # 调用方应通过本类的公共方法访问数据；任何对 `_conn` 或 `_connection`
     # 的外部访问将被 dev 守卫 (scripts/check_no_external_conn.sh) 拒绝。
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         self._path = db_path or DB_PATH
-        self._connection: Optional[sqlite3.Connection] = None
+        self._connection: sqlite3.Connection | None = None
 
     @property
     def path(self) -> Path:
@@ -170,7 +171,7 @@ class Database:
         if not row:
             return None
         cols = [d[0] for d in cur.description]
-        return dict(zip(cols, row))
+        return dict(zip(cols, row, strict=False))
 
     def upsert_status(self, date: str, indicator: str, status: str, source: str = "", error: str = ""):
         if self._connection is None:
@@ -204,7 +205,7 @@ class Database:
         """
         return pd.read_sql_query(query, self._connection, params=(date,))
 
-    def get_latest_score_date(self) -> Optional[str]:
+    def get_latest_score_date(self) -> str | None:
         if self._connection is None:
             raise RuntimeError("Database not connected")
         cursor = self._connection.execute("SELECT MAX(date) FROM scores_daily")
@@ -212,7 +213,7 @@ class Database:
         return row[0] if row else None
 
     def get_missing_dates(self, indicator: str, start_date: str, end_date: str,
-                          trading_days: Optional[list] = None) -> list:
+                          trading_days: list | None = None) -> list:
         """trading_days 传入真实交易日历；缺省回退 m3_close 已有日期，再回退工作日。"""
         query = """
             SELECT date FROM raw_data
@@ -318,7 +319,7 @@ class Database:
             (date,),
         ).fetchall()
 
-    def get_latest_raw_date(self, indicator: str, on_or_before: str) -> Optional[str]:
+    def get_latest_raw_date(self, indicator: str, on_or_before: str) -> str | None:
         """返回 <= on_or_before 的最大 raw_data.date（无则 None）。
 
         用于 forward-fill 溯源：从最后得分日回溯到该指标的真实写入日。
@@ -331,7 +332,7 @@ class Database:
         ).fetchone()
         return row[0] if row else None
 
-    def get_raw_date_range(self, indicator: str) -> Optional[tuple]:
+    def get_raw_date_range(self, indicator: str) -> tuple | None:
         """返回 raw_data 中某 indicator 的 (min_date, max_date)；无数据返回 None。"""
         if self._connection is None:
             raise RuntimeError("Database not connected")
@@ -352,7 +353,7 @@ class Database:
         )
         return cur.rowcount
 
-    def get_raw_value_stats(self, indicator: str) -> Optional[tuple]:
+    def get_raw_value_stats(self, indicator: str) -> tuple | None:
         """返回 raw_data 中某 indicator 的 (min_value, max_value, avg_value)；无数据返回 None。"""
         if self._connection is None:
             raise RuntimeError("Database not connected")

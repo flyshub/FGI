@@ -4,13 +4,12 @@ daily_run 和 backfill 共用此配置，按需追加兜底来源（如 mootdx/t
 FallbackChain 自动剔除不支持的方法，追加到所有链是安全的。
 """
 
-from typing import Dict, List, Optional
-from fgi.collector.fallback import DataSourceManager
 
+from fgi.collector.fallback import DataSourceManager
 
 # 指标 → 首选来源列表
 # m1/s3 包含 zzshare + akshare 备份；其余指标单来源
-DEFAULT_CHAINS: Dict[str, List[str]] = {
+DEFAULT_CHAINS: dict[str, list[str]] = {
     "m1_zt_stats": ["zzshare", "akshare"],
     "m2_market_overview": ["zzshare"],
     "m3_index": ["akshare"],
@@ -31,7 +30,7 @@ DEFAULT_CHAINS: Dict[str, List[str]] = {
 
 def configure_manager(
     manager: DataSourceManager,
-    extra_fallbacks: Optional[List[str]] = None,
+    extra_fallbacks: list[str] | None = None,
 ) -> None:
     """为 DataSourceManager 配置所有指标链。
 

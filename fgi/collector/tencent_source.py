@@ -1,5 +1,6 @@
-import requests
 import pandas as pd
+import requests
+
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
 

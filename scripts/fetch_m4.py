@@ -4,12 +4,12 @@
 """
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import pandas as pd
 from fgi.collector.akshare_source import AKShareSource
-from fgi.storage.database import Database
 from fgi.config.settings import DB_PATH
+from fgi.storage.database import Database
 
 
 def main():
@@ -38,7 +38,7 @@ def main():
     if after_range:
         print(f"m4_volume in DB: {after_n} rows, range {after_range[0]} ~ {after_range[1]}", flush=True)
     else:
-        print(f"m4_volume in DB: 0 rows", flush=True)
+        print("m4_volume in DB: 0 rows", flush=True)
     return 0
 
 

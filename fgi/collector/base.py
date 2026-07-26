@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+
 import pandas as pd
 
 
@@ -13,10 +13,10 @@ class DataSourceStatus(Enum):
 
 @dataclass
 class DataSourceResult:
-    data: Optional[pd.DataFrame]
+    data: pd.DataFrame | None
     status: DataSourceStatus
     source: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class DataSource(ABC):

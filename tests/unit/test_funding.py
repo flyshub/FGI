@@ -1,6 +1,9 @@
-import pytest
 import tempfile
 from pathlib import Path
+
+import pandas as pd
+import pytest
+
 from fgi.calculator.funding.f1 import F1Calculator
 from fgi.calculator.funding.f2 import F2Calculator
 from fgi.calculator.funding.f3 import F3Calculator
@@ -8,7 +11,6 @@ from fgi.collector.fallback import DataSourceManager
 from fgi.collector.mock_source import MockSource
 from fgi.common.utils import clear_percentile_cache
 from fgi.storage.database import Database
-import pandas as pd
 
 
 @pytest.fixture(autouse=True)
@@ -196,7 +198,7 @@ class TestF2Calculator:
         monkeypatch.setattr(f2_calculator, "fetch_data", mock_fetch)
 
         # 2023-12-28：最近数据 28 天前 → 应该 fetch
-        result = f2_calculator.run("2023-12-28", lookback_days=400)
+        f2_calculator.run("2023-12-28", lookback_days=400)
         assert fetched["called"], "should fetch when weekly data is >7 days stale"
 
 

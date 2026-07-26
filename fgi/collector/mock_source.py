@@ -3,6 +3,7 @@ import pandas as pd
 
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
+
 class MockSource(DataSource):
     def __init__(self, name: str = "mock", healthy: bool = True):
         self._name = name

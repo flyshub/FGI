@@ -1,12 +1,13 @@
 from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from typing import Optional
-from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
+
+from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
+from fgi.config.settings import PERCENTILE_WINDOW_YEARS
 from fgi.storage.database import Database
-from fgi.config.settings import LOOKBACK_YEARS, PERCENTILE_WINDOW_YEARS
 
 
 class M4Calculator:
@@ -52,7 +53,7 @@ class M4Calculator:
             self._db.upsert_raw_data(d, "m4_volume", float(row["volume"]))
         self._db.commit()
 
-    def _get_last_good_volume(self, date: str) -> Optional[float]:
+    def _get_last_good_volume(self, date: str) -> float | None:
         """取最近一个非 NaN 的 m4_volume 值（用于 last-good-value 回退）。"""
         df = self._db.get_raw_data("m4_volume", "2015-01-01", date)
         if df.empty:

@@ -1,8 +1,8 @@
 import os
-from typing import Dict, Any
+from typing import Any
+
 from fgi.config.settings import DB_PATH
 from fgi.storage.database import Database
-
 
 VERSION_CONFIG = {
     "legacy_enabled": os.getenv("FGI_LEGACY_ENABLED", "true").lower() == "true",
@@ -24,7 +24,7 @@ class VersionManager:
             return "legacy"
         return "current"
 
-    def get_parallel_config(self) -> Dict[str, Any]:
+    def get_parallel_config(self) -> dict[str, Any]:
         return {
             "legacy_enabled": self._config["legacy_enabled"],
             "current_enabled": self._config["current_enabled"],
@@ -37,7 +37,7 @@ class VersionManager:
     def should_run_current(self) -> bool:
         return self._config["current_enabled"]
 
-    def get_display_value(self, date: str) -> Dict[str, float]:
+    def get_display_value(self, date: str) -> dict[str, float]:
         with Database(self._db_path) as db:
             scores = db.get_scores(date, date)
             if scores.empty:
@@ -53,11 +53,9 @@ class VersionManager:
             return False
         with Database(self._db_path) as db:
             scores = db.get_scores(target_date, target_date)
-            if scores.empty:
-                return False
-            return True
+            return not scores.empty
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         return {
             "active_version": self.get_active_version(),
             "parallel_config": self.get_parallel_config(),

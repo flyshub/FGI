@@ -1,15 +1,16 @@
 """TDD tests for fgi.output.decision_matrix."""
 import tempfile
-import pytest
 from pathlib import Path
 
-from fgi.storage.database import Database
+import pytest
+
 from fgi.output.decision_matrix import (
-    compute_decision_matrix,
     _classify_sentiment,
     _classify_valuation,
     _lookup_quadrant,
+    compute_decision_matrix,
 )
+from fgi.storage.database import Database
 
 
 @pytest.fixture
@@ -139,4 +140,3 @@ class TestComputeDecisionMatrix:
         assert d["fgi"] == 30.0
 
 
-import tempfile  # noqa: E402

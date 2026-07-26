@@ -2,8 +2,8 @@
 import tempfile
 from pathlib import Path
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
 
 from fgi.storage.database import Database
@@ -252,8 +252,8 @@ class TestEngineIntegration:
         fgis = rng.uniform(15, 85, n)
 
         _seed(db,
-              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis)],
-              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes)])
+              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis, strict=False)],
+              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes, strict=False)])
 
         from fgi.output.signal_report import SignalReportEngine
 
@@ -284,8 +284,8 @@ class TestEngineIntegration:
         fgis = rng.uniform(20, 80, len(all_dates))
 
         _seed(db,
-              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(all_dates, fgis)],
-              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(all_dates, closes)])
+              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(all_dates, fgis, strict=False)],
+              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(all_dates, closes, strict=False)])
 
         from fgi.output.signal_report import SignalReportEngine
 
@@ -404,8 +404,8 @@ class TestZoneContextCard:
         fgis = rng.uniform(45, 55, n)  # all neutral
 
         _seed(db,
-              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis)],
-              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes)])
+              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis, strict=False)],
+              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes, strict=False)])
 
         from fgi.output.signal_report import render_zone_context_card
 
@@ -557,8 +557,8 @@ class TestCliEntry:
 
     def test_main_with_defaults(self, tmp_path):
         """CLI runs with a seeded temp DB and writes a report file."""
-        from fgi.output.signal_report import SignalReportEngine, render_markdown
         from fgi.config.settings import DB_PATH
+        from fgi.output.signal_report import SignalReportEngine, render_markdown
 
         orig_path = DB_PATH
         path = tmp_path / "test_fgi.db"
