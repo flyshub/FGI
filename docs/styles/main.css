@@ -181,7 +181,7 @@ footer {
   .chart-row .section { margin-bottom: 16px; }
   .chart { height: 240px; }
   .chart-large { height: 300px; }
-  matrix-grid { font-size: 0.7rem; grid-template-columns: 70px repeat(3, 1fr); }
+  .matrix-grid { font-size: 0.7rem; grid-template-columns: 70px repeat(3, 1fr); }
   .matrix-cell { padding: 6px 4px; min-height: 36px; }
   header#header { flex-direction: column; text-align: center; }
 }

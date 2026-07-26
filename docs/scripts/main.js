@@ -111,9 +111,9 @@ function switchToDate(dateStr) {
 
 function _doSwitchDate(dateStr) {
   if (dateStr === currentDate) return;
-  currentDate = dateStr;
   const data = getDataForDate(dateStr);
-  if (!data) { _switchingDate = false; return; }
+  if (!data) return;
+  currentDate = dateStr;
 
   // Update header label
   document.getElementById('last-update').textContent = `数据截止 ${dateStr}`;
@@ -137,7 +137,6 @@ function _doSwitchDate(dateStr) {
   initIndicatorChart(data.scores, data.statuses, data.extreme_signals);
   initDistributionChart(state.history, data.fgi_final, dateStr);
   _updateHistoryMarkLine(dateStr);
-  _switchingDate = false;
 }
 
 // ── History chart mark line ──────────────────────────

@@ -477,31 +477,6 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
             "anchor": anchor,
         })
     return all_dates
-    """Pre-compute anchors for every historical date with non-neutral FGI."""
-    result = []
-    df = db.get_scores("2015-01-01", "2099-12-31")
-    if df.empty:
-        return result
-    df = df.dropna(subset=["FGI_final"]).sort_values("date")
-
-    for _, r in df.iterrows():
-        date_str = str(r["date"])
-        fgi = float(r["FGI_final"])
-        if 40 <= fgi <= 60:
-            continue  # skip neutral zone
-        closest = _find_closest_prior_fgi(db, fgi, date_str)
-        if closest is None:
-            continue
-        fr = _get_forward_return(db, closest[0], horizon=20)
-        result.append({
-            "date": date_str,
-            "fgi": round(fgi, 1),
-            "anchor_date": closest[0],
-            "anchor_fgi": round(closest[1], 1),
-            "anchor_delta": round(closest[1] - closest[2], 1),
-            "forward_20": round(fr * 100, 1) if fr is not None else None,
-        })
-    return result
 
 
 def export_anchors_history(db: Database) -> list[dict]:
@@ -540,7 +515,7 @@ def export_anchors_history(db: Database) -> list[dict]:
 from fgi.output.signal_report import compute_rolling_ic_window  # noqa: E402
 
 
-def write_json(data, path: Path):
+def write_json(data, path: Path) -> None:
     """Write JSON with Chinese support, creating directories as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -593,7 +568,7 @@ def main():
             all_dates = export_all_dates(db, signal_report if signal_report and not signal_report.get("error") else None)
             write_json(all_dates, output_dir / "fgi_all_dates.json")
 
-    print("Done.")
+    logger.info("Done.")
 
 
 if __name__ == "__main__":
