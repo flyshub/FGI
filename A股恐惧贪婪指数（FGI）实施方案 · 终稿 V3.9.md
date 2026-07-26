@@ -1,6 +1,6 @@
 # A股恐惧贪婪指数（FGI）实施方案 · 终稿 V3.9
 
-**版本**：V3.9.0（回测增强版 + 口径变更操作手册）  
+**版本**：V3.9.0（回测增强版 + 口径变更操作手册 + 离线模式使用规范）  
 **更新日期**：2026年7月26日  
 **设计原则**：数据免费、逻辑稳健、每日自动更新、可解释  
 
@@ -569,7 +569,172 @@ CREATE TABLE daily_status (
 
 ---
 
-## 八、局限性声明
+## 八、离线模式（FGI_OFFLINE）使用规范
+
+### 8.1 什么是离线模式
+
+离线模式（`FGI_OFFLINE=1`）是一种**从 raw_data 直接重构指标数据的运行模式**，不调用任何外部 API。
+
+```
+FGI_OFFLINE=1 python3 scripts/recompute_scores.py
+```
+
+**触发机制**：`fgi/collector/fallback.py` 中 `DataSourceManager.fetch()` 在环境变量 `FGI_OFFLINE=1` 时，跳过所有 FallbackChain（数据源链），改为通过 `_offline_reconstruct()` 从数据库 raw_data 表读取数据。
+
+**用途**：
+- 全历史 recompute：不依赖外部 API 可用性，重算所有历史 FGI 得分
+- 信号回测：确保计算可复现，不受上游数据变更影响
+- 无网络环境验证：CI/CD、离线开发、缓存测试
+
+### 8.2 依赖链（必须完整闭合）
+
+离线模式不出错的前提是下面这条链的每个环节**全部同步**：
+
+```
+OFFLINE_RAW_MAPPING → raw_data key → calculator.run() 写入 → raw_data 表
+```
+
+任何一个环节断裂，离线模式就会静默失败，导致该指标降级（degraded）或缺失（missing）。
+
+#### 8.2.1 OFFLINE_RAW_MAPPING
+
+定义在 `fgi/collector/fallback.py:20`，是一个 `dict[str, tuple]`，将每个数据获取方法名映射到 raw_data key：
+
+```python
+OFFLINE_RAW_MAPPING = {
+    "fetch_pe_data":       (("v1_pe_ttm",),             ("滚动市盈率",)),
+    "fetch_bond_yield":    (("v1_bond_yield",),          ("yield_10y",)),
+    "fetch_open_sentiment": (("m2_up_num", "m2_down_num"), ("up_num", "down_num")),
+    ...
+}
+```
+
+**修改这里的 key 时，必须同步修改以下各处：**
+- `INDICATOR_RAW_KEY`（同文件第 41 行）
+- 对应 calculator 的 `run()` 写入逻辑
+- `scripts/backfill_*.py` 中的回填 key
+
+#### 8.2.2 INDICATOR_RAW_KEY
+
+辅助映射，将指标名 → raw_data key，用于 forward-fill 溯源：
+
+```python
+INDICATOR_RAW_KEY = {
+    "V1": "v1_pe_ttm",
+    "M2": "m2_up_num",
+    ...
+}
+```
+
+**如果这里的 key 与 OFFLINE_RAW_MAPPING 不一致**，会导致：
+- forward_fill 取不到正确的原始日期
+- 离线模式错误地用缓存数据
+- `resolve_source_date` 追踪到错误的 raw_data
+
+#### 8.2.3 calculator.run() 写入
+
+**最重要的约束**：每个 calculator 的 `run()` 方法，必须**写入 OFFLINE_RAW_MAPPING 中该指标依赖的所有 raw_data key**。
+
+以 V1 为例，`OFFLINE_RAW_MAPPING` 定义了两组 key：
+
+| 方法 | raw_data key | calculator 是否写入？ |
+|------|-------------|-------------------|
+| `fetch_pe_data` | `v1_pe_ttm` | ❌ 2026-07-26 前未写入（3 号坑） |
+| `fetch_bond_yield` | `v1_bond_yield` | ❌ 2026-07-26 前未写入（3 号坑） |
+
+这两个 key 离线模式的依赖，但 V1 的 `run()` 只写了 `v1_erp` 和 `v1_percentile`——离线模式根本读不到它们！结果：`FGI_OFFLINE=1` 下 V1 永远是 degraded（forward_fill）。
+
+**这就是本次健康度从 100 跌到 87 的根因**：V1 没有把离线模式依赖的原始数据写入 raw_data。
+
+### 8.3 已出过的坑（案例分析）
+
+#### 坑 1：F1 market_cap 口径改了，但旧历史没回填
+
+| 项目 | 内容 |
+|------|------|
+| **变更** | V3.8: 只取上海市价总值 → V3.8.3: 沪深合计 |
+| **影响** | raw_data 中 f1_market_cap 的旧值（457,333）与新口径（726,942）相差 60% |
+| **根因** | 改了 calculator 没回填历史 raw_data，也未注意 OFFLINE_RAW_MAPPING 依赖此 key |
+| **修复** | 编写 `scripts/backfill_f1_market_cap.py` 回填全历史，再全量 recompute |
+
+#### 坑 2：M2 加了 up_num/down_num 写入，但 raw_data 没补
+
+| 项目 | 内容 |
+|------|------|
+| **变更** | M2 calculator run() 新增 `upsert_raw_data(date, "m2_up_num", ...)` 和 `m2_down_num` |
+| **影响** | 修改前的 daily_run 从未写过这两个 key，`OFFLINE_RAW_MAPPING` 读不到 |
+| **根因** | 只改了写入，但没意识到已有 raw_data 中缺失这些 key |
+| **修复** | `daily_run --date` 以 live 模式补最新数据（非全量回填，因为 M2 数据实时更新即可） |
+
+#### 坑 3：V1 从未写 pe_ttm 和 bond_yield 到 raw_data（最隐蔽）
+
+| 项目 | 内容 |
+|------|------|
+| **变更** | 无——一切初就未写入 |
+| **影响** | V1 代码一直正确运行（live 模式下从 API fetch），但 `OFFLINE_RAW_MAPPING` 依赖 v1_pe_ttm 和 v1_bond_yield，它们从未写入 raw_data |
+| **根因** | calculator 只写了计算结果（v1_erp、v1_percentile），**没写原始输入数据** |
+| **修复** | 在 `v1.py` 的 `run()` 中加入 `upsert_raw_data_batch(pe_history, "v1_pe_ttm")` 和 `upsert_raw_data_batch(bond_history, "v1_bond_yield")` |
+| **教训** | calculator 不仅要写**计算结果**，还必须写**离线模式依赖的全部原始输入数据** |
+
+这三个坑的共同模式：
+
+```
+改了 calculator → 但 OFFLINE_RAW_MAPPING 依赖的 raw_data key 没同步 → 
+离线模式静默降级 → recompute 后健康度下降 → 前端显示异常
+```
+
+### 8.4 防坑清单：修改 calculator 时的必检项
+
+每次修改 calculator 的 `run()` 方法，必须逐项核查：
+
+| # | 检查项 | 怎么做 |
+|---|--------|-------|
+| 1 | `OFFLINE_RAW_MAPPING` 中该方法的 key 有哪些？ | 打开 `fgi/collector/fallback.py`，找到对应 `method` 的映射 |
+| 2 | `run()` 是否实际写入了这些 key？ | 搜索 `upsert_raw_data` / `upsert_raw_data_batch` + 对应 key 名 |
+| 3 | 如果不写——是数据隔离（应加新映射）还是遗漏（应加写入）？ | **遗漏必须补写入**，隔离必须确认旧 key 不再被引用 |
+| 4 | `INDICATOR_RAW_KEY` 中的 key 是否一致？ | 确认同步更新 |
+| 5 | 现有 raw_data 中这些 key 是否完整覆盖所有历史日期？ | `get_raw_data(key, "2014-01-01", "now")` 检查日期范围 |
+| 6 | 如果不完整——是否需要回填脚本？ | 编写 `scripts/backfill_*.py` 补历史 |
+| 7 | 验证：`FGI_OFFLINE=1` 跑单日能正常工作吗？ | `FGI_OFFLINE=1 python3 -c "calc.run('today')"` 对比 live 结果 |
+
+### 8.5 离线模式的日常验证
+
+#### 8.5.1 单日验证（推荐每次修改 calculator 后运行）
+
+```bash
+# 先跑 live 模式
+python3 -m fgi.output.daily_run --date 2026-07-24
+
+# 再跑离线模式，对比 FGI_final
+FGI_OFFSET=1 python3 scripts/recompute_scores.py --date 2026-07-24
+```
+
+如果离线与 live 的 FGI_final 差值超过 0.5，说明某个指标在离线模式下重构有误。
+
+#### 8.5.2 全量验证（定时或变更后运行）
+
+```bash
+FGI_OFFLINE=1 python3 scripts/recompute_scores.py
+# 预期：ok=2575 err=0，健康度全部 100
+```
+
+#### 8.5.3 检查 raw_data 覆盖度
+
+```bash
+python3 -c "
+from fgi.storage.database import Database
+with Database() as db:
+    for key in ['v1_pe_ttm', 'v1_bond_yield', 'm2_up_num', 'm2_down_num', ...]:
+        df = db.get_raw_data(key, '2014-01-01', 'now')
+        print(f'{key}: {len(df)} rows ({df[\"date\"].iloc[0]} ~ {df[\"date\"].iloc[-1]})')
+"
+```
+
+预期：所有 raw_data key 的日期范围都应覆盖计算所需的最早到最晚交易日。
+
+---
+
+## 九、局限性声明
 
 1. **市场结构变化**：5 年窗口可能滞后于注册制、量化扩容等体制变化。波动率类指标建议持续监控。
 2. **共线性处理**：依赖季度人工监控，未引入自动正交化。M1 与 S3 同源已预设应对方案。
