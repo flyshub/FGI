@@ -41,7 +41,7 @@ jobs:
       - name: Run FGI daily update
         env:
           FGI_PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-          FGI_PUSHPLUS_TOKENS: ${{ secrets.PUSHPLUS_TOKENS }}
+          FGI_PUSHPLUS_FRIENDS: ${{ secrets.PUSHPLUS_FRIENDS }}
         run: python -m fgi.output.daily_run --date ${{ steps.date.outputs.target_date }}
       
       - name: Upload results

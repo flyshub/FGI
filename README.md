@@ -12,7 +12,7 @@ pip install -r requirements.txt
 
 # 2. 配置推送（可选）
 export FGI_PUSHPLUS_TOKEN=your_token_here      # 主推送
-export FGI_PUSHPLUS_TOKENS=tokenA,tokenB        # 额外订阅者（逗号分隔，可选）
+export FGI_PUSHPLUS_FRIENDS=tokenA,tokenB       # 好友令牌（逗号分隔，可选）
 
 # 3. 运行
 python -m fgi.output.daily_run          # 最近交易日
@@ -126,7 +126,7 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 - **触发**：交易日 19:00（北京时间）+ 手动 `workflow_dispatch`
 - **配置**：在 Settings → Secrets → Actions 添加：
   - `PUSHPLUS_TOKEN` — 主推送地址
-  - `PUSHPLUS_TOKENS` — 额外订阅者 token（逗号分隔，可选）
+  - `PUSHPLUS_FRIENDS` — 好友令牌（逗号分隔，可选，用好友消息推送）
 - **流水线**：
   1. `python -m fgi.output.daily_run` — 计算 FGI + PushPlus 推送
   2. `git commit data/fgi.db` — 数据库回写
