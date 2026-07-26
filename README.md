@@ -121,13 +121,75 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 
 ## GitHub Actions
 
-项目通过 GitHub Actions 每个交易日自动计算 FGI、推送 PushPlus、回写数据库。
+项目通过 GitHub Actions 每个交易日自动计算 FGI、推送 PushPlus、回写数据库、更新 Web 前端。
 
 - **触发**：交易日 19:00（北京时间）+ 手动 `workflow_dispatch`
 - **配置**：在 Settings → Secrets → Actions 添加：
   - `PUSHPLUS_TOKEN` — 主推送地址
   - `PUSHPLUS_TOKENS` — 额外订阅者 token（逗号分隔，可选）
+- **流水线**：
+  1. `python -m fgi.output.daily_run` — 计算 FGI + PushPlus 推送
+  2. `git commit data/fgi.db` — 数据库回写
+  3. `python scripts/export_fgi_web_data.py --full` — 导出 6 个 JSON 文件
+  4. `git commit docs/data/` — Web 数据回写 → GitHub Pages 自动部署
 - **产物**：每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact
+
+## Web 前端
+
+在线地址：**[https://flyshub.github.io/FGI/](https://flyshub.github.io/FGI/)**
+
+纯静态页面，零构建步骤，通过 GitHub Pages 从 `main` 分支的 `docs/` 目录提供服务。
+
+### 功能
+
+| 区块 | 内容 |
+|------|------|
+| 日期选择器 | 查看任意历史交易日的详情，选日期后所有区块联动刷新 |
+| FGI 仪表盘 | 大数字 FGI + 情绪等级 + 趋势方向 + 涨跌变化 + 数据健康度 + 历史百分位 |
+| 🎯 决策矩阵 | 3×3 情绪-估值象限图，当前象限高亮 |
+| 📈 历史信号参考 | 当前 FGI 区间的 5/20/60 日胜率和平均收益 + 时间锚点（明细表） |
+| 📊 FGI 历史走势 | 交互式折线图（FGI 左轴 + 上证综指右轴），底部滑块缩放，极端信号菱形标记，点击任一点切换日期 |
+| 📐 五维度雷达图 | 动量/情绪/估值/波动率/资金 五维对比 |
+| 🔍 指标明细 | 12 指标条形图，85/15 阈值线，极端指标边框高亮 |
+| 📊 FGI 分布 | 20 桶直方图，当前日期橙色标记 |
+| 📈 维度/指标趋势 | 下拉切换查看各维度/指标的历史走势 |
+| 📊 信号报告 | Rank IC 分析 + 10 档分层回测 + 反向 DCA 策略对比 |
+| ⚡ 极端信号标签 | ≥85（红）或 ≤15（绿）的指标名标注 |
+
+### 数据更新
+
+与每日 FGI 计算在同一个 GitHub Actions workflow 中顺序执行——计算完成后自动导出 JSON → 提交 → Pages 部署。用户无感知，每日 19:00 后几分钟内页面自动刷新。
+
+### 本地预览
+
+```bash
+# 1. 生成 JSON 数据
+python scripts/export_fgi_web_data.py --full
+
+# 2. 启动本地 HTTP 服务器
+cd docs && python -m http.server 8000
+
+# 3. 浏览器打开 http://localhost:8000
+```
+
+### 导出脚本
+
+```bash
+python scripts/export_fgi_web_data.py                  # 最新日期
+python scripts/export_fgi_web_data.py --date 2026-07-24  # 指定日期
+python scripts/export_fgi_web_data.py --full              # 全量所有文件
+```
+
+输出文件：
+
+| 文件 | 内容 | 大小 |
+|------|------|------|
+| `fgi_all_dates.json` | 2575 个交易日全量预计算数据，日期切换秒级响应 | ~5MB |
+| `fgi_latest.json` | 当日最新数据（仪表盘/决策矩阵/锚点/极端信号） | ~2KB |
+| `fgi_history.json` | 全量历史 FGI + 上证综指收盘价 | ~320KB |
+| `fgi_signal_report.json` | 信号报告（区间统计/Rank IC/分层回测/DCA） | ~30KB |
+| `fgi_indicators_history.json` | 12 指标 + 收盘价全量时间序列 | ~1.9MB |
+| `fgi_anchors_history.json` | 每日锚点预计算 | ~160KB |
 
 ## 测试
 
