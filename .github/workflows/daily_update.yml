@@ -2,6 +2,9 @@ name: FGI Daily Update
 
 on:
   schedule:
+    # 工作日 10:30 和 11:00 UTC（18:30 / 19:00 北京）各触发一次
+    # 双 cron 冗余：一次错过另一次也能兜底
+    - cron: '30 10 * * 1-5'
     - cron: '0 11 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -14,21 +17,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write   # 用于创建失败通知 Issue
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Get target date
         id: date
         run: |
@@ -37,14 +41,31 @@ jobs:
           else
             echo "target_date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
           fi
-      
+
+      - name: Check if trading day
+        id: check
+        run: |
+          # 简单交易日判断：跳过周末（精确判断由 daily_run 内部完成）
+          DAY=$(date -d "${{ steps.date.outputs.target_date }}" +%u 2>/dev/null || date -j -u -f "%Y-%m-%d" "${{ steps.date.outputs.target_date }}" +%u 2>/dev/null)
+          if [ -z "$DAY" ]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+          elif [ "$DAY" -ge 6 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run FGI daily update
+        id: run_fgi
+        if: steps.check.outputs.skip != 'true'
+        continue-on-error: true
         env:
           FGI_PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           FGI_PUSHPLUS_FRIENDS: ${{ secrets.PUSHPLUS_FRIENDS }}
         run: python -m fgi.output.daily_run --date ${{ steps.date.outputs.target_date }}
-      
+
       - name: Upload results
+        if: always() && steps.check.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: fgi-results-${{ steps.date.outputs.target_date }}
@@ -54,7 +75,7 @@ jobs:
           retention-days: 7
 
       - name: Commit updated DB back to repo
-        if: github.event_name == 'schedule'
+        if: steps.check.outputs.skip != 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -67,12 +88,13 @@ jobs:
           fi
 
       - name: Export web data
+        if: steps.check.outputs.skip != 'true'
         env:
           PYTHONPATH: .
         run: python scripts/export_fgi_web_data.py --full
 
       - name: Commit web data
-        if: github.event_name == 'schedule'
+        if: steps.check.outputs.skip != 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -83,3 +105,28 @@ jobs:
             git commit -m "chore(web): update frontend data for ${{ steps.date.outputs.target_date }} [skip ci]"
             git push
           fi
+
+      - name: Check if daily_run actually succeeded
+        id: check_result
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          if [ "${{ steps.run_fgi.outcome }}" != "success" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "failed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue on failure
+        if: steps.check_result.outputs.failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = '${{ steps.date.outputs.target_date }}';
+            const runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ FGI 每日更新失败 · ${date}`,
+              body: `## FGI 每日更新失败\n\n- **日期**: ${date}\n- **运行**: [查看日志](${runUrl})\n- **时间**: ${new Date().toISOString()}\n\n请手动检查并重新运行：\n1. 去 [Actions](${runUrl}) 查看错误日志\n2. 修复问题后，手动触发 workflow_dispatch 重跑`,
+              labels: ['bug', 'automation'],
+            });
