@@ -59,7 +59,7 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run FGI daily update
+      - name: Run FGI daily update (first pass, no push)
         id: run_fgi
         if: steps.check.outputs.skip != 'true'
         continue-on-error: true
@@ -67,7 +67,7 @@ jobs:
           FGI_PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           FGI_PUSHPLUS_FRIENDS: ${{ secrets.PUSHPLUS_FRIENDS }}
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
-        run: python -m fgi.output.daily_run --date "$TARGET_DATE"
+        run: python -m fgi.output.daily_run --date "$TARGET_DATE" --first-pass
 
       - name: Backfill late data (replaces forward-filled with real values)
         id: backfill
@@ -76,7 +76,8 @@ jobs:
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: python scripts/backfill_late_data.py --days 5
 
-      - name: Re-run FGI for today with corrected historical data
+      - name: Re-run FGI for today with corrected data (with push)
+        id: run_fgi_final
         id: run_fgi_final
         if: steps.check.outputs.skip != 'true'
         continue-on-error: true
