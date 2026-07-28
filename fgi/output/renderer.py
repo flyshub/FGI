@@ -269,7 +269,7 @@ def build_fgi_markdown(
     for dim in DIMENSION_INDICATORS:
         bg = f' style="background:{_DIM_COLORS[dim]}"'
         dim_label = DIMENSION_NAMES[dim]
-        for i, name in enumerate(ilist := DIMENSION_INDICATORS[dim]):
+        for i, name in enumerate(DIMENSION_INDICATORS[dim]):
             r = indicator_results.get(name, {})
             score = extract_indicator_score(r, name)
             s_str = f"{score:.0f}" if score is not None else '<span style="color:#999">—</span>'
