@@ -78,7 +78,6 @@ jobs:
 
       - name: Re-run FGI for today with corrected data (with push)
         id: run_fgi_final
-        id: run_fgi_final
         if: steps.check.outputs.skip != 'true'
         continue-on-error: true
         env:
