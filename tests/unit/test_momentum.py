@@ -110,7 +110,9 @@ class TestM1Calculator:
         fetched = {"called": False}
         def mock_fetch(start_date, end_date):
             fetched["called"] = True
-            if start_date == "2023-12-28":
+            # M1 now calls fetch_data(recent_start, date) with recent_start ~30 days prior
+            # Accept any start_date that includes the target date
+            if end_date == "2023-12-28":
                 df = pd.DataFrame({
                     "date": ["2023-12-28"],
                     "limit_up_count": [30],
