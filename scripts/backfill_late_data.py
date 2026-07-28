@@ -18,15 +18,13 @@ import argparse
 import logging
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-
-import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fgi.calculator.fgi import FGICalculator
-from fgi.collector.trading_calendar import TradingCalendar, resolve_trading_days
+from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.config.settings import DB_PATH
 from fgi.output.daily_run import setup_data_manager
 from fgi.output.status import record_indicator_status
@@ -40,7 +38,6 @@ LATE_INDICATORS = {"s3", "f1", "m1", "m4"}  # m4 may also have delays
 
 def _setup_manager():
     """Set up data sources (same as daily_run)."""
-    from fgi.output.daily_run import setup_data_manager
     return setup_data_manager()
 
 
@@ -80,7 +77,6 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     data_manager = _setup_manager()
-    calendar = TradingCalendar()
     trading_days = resolve_trading_days("2000-01-01", "2099-12-31")
     today = datetime.now().strftime("%Y-%m-%d")
 
