@@ -53,6 +53,8 @@ header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px; }
 .quality-badge.ok { background: #2e7d32; color: #fff; }
 .quality-badge.warn { background: #e65100; color: #fff; }
 .quality-badge.bad { background: #c62828; color: #fff; }
+.header-learn { font-size: 0.85rem; margin-left: auto; }
+.header-learn a { color: #fff; text-decoration: underline; }
 
 /* 3. Section cards */
 .section { margin-bottom: 16px; }
