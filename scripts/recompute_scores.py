@@ -30,82 +30,80 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
     if include_today:
         # 显式覆盖 end（无论是否传入）
         end = datetime.now().strftime("%Y-%m-%d")
-
     # 强制 offline 模式，杜绝 calculator 内部 fetch 触发网络
     os.environ["FGI_OFFLINE"] = "1"
 
-    db = Database()
-    db.connect()
-    db.init_schema()
+    with Database() as db:
+        db.init_schema()
 
-    print(f"=== Recompute FGI scores: {start} -> {end} ===", flush=True)
-    if resume:
-        # resume 模式：跳过已完成的日期（FGI_final 非空），不清理数据
-        scores_all = db.get_scores("1900-01-01", "2999-12-31")
-        done = set(scores_all.loc[scores_all["FGI_final"].notna(), "date"].tolist())
-        all_dates = resolve_trading_days(start, end, db=db)
-        dates = [d for d in all_dates if d not in done]
-        done_n = len(done)
-        total = len(all_dates)
-        print(f"RESUME mode: done={done_n}/{total}, remaining={len(dates)}", flush=True)
-    else:
-        print("Clearing scores_daily and daily_status...", flush=True)
-        db.clear_table("scores_daily")
-        db.clear_table("daily_status")
+        print(f"=== Recompute FGI scores: {start} -> {end} ===", flush=True)
+        if resume:
+            # resume 模式：跳过已完成的日期（FGI_final 非空），不清理数据
+            scores_all = db.get_scores("1900-01-01", "2999-12-31")
+            done = set(scores_all.loc[scores_all["FGI_final"].notna(), "date"].tolist())
+            all_dates = resolve_trading_days(start, end, db=db)
+            dates = [d for d in all_dates if d not in done]
+            done_n = len(done)
+            total = len(all_dates)
+            print(f"RESUME mode: done={done_n}/{total}, remaining={len(dates)}", flush=True)
+        else:
+            print("Clearing scores_daily and daily_status...", flush=True)
+            db.clear_table("scores_daily")
+            db.clear_table("daily_status")
+            db.commit()
+            dates = resolve_trading_days(start, end, db=db)
+        print(f"Trading days to process: {len(dates)}", flush=True)
+
+        dm = setup_data_manager()
+        dm.set_db(db)  # 注入 DB 用于 offline 模式从 raw_data 重构 DataFrame
+        calc = FGICalculator(dm, db)
+
+        ok = miss = err = 0
+        t0 = time.time()
+        for i, d in enumerate(dates):
+            try:
+                r = calc.run(d)
+                record_indicator_status(db, d, r.get("indicator_results", {}))
+                fgi = r.get("fgi_final")
+                if isinstance(fgi, (int, float)):
+                    ok += 1
+                else:
+                    miss += 1
+            except Exception as e:
+                err += 1
+                if err <= 5:
+                    print(f"  ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
+
+            if (i + 1) % 300 == 0:
+                print(f"  [{i+1}/{len(dates)}] ok={ok} miss={miss} err={err} ({time.time()-t0:.0f}s)", flush=True)
+
         db.commit()
-        dates = resolve_trading_days(start, end, db=db)
-    print(f"Trading days to process: {len(dates)}", flush=True)
+        n = db.count_rows("scores_daily")
+        nonnull = db.count_scores_with_data()
+        status_n = db.count_rows("daily_status")
+        print(f"DONE ok={ok} miss={miss} err={err} in {time.time()-t0:.0f}s", flush=True)
+        print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
+        print(f"daily_status: {status_n} rows", flush=True)
 
-    dm = setup_data_manager()
-    dm.set_db(db)  # 注入 DB 用于 offline 模式从 raw_data 重构 DataFrame
-    calc = FGICalculator(dm, db)
-
-    ok = miss = err = 0
-    t0 = time.time()
-    for i, d in enumerate(dates):
-        try:
-            r = calc.run(d)
-            record_indicator_status(db, d, r.get("indicator_results", {}))
-            fgi = r.get("fgi_final")
-            if isinstance(fgi, (int, float)):
-                ok += 1
-            else:
-                miss += 1
-        except Exception as e:
-            err += 1
-            if err <= 5:
-                print(f"  ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
-        if (i + 1) % 300 == 0:
-            print(f"  [{i+1}/{len(dates)}] ok={ok} miss={miss} err={err} ({time.time()-t0:.0f}s)", flush=True)
-
-    db.commit()
-    n = db.count_rows("scores_daily")
-    nonnull = db.count_scores_with_data()
-    status_n = db.count_rows("daily_status")
-    print(f"DONE ok={ok} miss={miss} err={err} in {time.time()-t0:.0f}s", flush=True)
-    print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
-    print(f"daily_status: {status_n} rows", flush=True)
-
-    # Phase 2.5: 二次扫描重算 health_score（依赖完整的 scores_daily 历史）
-    print("=== Recompute health_score (phase 2.5) ===", flush=True)
-    t1 = time.time()
-    updated = health_err = 0
-    for d in dates:
-        try:
-            rows = db.get_indicator_status(d)
-            if not rows:
-                continue
-            status_df = pd.DataFrame(rows, columns=["indicator", "status"])
-            health = calculate_health_score(status_df)
-            db.update_score_field(d, "health_score", health)
-            updated += 1
-        except Exception as e:
-            health_err += 1
-            if health_err <= 5:
-                print(f"  HEALTH ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
-    db.commit()
-    print(f"Health updated: {updated} rows, errors: {health_err} in {time.time()-t1:.0f}s", flush=True)
-    db.close()
+        # Phase 2.5: 二次扫描重算 health_score（依赖完整的 scores_daily 历史）
+        print("=== Recompute health_score (phase 2.5) ===", flush=True)
+        t1 = time.time()
+        updated = health_err = 0
+        for d in dates:
+            try:
+                rows = db.get_indicator_status(d)
+                if not rows:
+                    continue
+                status_df = pd.DataFrame(rows, columns=["indicator", "status"])
+                health = calculate_health_score(status_df)
+                db.update_score_field(d, "health_score", health)
+                updated += 1
+            except Exception as e:
+                health_err += 1
+                if health_err <= 5:
+                    print(f"  HEALTH ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
+        db.commit()
+        print(f"Health updated: {updated} rows, errors: {health_err} in {time.time()-t1:.0f}s", flush=True)
 
 
 if __name__ == "__main__":

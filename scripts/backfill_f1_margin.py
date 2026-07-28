@@ -27,30 +27,27 @@ def main():
     df = df.dropna(subset=["margin_balance"]).sort_values("date").reset_index(drop=True)
     print(f"Got {len(df)} rows, range {df['date'].iloc[0]} ~ {df['date'].iloc[-1]}", flush=True)
 
-    db = Database(DB_PATH)
-    db.connect()
-    # 删除旧 SSE 历史值
-    n_old = db.count_rows("raw_data", "indicator='f1_margin_balance'")
-    deleted = db.delete_raw_data("f1_margin_balance")
-    print(f"Deleted {n_old} old SSE f1_margin_balance rows (rowcount={deleted})", flush=True)
+    with Database(DB_PATH) as db:
+        # 删除旧 SSE 历史值
+        n_old = db.count_raw_data_by_indicator("f1_margin_balance")
+        deleted = db.delete_raw_data("f1_margin_balance")
+        print(f"Deleted {n_old} old SSE f1_margin_balance rows (rowcount={deleted})", flush=True)
 
-    # 写入东财新值
-    for inserted, (_, row) in enumerate(df.iterrows(), 1):
-        db.upsert_raw_data(row["date"], "f1_margin_balance", float(row["margin_balance"]))
-        if inserted % 500 == 0:
-            db.commit()
-            print(f"  {inserted}/{len(df)}", flush=True)
-    db.commit()
+        # 写入东财新值
+        for inserted, (_, row) in enumerate(df.iterrows(), 1):
+            db.upsert_raw_data(row["date"], "f1_margin_balance", float(row["margin_balance"]))
+            if inserted % 500 == 0:
+                print(f"  {inserted}/{len(df)}", flush=True)
 
-    # 验证
-    n_new = db.count_rows("raw_data", "indicator='f1_margin_balance'")
-    stats = db.get_raw_value_stats("f1_margin_balance")
+        # 验证
+        n_new = db.count_raw_data_by_indicator("f1_margin_balance")
+        stats = db.get_raw_value_stats("f1_margin_balance")
+
     if stats:
         min_v, max_v, avg_v = stats
         print(f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}", flush=True)
     else:
         print(f"\nDONE: {n_new} rows, no stats available", flush=True)
-    db.close()
 
 
 if __name__ == "__main__":

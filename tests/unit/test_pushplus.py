@@ -1,5 +1,18 @@
 """Tests for PushPlus markdown rendering, especially health_score<60 warning and FGI_LEVELS."""
-from fgi.output.renderer import FGI_LEVELS, fgi_header, fgi_level
+from fgi.output.renderer import FGI_LEVELS, fgi_header, fgi_level, score_bar
+
+
+class TestScoreBar:
+    def test_score_bar_normal(self):
+        assert score_bar(0.0) == "░░░░░░░░"
+        assert score_bar(100.0) == "████████"
+        assert score_bar(50.0) == "████░░░░"
+
+    def test_score_bar_clamps_out_of_range(self):
+        """分数越界应被截断到 [0,100]，避免填充条宽度溢出。"""
+        assert score_bar(-10.0) == score_bar(0.0)
+        assert score_bar(150.0) == score_bar(100.0)
+        assert len(score_bar(999.0)) == 8
 
 
 class TestFgiLevels:

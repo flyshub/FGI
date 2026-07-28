@@ -61,6 +61,25 @@ class TestV1Calculator:
         assert "earnings_yield" in result.columns
         assert result["erp"].iloc[0] == pytest.approx(1.0 / 12.0 - 0.028, abs=0.01)
 
+    def test_calculate_erp_handles_zero_and_negative_pe(self, v1_calculator):
+        pe_df = pd.DataFrame({
+            "date": pd.date_range("2024-01-01", periods=5).strftime("%Y-%m-%d"),
+            "滚动市盈率": [12.0, 0.0, -5.0, np.nan, 15.0],
+        })
+        bond_df = pd.DataFrame({
+            "date": pd.date_range("2024-01-01", periods=5).strftime("%Y-%m-%d"),
+            "yield_10y": [2.80] * 5,
+        })
+        result = v1_calculator.calculate_erp(pe_df, bond_df)
+        assert "earnings_yield" in result.columns
+        assert "erp" in result.columns
+        # 0/负/NaN PE 不应产生 inf/-inf，而应变为 NaN
+        assert np.isfinite(result["earnings_yield"].iloc[0])
+        assert pd.isna(result["earnings_yield"].iloc[1])
+        assert pd.isna(result["earnings_yield"].iloc[2])
+        assert pd.isna(result["earnings_yield"].iloc[3])
+        assert np.isfinite(result["earnings_yield"].iloc[4])
+
     def test_calculate_score_reverse(self, v1_calculator):
         assert v1_calculator.calculate_score(0.5) == 50.0
         assert v1_calculator.calculate_score(0.0) == 100.0

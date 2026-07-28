@@ -45,24 +45,22 @@ def main():
         flush=True,
     )
 
-    db = Database(DB_PATH)
-    db.connect()
+    with Database(DB_PATH) as db:
+        n_old = db.count_raw_data_by_indicator("f3_industry_net_flow")
+        print(
+            f"Pre-state: {n_old} polluted rows (bug evidence: only 2 distinct values pre-fix)",
+            flush=True,
+        )
 
-    n_old = db.count_rows("raw_data", "indicator='f3_industry_net_flow'")
-    print(
-        f"Pre-state: {n_old} polluted rows (bug evidence: only 2 distinct values pre-fix)",
-        flush=True,
-    )
+        deleted = db.delete_raw_data("f3_industry_net_flow")
+        print(f"Deleted {n_old} polluted rows (rowcount={deleted})", flush=True)
 
-    deleted = db.delete_raw_data("f3_industry_net_flow")
-    print(f"Deleted {n_old} polluted rows (rowcount={deleted})", flush=True)
+        for _, row in df.iterrows():
+            db.upsert_raw_data(row["date"], "f3_industry_net_flow", float(row["net_flow"]))
 
-    for _, row in df.iterrows():
-        db.upsert_raw_data(row["date"], "f3_industry_net_flow", float(row["net_flow"]))
-    db.commit()
+        n_new = db.count_raw_data_by_indicator("f3_industry_net_flow")
+        stats = db.get_raw_value_stats("f3_industry_net_flow")
 
-    n_new = db.count_rows("raw_data", "indicator='f3_industry_net_flow'")
-    stats = db.get_raw_value_stats("f3_industry_net_flow")
     if stats:
         min_v, max_v, avg_v = stats
         print(
@@ -72,7 +70,6 @@ def main():
         )
     else:
         print(f"\nDONE: {n_new} rows", flush=True)
-    db.close()
 
 
 if __name__ == "__main__":

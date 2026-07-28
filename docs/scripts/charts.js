@@ -2,10 +2,20 @@
 // FGI Web Frontend — ECharts Configurations
 // =============================================
 
+// 工具：如果已存在实例，先 dispose 释放内存
+function _disposeIfExists(id) {
+  const existing = getChart(id);
+  if (existing) {
+    existing.dispose();
+    unregisterChart(id);
+  }
+}
+
 // ── FGI + 上证综指 History Chart (initialized once) ──
 function initHistoryChart(history) {
   const dom = document.getElementById('history-chart');
-  if (!dom || getChart('history')) return;
+  if (!dom) return;
+  _disposeIfExists('history');
   const chart = echarts.init(dom);
   registerChart('history', chart);
 
@@ -149,11 +159,9 @@ function _updateHistoryMarkLine(dateStr) {
 function initRadarChart(dimensions) {
   const dom = document.getElementById('radar-chart');
   if (!dom) return;
-  let chart = getChart('radar');
-  if (!chart) {
-    chart = echarts.init(dom);
-    registerChart('radar', chart);
-  }
+  _disposeIfExists('radar');
+  const chart = echarts.init(dom);
+  registerChart('radar', chart);
 
   const indicatorNames = { momentum: '动量', sentiment: '情绪', valuation: '估值', volatility: '波动率', funding: '资金' };
   const indicator = Object.values(indicatorNames).map(n => ({ name: n, max: 100 }));
@@ -173,11 +181,9 @@ function initRadarChart(dimensions) {
 function initIndicatorChart(scores, statuses, extremeSignals) {
   const dom = document.getElementById('indicator-chart');
   if (!dom) return;
-  let chart = getChart('indicator');
-  if (!chart) {
-    chart = echarts.init(dom);
-    registerChart('indicator', chart);
-  }
+  _disposeIfExists('indicator');
+  const chart = echarts.init(dom);
+  registerChart('indicator', chart);
 
   const names = { M1: '涨停板数', M2: '散户意愿', M3: '偏离60日线', M4: '创业板活跃', S2: '股吧热度', S3: '封单量', V1: '风险溢价', V2: 'ΔERP Z', V4: '期权波动', F1: '融资余额', F2: '基金仓位', F3: '主力偏好' };
   const indOrder = ['M1','M2','M3','M4','S2','S3','V1','V2','V4','F1','F2','F3'];
@@ -241,11 +247,9 @@ function initIndicatorChart(scores, statuses, extremeSignals) {
 function initDistributionChart(history, currentFgi, dateStr) {
   const dom = document.getElementById('distribution-chart');
   if (!dom) return;
-  let chart = getChart('distribution');
-  if (!chart) {
-    chart = echarts.init(dom);
-    registerChart('distribution', chart);
-  }
+  _disposeIfExists('distribution');
+  const chart = echarts.init(dom);
+  registerChart('distribution', chart);
 
   const bucketSize = 5;
   const buckets = Array(20).fill(0);
@@ -285,7 +289,8 @@ function initDistributionChart(history, currentFgi, dateStr) {
 // ── Trend Explorer (initialized once) ──
 function initTrendChart(indicatorsHistory) {
   const dom = document.getElementById('trend-chart');
-  if (!dom || getChart('trend')) return;
+  if (!dom) return;
+  _disposeIfExists('trend');
   const chart = echarts.init(dom);
   registerChart('trend', chart);
 

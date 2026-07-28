@@ -2,6 +2,20 @@
 // FGI Web Frontend — DOM Components
 // =============================================
 
+// HTML 转义，防止后端数据污染前端 DOM
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 前瞻窗口（与 backend signal_report.py 保持一致）
+const HORIZON_DAYS = [5, 20, 60];
+
 // ── Date picker setup ──
 function setupDatePicker(defaultDate) {
   const picker = document.getElementById('date-picker');
@@ -26,6 +40,7 @@ function setupDatePicker(defaultDate) {
 
 // ── Dashboard ──
 function renderDashboard(data) {
+  if (!data) return;
   const fgi = data.fgi_final;
   const zone = getZone(fgi);
 
@@ -80,20 +95,20 @@ function renderDecisionMatrix(data) {
   html += cols.map(v => `<div class="matrix-cell matrix-header">${v}</div>`).join('');
 
   rows.forEach(s => {
-    html += `<div class="matrix-cell matrix-row-header">${s}</div>`;
+    html += `<div class="matrix-cell matrix-row-header">${escapeHtml(s)}</div>`;
     cols.forEach(v => {
       const key = `${s}_${v}`;
       const label = QUADRANT_LABELS[key] || '?';
       const hl = s === curSent && v === curVal;
-      html += `<div class="matrix-cell${hl ? ' highlight' : ''}">${label}</div>`;
+      html += `<div class="matrix-cell${hl ? ' highlight' : ''}">${escapeHtml(label)}</div>`;
     });
   });
   container.innerHTML = html;
 
   const info = document.getElementById('matrix-info');
   info.innerHTML = `
-    <p>象限：<strong>${dm.quadrant}</strong>（${dm.sentiment_tier} · ${dm.valuation_tier}）</p>
-    <p style="color:#888;font-size:0.85rem">${dm.advice}</p>
+    <p>象限：<strong>${escapeHtml(dm.quadrant)}</strong>（${escapeHtml(dm.sentiment_tier)} · ${escapeHtml(dm.valuation_tier)}）</p>
+    <p style="color:#888;font-size:0.85rem">${escapeHtml(dm.advice)}</p>
   `;
 }
 
@@ -109,7 +124,7 @@ function renderSignalRef(data) {
 
   el.innerHTML = `
     <p style="margin-bottom:8px;font-size:0.9rem">
-      FGI <strong>${zc.zone}</strong> 区间，历史上 <strong>${zc.n}</strong> 次（${zc.pct}%）
+      FGI <strong>${escapeHtml(zc.zone)}</strong> 区间，历史上 <strong>${escapeHtml(zc.n)}</strong> 次（${escapeHtml(zc.pct)}%）
     </p>
     ${_signalTable(zc.horizons)}
   `;
@@ -117,13 +132,13 @@ function renderSignalRef(data) {
 
 function _signalTable(horizons) {
   if (!horizons || !Object.keys(horizons).length) return '';
-  const rows = [5, 20, 60]
+  const rows = HORIZON_DAYS
     .map(h => {
       const d = horizons[String(h)];
       if (!d) return '';
       const meanStr = d.mean != null ? `${(d.mean * 100).toFixed(2)}%` : '--';
       const wrStr = d.win_rate != null ? `${(d.win_rate * 100).toFixed(0)}%` : '--';
-      return `<tr><td>${h} 日</td><td>${meanStr}</td><td>${wrStr}</td></tr>`;
+      return `<tr><td>${escapeHtml(h)} 日</td><td>${meanStr}</td><td>${wrStr}</td></tr>`;
     })
     .join('');
 
@@ -146,10 +161,11 @@ function renderAnchor(data) {
   }
 
   let html = `<div class="anchor-card">`;
-  html += `<p>📎 上次同向接近此水平（${anchor.closest_fgi}）是 <strong>${anchor.closest_date}</strong>`;
+  html += `<p>📎 上次同向接近此水平（${escapeHtml(anchor.closest_fgi)}）是 <strong>${escapeHtml(anchor.closest_date)}</strong>`;
   if (anchor.forward_20d_return != null) {
     const arrow = anchor.forward_20d_return > 0 ? '📈' : '📉';
-    html += `，之后 20 日 ${arrow} <strong>${anchor.forward_20d_return > 0 ? '+' : ''}${anchor.forward_20d_return}%</strong>`;
+    const sign = anchor.forward_20d_return > 0 ? '+' : '';
+    html += `，之后 20 日 ${arrow} <strong>${sign}${escapeHtml(anchor.forward_20d_return)}%</strong>`;
   }
   html += `</p>`;
 
@@ -163,12 +179,14 @@ function renderAnchor(data) {
       <tbody>`;
     dt.forEach(r => {
       const isClosest = r.date === anchor.closest_date;
+      const arrow = r.forward_20 > 0 ? '📈' : '📉';
+      const sign = r.forward_20 > 0 ? '+' : '';
       html += `<tr${isClosest ? ' style="font-weight:700;background:#fff3e0"' : ''}>
-        <td>${r.date}</td><td>${r.fgi}</td>
-        <td>${r.forward_20 > 0 ? '📈' : '📉'} ${r.forward_20 > 0 ? '+' : ''}${r.forward_20}%</td>
+        <td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.fgi)}</td>
+        <td>${arrow} ${sign}${escapeHtml(r.forward_20)}%</td>
       </tr>`;
     });
-    html += `<tr style="background:#ececec"><td colspan="2"><strong>区间</strong></td><td><strong>${min > 0 ? '+' : ''}${min}% ~ ${max > 0 ? '+' : ''}${max}%</strong></td></tr>`;
+    html += `<tr style="background:#ececec"><td colspan="2"><strong>区间</strong></td><td><strong>${min > 0 ? '+' : ''}${escapeHtml(min)}% ~ ${max > 0 ? '+' : ''}${escapeHtml(max)}%</strong></td></tr>`;
     html += `</tbody></table>`;
     html += `<p class="footnote" style="margin-top:4px">最近似日期以加粗标注</p></div>`;
   }
@@ -187,12 +205,12 @@ function renderExtremeSignals(data) {
   let html = '';
   if (ext.high.length) {
     html += ext.high.map(([, label, score]) =>
-      `<span class="extreme-tag high">🔴 ${label} ${score}</span>`
+      `<span class="extreme-tag high">🔴 ${escapeHtml(label)} ${escapeHtml(score)}</span>`
     ).join(' ');
   }
   if (ext.low.length) {
     html += ext.low.map(([, label, score]) =>
-      `<span class="extreme-tag low">🟢 ${label} ${score}</span>`
+      `<span class="extreme-tag low">🟢 ${escapeHtml(label)} ${escapeHtml(score)}</span>`
     ).join(' ');
   }
   el.innerHTML = html;
@@ -227,7 +245,7 @@ function renderSignalReport(sr) {
       <table class="signal-table">
         <thead><tr><th>日期</th><th>IC</th><th>IR</th><th>胜率</th></tr></thead>
         <tbody>${d.rolling.slice(-5).map(r => `
-          <tr><td>${r.date}</td><td>${r.ic.toFixed(4)}</td><td>${r.ir != null ? r.ir.toFixed(3) : '—'}</td><td>${(r.win_rate * 100).toFixed(0)}%</td></tr>`).join('')}
+          <tr><td>${escapeHtml(r.date)}</td><td>${r.ic.toFixed(4)}</td><td>${r.ir != null ? r.ir.toFixed(3) : '—'}</td><td>${(r.win_rate * 100).toFixed(0)}%</td></tr>`).join('')}
         </tbody>
       </table>` : ''}
     `;
@@ -238,14 +256,14 @@ function renderSignalReport(sr) {
   if (layers && layers.full) {
     let html = '<p style="margin-top:12px"><strong>10档分层回测</strong>（FGI分档 × 前瞻收益）</p>';
     html += '<p style="margin:6px 0;font-size:0.85rem;color:#666;border-left:3px solid #e0e0e0;padding-left:8px">💡 大白话：把历史上所有交易日按 FGI 分数从低到高排成 10 档，第 1 档最恐慌，第 10 档最贪婪。理想情况下应该是「第 1 档涨最多、第 10 档跌最多」——像下楼梯一样严格递减。如果中段收益交叉，说明 FGI 在中间区域的区分度不够精细。</p>';
-    [5, 20, 60].forEach(h => {
+    HORIZON_DAYS.forEach(h => {
       const data = layers.full[String(h)];
       if (!data || !data.length) return;
       html += `<table class="signal-table" style="margin-top:6px">
-        <caption style="caption-side:top;font-size:0.85rem;text-align:left;padding:4px 0">${h}日前瞻</caption>
+        <caption style="caption-side:top;font-size:0.85rem;text-align:left;padding:4px 0">${escapeHtml(h)}日前瞻</caption>
         <thead><tr><th>分档</th><th>N</th><th>平均收益</th><th>胜率</th></tr></thead>
         <tbody>${data.map(d => `
-          <tr><td>${d.layer}</td><td>${d.n}</td><td>${(d.mean_return * 100).toFixed(2)}%</td><td>${(d.win_rate * 100).toFixed(0)}%</td></tr>`).join('')}
+          <tr><td>${escapeHtml(d.layer)}</td><td>${escapeHtml(d.n)}</td><td>${(d.mean_return * 100).toFixed(2)}%</td><td>${(d.win_rate * 100).toFixed(0)}%</td></tr>`).join('')}
         </tbody>
       </table>`;
     });
@@ -257,7 +275,7 @@ function renderSignalReport(sr) {
   if (dca && !dca.error) {
     const _pct = v => `${(v * 100).toFixed(2)}%`;
     document.getElementById('signal-report-dca').innerHTML = `
-      <p style="margin-top:12px"><strong>逆情绪 DCA vs 等额定投</strong>（${dca.n_months}个月）</p>
+      <p style="margin-top:12px"><strong>逆情绪 DCA vs 等额定投</strong>（${escapeHtml(dca.n_months)}个月）</p>
       <p style="margin:6px 0;font-size:0.85rem;color:#666;border-left:3px solid #e0e0e0;padding-left:8px">💡 大白话：模拟两种每月定投策略。等额定投：每月固定投入 1 万元。逆情绪 DCA：市场越恐慌（FGI 低）投入越多（最多 2 万），越贪婪（FGI 高）投入越少。核心逻辑是「别人恐惧我加仓，别人贪婪我减仓」。对比两者的收益和风险，看 FGI 择时定投是否有价值。</p>
       <table class="signal-table">
         <thead><tr><th>策略</th><th>总收益</th><th>年化收益</th><th>最大回撤</th><th>夏普</th></tr></thead>
