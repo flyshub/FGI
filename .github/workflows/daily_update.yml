@@ -134,13 +134,14 @@ jobs:
             git push
           fi
 
-      - name: Check if daily_run actually succeeded
+      - name: Check if all daily_run steps actually succeeded
         id: check_result
         if: steps.check.outputs.skip != 'true'
         env:
-          RUN_OUTCOME: ${{ steps.run_fgi.outcome }}
+          RUN_FGI_OUTCOME: ${{ steps.run_fgi.outcome }}
+          RUN_FINAL_OUTCOME: ${{ steps.run_fgi_final.outcome }}
         run: |
-          if [ "$RUN_OUTCOME" != "success" ]; then
+          if [ "$RUN_FGI_OUTCOME" != "success" ] || [ "$RUN_FINAL_OUTCOME" != "success" ]; then
             echo "failed=true" >> $GITHUB_OUTPUT
           else
             echo "failed=false" >> $GITHUB_OUTPUT
