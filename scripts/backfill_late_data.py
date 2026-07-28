@@ -10,7 +10,6 @@ Strategy:
 Usage:
     python scripts/backfill_late_data.py              # default: look back 3 trading days
     python scripts/backfill_late_data.py --days 5      # look back 5 trading days
-    python scripts/backfill_late_data.py --days 5       # look back 5 trading days
 """
 from __future__ import annotations
 
@@ -55,7 +54,7 @@ def _find_forward_filled_dates(db: Database, lookback_days: int,
     if not recent:
         return {}
     start = recent[0] if len(recent) <= lookback_days else recent[-lookback_days]
-    rows = db.get_degraded_dates(start, trading_days[-1])
+    rows = db.get_degraded_dates(start, today)
 
     result: dict[str, set[str]] = {}
     for row in rows:
