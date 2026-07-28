@@ -124,35 +124,40 @@ function initHistoryChart(history) {
   chart.setOption(option);
 }
 
-// ── Update mark line on history chart ──
+// ── Update mark line on history chart (debounced) ──
+let _markLineTimer = null;
 function _updateHistoryMarkLine(dateStr) {
-  const chart = getChart('history');
-  if (!chart) return;
-  const idx = state.history.findIndex(d => d.date === dateStr);
-  if (idx < 0) return;
+  if (_markLineTimer) clearTimeout(_markLineTimer);
+  _markLineTimer = setTimeout(() => {
+    _markLineTimer = null;
+    const chart = getChart('history');
+    if (!chart) return;
+    const idx = state.history.findIndex(d => d.date === dateStr);
+    if (idx < 0) return;
 
-  chart.setOption({
-    series: [
-      { id: 'fgi',
-        markLine: {
-          silent: true,
-          symbol: 'none',
-          animation: false,
-          data: [{
-            xAxis: idx,
-            label: {
-              formatter: `⬅ ${dateStr}`,
-              position: 'start',
-              color: '#ff9800',
-              fontSize: 11,
-              fontWeight: 'bold',
-            },
-            lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
-          }],
+    chart.setOption({
+      series: [
+        { id: 'fgi',
+          markLine: {
+            silent: true,
+            symbol: 'none',
+            animation: false,
+            data: [{
+              xAxis: idx,
+              label: {
+                formatter: `⬅ ${dateStr}`,
+                position: 'start',
+                color: '#ff9800',
+                fontSize: 11,
+                fontWeight: 'bold',
+              },
+              lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
+            }],
+          },
         },
-      },
-    ],
-  }, { lazyUpdate: true });  // ← lazyUpdate avoids synchronous re-render
+      ],
+    }, { lazyUpdate: true });
+  }, 100);
 }
 
 // ── Radar (re-renderable) ──
@@ -374,16 +379,18 @@ function initTrendChart(indicatorsHistory) {
   updateChart();
 }
 
-// ── Click handler on history chart to switch date ──
+// ── Click handler on history chart to switch date (debounced) ──
 function enableHistoryChartClick() {
   const chart = getChart('history');
   if (!chart) return;
 
+  let _clickTimer = null;
   chart.on('click', params => {
     if (params.componentType === 'series') {
       const dateStr = params.name;
       if (dateStr && state.allDatesIndex[dateStr]) {
-        switchToDate(dateStr);
+        if (_clickTimer) clearTimeout(_clickTimer);
+        _clickTimer = setTimeout(() => switchToDate(dateStr), 150);
       }
     }
   });
