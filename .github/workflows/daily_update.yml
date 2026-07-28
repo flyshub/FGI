@@ -69,12 +69,22 @@ jobs:
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: python -m fgi.output.daily_run --date "$TARGET_DATE"
 
-      - name: Backfill late data
+      - name: Backfill late data (replaces forward-filled with real values)
         id: backfill
         if: steps.check.outputs.skip != 'true'
         env:
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: python scripts/backfill_late_data.py --days 5
+
+      - name: Re-run FGI for today with corrected historical data
+        id: run_fgi_final
+        if: steps.check.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          FGI_PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          FGI_PUSHPLUS_FRIENDS: ${{ secrets.PUSHPLUS_FRIENDS }}
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
+        run: python -m fgi.output.daily_run --date "$TARGET_DATE"
 
       - name: Upload results
         if: always() && steps.check.outputs.skip != 'true'
