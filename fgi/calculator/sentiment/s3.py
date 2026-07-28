@@ -88,7 +88,8 @@ class S3Calculator:
         else:
             today_in_db = False
         if not today_in_db:
-            result = self.fetch_data(date, date)
+            recent_start = (pd.Timestamp(date) - pd.Timedelta(days=30)).strftime("%Y-%m-%d")
+            result = self.fetch_data(recent_start, date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
                 valid = result.data[result.data["seal_fund_sum"].fillna(0).astype(float) > 0]
                 if not valid.empty:
