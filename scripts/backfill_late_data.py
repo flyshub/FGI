@@ -10,7 +10,7 @@ Strategy:
 Usage:
     python scripts/backfill_late_data.py              # default: look back 3 trading days
     python scripts/backfill_late_data.py --days 5      # look back 5 trading days
-    python scripts/backfill_late_data.py --force       # recheck all degraded entries
+    python scripts/backfill_late_data.py --days 5       # look back 5 trading days
 """
 from __future__ import annotations
 
@@ -26,10 +26,9 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fgi.calculator.fgi import FGICalculator
-from fgi.collector.chains import configure_manager
-from fgi.collector.fallback import DataSourceManager
 from fgi.collector.trading_calendar import TradingCalendar, resolve_trading_days
 from fgi.config.settings import DB_PATH
+from fgi.output.daily_run import setup_data_manager
 from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
@@ -39,33 +38,10 @@ logger = logging.getLogger(__name__)
 LATE_INDICATORS = {"s3", "f1", "m1", "m4"}  # m4 may also have delays
 
 
-def _setup_manager() -> DataSourceManager:
+def _setup_manager():
     """Set up data sources (same as daily_run)."""
-    from fgi.collector.akshare_source import AKShareSource
-    from fgi.collector.mootdx_source import MootdxSource
-    from fgi.collector.tencent_source import TencentSource
-    from fgi.collector.zzshare_source import ZZShareSource
-    from fgi.config.settings import AKSHARE_ENABLED, MOOTDX_ENABLED, TENCENT_ENABLED
-
-    manager = DataSourceManager()
-    if AKSHARE_ENABLED:
-        manager.register_source("akshare", AKShareSource())
-    if MOOTDX_ENABLED:
-        manager.register_source("mootdx", MootdxSource())
-    if TENCENT_ENABLED:
-        manager.register_source("tencent", TencentSource())
-    try:
-        import zzshare  # noqa: F401
-        manager.register_source("zzshare", ZZShareSource())
-    except ImportError:
-        pass
-    extra = []
-    if MOOTDX_ENABLED:
-        extra.append("mootdx")
-    if TENCENT_ENABLED:
-        extra.append("tencent")
-    configure_manager(manager, extra_fallbacks=extra or None)
-    return manager
+    from fgi.output.daily_run import setup_data_manager
+    return setup_data_manager()
 
 
 def _find_forward_filled_dates(db: Database, lookback_days: int,
@@ -96,21 +72,9 @@ def _find_forward_filled_dates(db: Database, lookback_days: int,
     return result
 
 
-def _last_real_date(db: Database, indicator: str, before: str) -> str | None:
-    """Find the most recent date before `before` where this indicator had a non-forward-filled score."""
-    row = db._connection.execute(
-        "SELECT date FROM daily_status "
-        "WHERE indicator = ? AND date < ? AND status = 'normal' AND source != 'forward_fill' "
-        "ORDER BY date DESC LIMIT 1",
-        (indicator, before),
-    ).fetchone()
-    return row[0] if row else None
-
-
 def main():
     parser = argparse.ArgumentParser(description="Backfill late-released indicator data")
     parser.add_argument("--days", type=int, default=3, help="Look back N trading days (default 3)")
-    parser.add_argument("--force", action="store_true", help="Recheck all forward-filled entries")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
