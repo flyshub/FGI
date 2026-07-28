@@ -336,6 +336,16 @@ class Database:
             (date,),
         ).fetchall()
 
+    def get_degraded_dates(self, start_date: str, end_date: str) -> list:
+        """返回 (date, indicator, status, source, error) — 指定日期范围内的所有 degraded 记录。"""
+        if self._connection is None:
+            raise RuntimeError("Database not connected")
+        return self._connection.execute(
+            "SELECT date, indicator, status, source, error FROM daily_status "
+            "WHERE date >= ? AND date <= ? AND status = 'degraded' ORDER BY date, indicator",
+            (start_date, end_date),
+        ).fetchall()
+
     def get_latest_raw_date(self, indicator: str, on_or_before: str) -> str | None:
         """返回 <= on_or_before 的最大 raw_data.date（无则 None）。
 
