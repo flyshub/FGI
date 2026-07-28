@@ -40,3 +40,4 @@ data/*.db-wal
 *.db
 *.db-wal
 *.db-shm
+.coverage
