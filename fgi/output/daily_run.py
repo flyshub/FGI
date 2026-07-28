@@ -70,6 +70,7 @@ def setup_data_manager() -> DataSourceManager:
 def main():
     parser = argparse.ArgumentParser(description="Run daily FGI calculation")
     parser.add_argument("--date", type=str, help="Target date (YYYY-MM-DD)")
+    parser.add_argument("--first-pass", action="store_true", help="Silent run: calculate but skip push")
     args = parser.parse_args()
 
     target_date = args.date or datetime.now().strftime("%Y-%m-%d")
@@ -94,15 +95,19 @@ def main():
         print(f"Health Score: {result['health_score']}")
         print(f"Indicator Status: {result['indicator_results']}")
 
-        try:
-            anomaly_detected = Alert(db_path=db.path).check_and_alert(target_date, result)
-        except Exception as e:
-            print(f"Anomaly check skipped: {e}")
-            anomaly_detected = False
+        # 首次运行（--first-pass）只算不推送，用于 workflow 中先干跑再回填后正式推送
+        # 默认（无 --first-pass 或第二次跑）正常推送
+        first_pass = args.first_pass or os.environ.get("FGI_FIRST_PASS") == "1"
+        if not first_pass:
+            try:
+                anomaly_detected = Alert(db_path=db.path).check_and_alert(target_date, result)
+            except Exception as e:
+                print(f"Anomaly check skipped: {e}")
+                anomaly_detected = False
 
-        if anomaly_detected:
-            print("Anomaly detected — suspending daily FGI push, manual review required (spec line 262).")
-        else:
+            if anomaly_detected:
+                print("Anomaly detected — suspending daily FGI push, manual review required (spec line 262).")
+            else:
             dm = compute_decision_matrix(db, target_date, result["fgi_final"])
             dm_dict = dm.to_dict() if dm else None
             ok = send_fgi_report(
