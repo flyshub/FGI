@@ -108,14 +108,14 @@ def main():
             if anomaly_detected:
                 print("Anomaly detected — suspending daily FGI push, manual review required (spec line 262).")
             else:
-            dm = compute_decision_matrix(db, target_date, result["fgi_final"])
-            dm_dict = dm.to_dict() if dm else None
-            ok = send_fgi_report(
-                db, result["fgi_final"], result["dimension_scores"],
-                result["indicator_results"], result["health_score"],
-                date_str=target_date,
-                decision_matrix=dm_dict)
-            print(f"PushPlus: {'OK' if ok else 'skipped'}")
+                dm = compute_decision_matrix(db, target_date, result["fgi_final"])
+                dm_dict = dm.to_dict() if dm else None
+                ok = send_fgi_report(
+                    db, result["fgi_final"], result["dimension_scores"],
+                    result["indicator_results"], result["health_score"],
+                    date_str=target_date,
+                    decision_matrix=dm_dict)
+                print(f"PushPlus: {'OK' if ok else 'skipped'}")
 
 
 if __name__ == "__main__":
