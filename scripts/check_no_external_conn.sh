@@ -13,6 +13,7 @@ HITS=$(grep -rnE '\._conn(ection)?\b' --include="*.py" \
     | grep -v '^[^:]*scripts/check_no_external_conn\.' \
     | grep -v '_pycache_' \
     | grep -v '^[^:]*tests/' \
+    | grep -v '^[^:]*\.venv/' \
     || true)
 
 if [ -n "$HITS" ]; then

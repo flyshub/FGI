@@ -55,14 +55,10 @@ def _find_forward_filled_dates(db: Database, lookback_days: int,
     if not recent:
         return {}
     start = recent[0] if len(recent) <= lookback_days else recent[-lookback_days]
-    st_df = db._connection.execute(
-        "SELECT date, indicator, status, source, error FROM daily_status "
-        "WHERE date >= ? AND date <= ? AND status = 'degraded'",
-        (start, trading_days[-1]),
-    ).fetchall()
+    rows = db.get_degraded_dates(start, trading_days[-1])
 
     result: dict[str, set[str]] = {}
-    for row in st_df:
+    for row in rows:
         ind = row[1].lower()
         if ind in LATE_INDICATORS:
             result.setdefault(ind, set()).add(row[0])
