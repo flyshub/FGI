@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 
 from fgi.collector.base import DataSourceResult, DataSourceStatus
@@ -36,7 +37,10 @@ class V1Calculator:
     def calculate_erp(self, pe_df: pd.DataFrame, bond_df: pd.DataFrame) -> pd.DataFrame:
         pe_df = pe_df.copy()
         pe_df["pe_ttm"] = pd.to_numeric(pe_df["滚动市盈率"], errors="coerce")
+        # 0/负值 PE 会生成 inf/-inf 收益溢价，污染后续百分位；按 NaN 剔除
+        pe_df["pe_ttm"] = pe_df["pe_ttm"].mask(pe_df["pe_ttm"] <= 0)
         pe_df["earnings_yield"] = 1.0 / pe_df["pe_ttm"]
+        pe_df["earnings_yield"] = pe_df["earnings_yield"].replace([np.inf, -np.inf], np.nan)
         merged = pd.merge(pe_df, bond_df, on="date", how="inner")
         merged["erp"] = merged["earnings_yield"] - merged["yield_10y"] / 100.0
         return merged

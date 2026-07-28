@@ -1,5 +1,6 @@
 """真实交易日历：akshare tool_trade_date_hist_sina，内存 + 磁盘缓存。"""
 import logging
+import threading
 from pathlib import Path
 
 import pandas as pd
@@ -14,21 +15,23 @@ class TradingCalendar:
             cache_dir = DATA_DIR / "cache"
         self._cache_dir = Path(cache_dir)
         self._days: list[str] | None = None
+        self._lock = threading.Lock()
 
     def load(self) -> list[str] | None:
         """返回全部交易日（升序）；akshare 与磁盘缓存均不可用时返回 None。"""
-        if self._days is not None:
-            return self._days
-        days = self._fetch_akshare()
-        if days:
-            self._days = days
-            self._save_disk(days)
-            return days
-        days = self._load_disk()
-        if days:
-            self._days = days
-            return days
-        return None
+        with self._lock:
+            if self._days is not None:
+                return self._days
+            days = self._fetch_akshare()
+            if days:
+                self._days = days
+                self._save_disk(days)
+                return days
+            days = self._load_disk()
+            if days:
+                self._days = days
+                return days
+            return None
 
     def trading_days(self, start_date: str, end_date: str) -> list[str] | None:
         days = self.load()
@@ -53,7 +56,10 @@ class TradingCalendar:
     def _save_disk(self, days: list[str]):
         try:
             self._cache_dir.mkdir(parents=True, exist_ok=True)
-            pd.DataFrame({"trade_date": days}).to_csv(self._cache_path(), index=False)
+            # 原子写入：先写临时文件，再 rename，避免并发或中断时产生半写文件
+            tmp_path = self._cache_path().with_suffix(".csv.tmp")
+            pd.DataFrame({"trade_date": days}).to_csv(tmp_path, index=False)
+            tmp_path.replace(self._cache_path())
         except Exception as e:
             logger.warning("Failed to save trading calendar cache: %s", e)
 

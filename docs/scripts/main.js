@@ -36,6 +36,9 @@ function registerChart(id, chart) {
   chartInstances[id] = chart;
   return chart;
 }
+function unregisterChart(id) {
+  delete chartInstances[id];
+}
 function getChart(id) { return chartInstances[id]; }
 
 async function fetchJSON(url) {
@@ -148,7 +151,6 @@ function updateHistoryMarkLine(dateStr) {
 }
 
 // ── History chart init (called once) ────────────────
-let historyChartInited = false;
 
 // Responsive
 function resizeAll() {

@@ -35,18 +35,22 @@ jobs:
 
       - name: Get target date
         id: date
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            echo "target_date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+          if [ -n "$INPUT_DATE" ]; then
+            echo "target_date=$INPUT_DATE" >> $GITHUB_OUTPUT
           else
             echo "target_date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
           fi
 
       - name: Check if trading day
         id: check
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: |
           # 简单交易日判断：跳过周末（精确判断由 daily_run 内部完成）
-          DAY=$(date -d "${{ steps.date.outputs.target_date }}" +%u 2>/dev/null || date -j -u -f "%Y-%m-%d" "${{ steps.date.outputs.target_date }}" +%u 2>/dev/null)
+          DAY=$(date -d "$TARGET_DATE" +%u 2>/dev/null || date -j -u -f "%Y-%m-%d" "$TARGET_DATE" +%u 2>/dev/null)
           if [ -z "$DAY" ]; then
             echo "skip=false" >> $GITHUB_OUTPUT
           elif [ "$DAY" -ge 6 ]; then
@@ -62,13 +66,16 @@ jobs:
         env:
           FGI_PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           FGI_PUSHPLUS_FRIENDS: ${{ secrets.PUSHPLUS_FRIENDS }}
-        run: python -m fgi.output.daily_run --date ${{ steps.date.outputs.target_date }}
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
+        run: python -m fgi.output.daily_run --date "$TARGET_DATE"
 
       - name: Upload results
         if: always() && steps.check.outputs.skip != 'true'
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
         uses: actions/upload-artifact@v4
         with:
-          name: fgi-results-${{ steps.date.outputs.target_date }}
+          name: fgi-results-${{ env.TARGET_DATE }}
           path: |
             data/fgi.db
             output/
@@ -76,6 +83,8 @@ jobs:
 
       - name: Commit updated DB back to repo
         if: steps.check.outputs.skip != 'true'
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -83,7 +92,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No DB changes to commit"
           else
-            git commit -m "chore(db): daily update for ${{ steps.date.outputs.target_date }} [skip ci]"
+            git commit -m "chore(db): daily update for $TARGET_DATE [skip ci]"
             git push
           fi
 
@@ -95,6 +104,8 @@ jobs:
 
       - name: Commit web data
         if: steps.check.outputs.skip != 'true'
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -102,15 +113,17 @@ jobs:
           if git diff --cached --quiet; then
             echo "No web data changes to commit"
           else
-            git commit -m "chore(web): update frontend data for ${{ steps.date.outputs.target_date }} [skip ci]"
+            git commit -m "chore(web): update frontend data for $TARGET_DATE [skip ci]"
             git push
           fi
 
       - name: Check if daily_run actually succeeded
         id: check_result
         if: steps.check.outputs.skip != 'true'
+        env:
+          RUN_OUTCOME: ${{ steps.run_fgi.outcome }}
         run: |
-          if [ "${{ steps.run_fgi.outcome }}" != "success" ]; then
+          if [ "$RUN_OUTCOME" != "success" ]; then
             echo "failed=true" >> $GITHUB_OUTPUT
           else
             echo "failed=false" >> $GITHUB_OUTPUT
@@ -118,11 +131,14 @@ jobs:
 
       - name: Create issue on failure
         if: steps.check_result.outputs.failed == 'true'
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         uses: actions/github-script@v7
         with:
           script: |
-            const date = '${{ steps.date.outputs.target_date }}';
-            const runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
+            const date = process.env.TARGET_DATE;
+            const runUrl = process.env.RUN_URL;
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,

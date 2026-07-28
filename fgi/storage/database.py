@@ -33,9 +33,15 @@ class Database:
         return self.connect()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._connection is None:
+            return
         if exc_type is not None:
-            self._connection.rollback()
+            if self._connection.in_transaction:
+                self._connection.rollback()
+        else:
+            self._connection.commit()
         self.close()
+        return False  # propagate any exception
 
     def init_schema(self):
         if self._connection is None:
@@ -140,6 +146,17 @@ class Database:
         scores.pop("FGI_legacy", None)  # FGI_legacy 保持 NULL（回滚字段，由版本切换流程写）
         if "FGI_current" not in scores and scores.get("FGI_final") is not None:
             scores["FGI_current"] = scores["FGI_final"]
+
+        # 字段白名单：与 init_schema 保持同步，防止拼接到 SQL 中
+        allowed = {
+            "M1", "M2", "M3", "M4", "S1", "S2", "S3",
+            "V1", "V2", "V4", "F1", "F2", "F3",
+            "FGI_raw", "FGI_final", "FGI_current", "health_score",
+        }
+        unknown = set(scores.keys()) - allowed
+        if unknown:
+            raise ValueError(f"unknown score field(s): {sorted(unknown)}")
+
         fields = list(scores.keys())
         values = [scores[f] for f in fields]
         placeholders = ", ".join(["?"] * len(fields))

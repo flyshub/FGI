@@ -13,32 +13,31 @@ from fgi.storage.database import Database
 
 
 def main():
-    db = Database(DB_PATH)
-    db.connect()
-    src = AKShareSource()
+    with Database(DB_PATH) as db:
+        src = AKShareSource()
 
-    print("=== Fetching m4_volume (创业板指成交量) 2015-至今 ===", flush=True)
-    # 新浪源对 sz399006 实际数据 2016 起；20150101 是脚本拉取起点，最早行不足会自动落入空集。
-    r = src.fetch_cyb_daily("20150101", "20260722")
-    if r.status.name != "HEALTHY" or r.data is None:
-        print(f"FAIL: {r.error}", flush=True)
-        return 1
+        print("=== Fetching m4_volume (创业板指成交量) 2015-至今 ===", flush=True)
+        # 新浪源对 sz399006 实际数据 2016 起；20150101 是脚本拉取起点，最早行不足会自动落入空集。
+        r = src.fetch_cyb_daily("20150101", "20260722")
+        if r.status.name != "HEALTHY" or r.data is None:
+            print(f"FAIL: {r.error}", flush=True)
+            return 1
 
-    df = r.data
-    print(f"fetched {len(df)} rows, range {df['date'].iloc[0]} ~ {df['date'].iloc[-1]}", flush=True)
+        df = r.data
+        print(f"fetched {len(df)} rows, range {df['date'].iloc[0]} ~ {df['date'].iloc[-1]}", flush=True)
 
-    for _, row in df.iterrows():
-        d = row["date"]
-        d = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
-        db.upsert_raw_data(d, "m4_volume", float(row["volume"]))
-    db.commit()
+        for _, row in df.iterrows():
+            d = row["date"]
+            d = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
+            db.upsert_raw_data(d, "m4_volume", float(row["volume"]))
+        db.commit()
 
-    after_n = db.count_rows("raw_data", "indicator='m4_volume'")
-    after_range = db.get_raw_date_range("m4_volume")
-    if after_range:
-        print(f"m4_volume in DB: {after_n} rows, range {after_range[0]} ~ {after_range[1]}", flush=True)
-    else:
-        print("m4_volume in DB: 0 rows", flush=True)
+        after_n = db.count_raw_data_by_indicator("m4_volume")
+        after_range = db.get_raw_date_range("m4_volume")
+        if after_range:
+            print(f"m4_volume in DB: {after_n} rows, range {after_range[0]} ~ {after_range[1]}", flush=True)
+        else:
+            print("m4_volume in DB: 0 rows", flush=True)
     return 0
 
 

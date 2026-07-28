@@ -70,49 +70,48 @@ def main():
     print(f"Valid percentile rows: {len(valid)}", flush=True)
 
     db = Database(DB_PATH)
-    db.connect()
+    with db:
 
-    # write PB raw
-    n_existing_pb = db.count_raw_data_by_indicator("v1_pb")
-    if n_existing_pb:
-        db.delete_raw_data("v1_pb")
-        print(f"Deleted {n_existing_pb} old v1_pb rows", flush=True)
-    inserted = 0
-    for _, row in df.iterrows():
-        db.upsert_raw_data(row["date"], "v1_pb", float(row["pb"]))
-        inserted += 1
-        if inserted % 1000 == 0:
-            db.commit()
-    db.commit()
-    print(f"v1_pb: inserted {inserted} rows", flush=True)
+        # write PB raw
+        n_existing_pb = db.count_raw_data_by_indicator("v1_pb")
+        if n_existing_pb:
+            db.delete_raw_data("v1_pb")
+            print(f"Deleted {n_existing_pb} old v1_pb rows", flush=True)
+        inserted = 0
+        for _, row in df.iterrows():
+            db.upsert_raw_data(row["date"], "v1_pb", float(row["pb"]))
+            inserted += 1
+            if inserted % 1000 == 0:
+                db.commit()
+        db.commit()
+        print(f"v1_pb: inserted {inserted} rows", flush=True)
 
-    # write PE percentile raw
-    for key in ("v1_pe_percentile", "v1_pb_percentile"):
-        n_old = db.count_raw_data_by_indicator(key)
-        if n_old:
-            db.delete_raw_data(key)
-            print(f"Deleted {n_old} old {key} rows", flush=True)
+        # write PE percentile raw
+        for key in ("v1_pe_percentile", "v1_pb_percentile"):
+            n_old = db.count_raw_data_by_indicator(key)
+            if n_old:
+                db.delete_raw_data(key)
+                print(f"Deleted {n_old} old {key} rows", flush=True)
 
-    inserted_pe = inserted_pb = 0
-    for _, row in valid.iterrows():
-        db.upsert_raw_data(row["date"], "v1_pe_percentile", float(row["pe_pct"]))
-        db.upsert_raw_data(row["date"], "v1_pb_percentile", float(row["pb_pct"]))
-        inserted_pe += 1
-        inserted_pb += 1
-        if inserted_pe % 1000 == 0:
-            db.commit()
-    db.commit()
-    print(f"v1_pe_percentile: inserted {inserted_pe} rows", flush=True)
-    print(f"v1_pb_percentile: inserted {inserted_pb} rows", flush=True)
+        inserted_pe = inserted_pb = 0
+        for _, row in valid.iterrows():
+            db.upsert_raw_data(row["date"], "v1_pe_percentile", float(row["pe_pct"]))
+            db.upsert_raw_data(row["date"], "v1_pb_percentile", float(row["pb_pct"]))
+            inserted_pe += 1
+            inserted_pb += 1
+            if inserted_pe % 1000 == 0:
+                db.commit()
+        db.commit()
+        print(f"v1_pe_percentile: inserted {inserted_pe} rows", flush=True)
+        print(f"v1_pb_percentile: inserted {inserted_pb} rows", flush=True)
 
-    # summary
-    pb_stats = db.get_raw_value_stats("v1_pb")
-    pe_pct_stats = db.get_raw_value_stats("v1_pe_percentile")
-    pb_pct_stats = db.get_raw_value_stats("v1_pb_percentile")
-    print(f"\nv1_pb stats: min={pb_stats[0]:.4f} max={pb_stats[1]:.4f} avg={pb_stats[2]:.4f}" if pb_stats else "v1_pb: no stats")
-    print(f"v1_pe_percentile stats: min={pe_pct_stats[0]:.3f} max={pe_pct_stats[1]:.3f} avg={pe_pct_stats[2]:.3f}" if pe_pct_stats else "v1_pe_percentile: no stats")
-    print(f"v1_pb_percentile stats: min={pb_pct_stats[0]:.3f} max={pb_pct_stats[1]:.3f} avg={pb_pct_stats[2]:.3f}" if pb_pct_stats else "v1_pb_percentile: no stats")
-    db.close()
+        # summary
+        pb_stats = db.get_raw_value_stats("v1_pb")
+        pe_pct_stats = db.get_raw_value_stats("v1_pe_percentile")
+        pb_pct_stats = db.get_raw_value_stats("v1_pb_percentile")
+        print(f"\nv1_pb stats: min={pb_stats[0]:.4f} max={pb_stats[1]:.4f} avg={pb_stats[2]:.4f}" if pb_stats else "v1_pb: no stats")
+        print(f"v1_pe_percentile stats: min={pe_pct_stats[0]:.3f} max={pe_pct_stats[1]:.3f} avg={pe_pct_stats[2]:.3f}" if pe_pct_stats else "v1_pe_percentile: no stats")
+        print(f"v1_pb_percentile stats: min={pb_pct_stats[0]:.3f} max={pb_pct_stats[1]:.3f} avg={pb_pct_stats[2]:.3f}" if pb_pct_stats else "v1_pb_percentile: no stats")
     print("\nDONE.", flush=True)
 
 

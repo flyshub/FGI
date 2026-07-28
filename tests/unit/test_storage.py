@@ -109,6 +109,48 @@ class TestStatus:
 
 
 class TestUtilities:
+    def test_context_manager_commits_on_success(self):
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            path = Path(tmp.name)
+        try:
+            with Database(path) as db:
+                db.init_schema()
+                db.upsert_score("2024-01-01", {"M1": 50.0})
+            # 重新打开，验证数据已提交
+            with Database(path) as db:
+                row = db.get_score_on_date("2024-01-01")
+                assert row is not None
+                assert row["M1"] == 50.0
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_context_manager_rolls_back_on_exception(self):
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            path = Path(tmp.name)
+        try:
+            try:
+                with Database(path) as db:
+                    db.init_schema()
+                    db.upsert_score("2024-01-01", {"M1": 50.0})
+                    raise RuntimeError("boom")
+            except RuntimeError:
+                pass
+            with Database(path) as db:
+                assert db.get_score_on_date("2024-01-01") is None
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_upsert_score_rejects_unknown_field(self):
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            path = Path(tmp.name)
+        try:
+            with Database(path) as db:
+                db.init_schema()
+                with pytest.raises(ValueError, match="unknown score field"):
+                    db.upsert_score("2024-01-01", {"M1": 50.0, "NOT_A_FIELD": 1.0})
+        finally:
+            path.unlink(missing_ok=True)
+
     def test_get_latest_score_date(self, db):
         assert db.get_latest_score_date() is None
         db.upsert_score("2024-01-01", {"M1": 50.0})
