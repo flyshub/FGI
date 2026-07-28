@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A股恐惧贪婪指数—大白话解读</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.8;
+      color: #333;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fff;
+    }
+    h1, h2, h3 {
+      color: #1a1a2e;
+      margin-top: 24px;
+      margin-bottom: 12px;
+    }
+    h1 { font-size: 1.8rem; border-bottom: 2px solid #1976d2; padding-bottom: 8px; }
+    h2 { font-size: 1.4rem; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-top: 32px; }
+    p { margin-bottom: 16px; text-align: justify; }
+    ul, ol { margin-left: 24px; margin-bottom: 16px; }
+    li { margin-bottom: 8px; }
+    strong { color: #1976d2; }
+    pre {
+      background: #f5f5f5;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+    .footnote {
+      font-size: 0.85rem;
+      color: #666;
+      font-style: italic;
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px dashed #ccc;
+    }
+  </style>
+</head>
+<body>
+
+<h1>A股恐惧贪婪指数 — 大白话解读</h1>
+
+<p>你炒股吗？或者，你身边有人炒股吗？</p>
+
+<p>股市像情绪过山车。有人疯狂追高，有人绝望割盘。同一个消息，有人看到机会，有人看到风险。怎么把这种"集体情绪"量化成一个数字？这就是 FGI 要做的事——把看不见的恐慌和贪婪，变成看得见的分数。</p>
+
+<h2>它叫什么？</h2>
+
+<p><strong>FGI</strong>，全称 A 股恐惧贪婪指数。简单说：它是一个每日更新的 0~100 分数字。</p>
+
+<ul>
+  <li><strong>0 分</strong> = 极度恐惧。散户都在卖，股票便宜得像白菜，市场没人敢碰。</li>
+  <li><strong>100 分</strong> = 极度贪婪。所有人都在追涨，连菜市场大妈都在买股票，空气都弥漫着赚钱的味道。</li>
+  <li><strong>50 分左右</strong> = 正常，市场情绪平平静。</li>
+</ul>
+
+<p>你看 CNN 也搞过一个 Fear & Greed Index（恐惧贪婪指数），用的是美股数据。FGI 是它的中国版，专门针对 A 股市场。</p>
+
+<h2>它怎么看一个人是不是在恐慌或贪婪？</h2>
+
+<p>普通人看新闻、看股价涨跌、看朋友聊什么。FGI 不看这些，它从<strong>12 个具体的指标</strong>里算情绪。这 12 个指标分五大类，每类占 20%：</p>
+
+<h3>第一类：动量（股价怎么走的）</h3>
+<ul>
+  <li>涨停板有多少家？涨停板多 → 大家抢着买 → 贪婪</li>
+  <li>多少股票在涨？上涨比例高 → 市场情绪好 → 贪婪</li>
+  <li>股价离 60 日均线远不远？涨太快了可能过热 → 贪婪</li>
+  <li>创业板成交量大不大？放量炒小票 → 投机情绪浓 → 贪婪</li>
+</ul>
+
+<h3>第二类：情绪（人心躁不躁）</h3>
+<ul>
+  <li>股吧讨论热不热闹？讨论越多 → 关注度越高 → 贪婪</li>
+  <li>涨停板的封单量大不大？封单多说明看好的人愿意高价排队 → 贪婪</li>
+</ul>
+
+<h3>第三类：估值（贵不贵）</h3>
+<ul>
+  <li>沪深 300 的性价比怎么样？股票相对债券越便宜 → 越值得买 → 恐惧时得分低（反向）</li>
+  <li>估值的变化速度快不快？快速上升可能见顶 → 反向处理</li>
+</ul>
+
+<h3>第四类：波动率（稳不稳定）（新加的）</h3>
+<ul>
+  <li>期权市场的波动率高不高？波动率像温度计，高→怕出事→低分；低→安心→高分</li>
+</ul>
+
+<h3>第五类：资金（钱往哪流）</h3>
+<ul>
+  <li>借钱炒股的人多不多？融资余额占比高 → 杠杆高 → 贪婪</li>
+  <li>基金买了多少股票？仓位高 → 机构乐观 → 贪婪</li>
+  <li>主力资金偏爱哪个板块？资金往热点跑 → 贪婪</li>
+</ul>
+
+<p><strong>别被这些词吓到。</strong>每一张表背后都是问同一个问题：<em>今天市场怕还是贪？</em></p>
+
+<h2>为什么需要这个指数？</h2>
+
+<p>你自己看 K 线图，看消息，容易被左右。别人说什么你就信什么。FOMO（怕错过）情绪来的时候，明明知道贵了，还是忍不住跟进去。跌下来又怕继续跌，恐慌性抛售。</p>
+
+<p>FGI 给你一把尺子。每天盘后自动算好：</p>
+
+<ul>
+  <li>FGI = 15 → <strong>极度恐惧</strong>。历史上这时候，接下来半年大多涨。可以慢慢布局。</li>
+  <li>FGI = 85 → <strong>极度贪婪</strong>。历史上这时候，之后容易回调。别加仓，甚至可以考虑减仓。</li>
+</ul>
+
+<p>但这不是说 FGI=15 明天就涨停，也不是 FGI=85 明天就暴跌。它是用历史数据告诉你一个大概的概率。统计显示：FGI 低于 20 的日子，60 日后上证指数上涨的概率约 71%，平均能赚 3% 左右。反过来，FGI 高于 80 的时候，60 日反而可能亏钱。</p>
+
+<p>这就是那句老话："别人恐惧我贪婪，别人贪婪我恐惧。"FGI 告诉你此刻是<strong>别人的哪一边</strong>。</p>
+
+<h2>它是怎么算出来的？（简化版）</h2>
+
+<p>每个原始指标（比如涨停板家数、股吧热度等），都要经过三步处理：</p>
+
+<ol>
+  <li><strong>比较</strong>。拿今天的历史值，和前五年每天的值比。比如今天有 80 只涨停板，过去五年里有 90% 的日期涨停板少于 80 只 → 那今天的值就在第 90 百分位。</li>
+  <li><strong>标准化</strong>。把不同单位、不同范围的数字，全部拉到 0~100 之间。涨停板家数是 80，股吧热度是 75，这两个原来没法直接比，标准化后都在同一尺度上了。</li>
+  <li><strong>合成</strong>。先按权重合成五大维度分（各 20%），再把五个分等权加起来，得到最终的 FGI。</li>
+</ol>
+
+<p>这里有个关键：<strong>不是所有指标都是同向的</strong>。比如风险溢价 ERP，数值越大代表股票相对债券越便宜（越值得买），但这是"恐惧信号"，所以处理时要反向——ERP 高对应 FGI 低。</p>
+
+<h2>它有什么局限？</h2>
+
+<p>诚实说，FGI 不是水晶球。</p>
+
+<ul>
+  <li><strong>它不能预测明天涨跌</strong>。只能基于历史给出概率参考。</li>
+  <li><strong>极端数据少</strong>。FGI&lt;20 的天数总共才几天，统计样本很小，结论不一定准。</li>
+  <li><strong>数据来源可能失效</strong>。它依赖免费公开接口，某天网站改版、API 挂了，数据就中断了（虽然系统有降级备份）。</li>
+  <li><strong>有些指标是估算的</strong>。比如 F3（主力资金偏好）没有直接 API，用"价格×成交量"估算的方向是对的，但具体数值会打折扣。</li>
+</ul>
+
+<p>最大的风险是：<strong>你以为在看情绪，其实只是在看过去的模式</strong>。市场变了，历史规律也可能失效。FGI 只是一个辅助工具，别全信它。</p>
+
+<h2>它怎么用？</h2>
+
+<p>最简单的方式有两个：</p>
+
+<ol>
+  <li><strong>每日推送</strong>。GitHub Actions 每天早上自动算好，通过 PushPlus 推送到你的手机。推送内容除了 FGI 分数和标签，还有决策矩阵、历史信号参考卡片。比如告诉你：当前 FGI=35（恐惧），历史上类似位置 60 日后平均涨 X%，胜率 Y%。</li>
+  <li><strong>网页看历史</strong>。访问 GitHub Pages 站点，交互式图表可以看到 FGI 走势，和上证综指叠加对比。鼠标悬停任意一天，就能看到那一天的详细指标分解。</li>
+</ol>
+
+<p>你也可以自己运行：<code>python -m fgi.output.daily_run</code> 计算当天数据。</p>
+
+<h2>一句话总结</h2>
+
+<p>FGI 是一个把 A 股市场情绪量化成 0~100 分的指数，每日自动更新。它从动量、情绪、估值、波动率、资金五个维度共 12 个指标出发，用历史百分位标准化后合成，目的是帮你识别<strong>"何时极度恐惧"（可能是买入时机）和"何时极度贪婪"（可能是卖出时机）</strong>。它不是预言家，是后视镜 + 方向盘的结合体——看得见过去的模式，提醒你当下的位置，但不替你踩油门。</p>
+
+<div class="footnote">本文由 A 股恐惧贪婪指数（FGI）项目团队编写，旨在用最通俗的方式帮助投资者理解 FGI 指数的原理与用法。</div>
+
+</body>
+</html>
