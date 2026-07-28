@@ -67,7 +67,8 @@ class M1Calculator:
         else:
             today_in_db = False
         if not today_in_db:
-            result = self.fetch_data(date, date)
+            recent_start = (pd.Timestamp(date) - pd.Timedelta(days=30)).strftime("%Y-%m-%d")
+            result = self.fetch_data(recent_start, date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
                 fetched_freshly = True
                 for _, row in result.data.iterrows():

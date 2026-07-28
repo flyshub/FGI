@@ -1,0 +1,204 @@
+"""Detect and backfill late-released indicator data, then recompute affected FGI scores.
+
+Strategy:
+1. Scan daily_status for recent 'degraded' entries (forward-filled data).
+2. Re-run the FGICalculator for each affected indicator + date range.
+   (M1/S3 now use range fetch — past 30 days — so missing data gets pulled.)
+3. Recompute scores_daily for affected dates.
+4. Re-export web data.
+
+Usage:
+    python scripts/backfill_late_data.py              # default: look back 3 trading days
+    python scripts/backfill_late_data.py --days 5      # look back 5 trading days
+    python scripts/backfill_late_data.py --force       # recheck all degraded entries
+"""
+from __future__ import annotations
+
+import argparse
+import logging
+import os
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from fgi.calculator.fgi import FGICalculator
+from fgi.collector.chains import configure_manager
+from fgi.collector.fallback import DataSourceManager
+from fgi.collector.trading_calendar import TradingCalendar, resolve_trading_days
+from fgi.config.settings import DB_PATH
+from fgi.output.status import record_indicator_status
+from fgi.storage.database import Database
+
+logger = logging.getLogger(__name__)
+
+# Indicators that can have T+1 or later data release delays
+LATE_INDICATORS = {"s3", "f1", "m1", "m4"}  # m4 may also have delays
+
+
+def _setup_manager() -> DataSourceManager:
+    """Set up data sources (same as daily_run)."""
+    from fgi.collector.akshare_source import AKShareSource
+    from fgi.collector.mootdx_source import MootdxSource
+    from fgi.collector.tencent_source import TencentSource
+    from fgi.collector.zzshare_source import ZZShareSource
+    from fgi.config.settings import AKSHARE_ENABLED, MOOTDX_ENABLED, TENCENT_ENABLED
+
+    manager = DataSourceManager()
+    if AKSHARE_ENABLED:
+        manager.register_source("akshare", AKShareSource())
+    if MOOTDX_ENABLED:
+        manager.register_source("mootdx", MootdxSource())
+    if TENCENT_ENABLED:
+        manager.register_source("tencent", TencentSource())
+    try:
+        import zzshare  # noqa: F401
+        manager.register_source("zzshare", ZZShareSource())
+    except ImportError:
+        pass
+    extra = []
+    if MOOTDX_ENABLED:
+        extra.append("mootdx")
+    if TENCENT_ENABLED:
+        extra.append("tencent")
+    configure_manager(manager, extra_fallbacks=extra or None)
+    return manager
+
+
+def _find_forward_filled_dates(db: Database, lookback_days: int,
+                                trading_days: list[str], today: str) -> dict[str, set[str]]:
+    """Find dates where each indicator was forward-filled in recent trading days.
+
+    Returns {indicator_name: {date_str, ...}}.
+    """
+    if not trading_days:
+        return {}
+
+    # Only look at dates up to today (trading_days may extend far into future)
+    recent = [d for d in trading_days if d <= today]
+    if not recent:
+        return {}
+    start = recent[0] if len(recent) <= lookback_days else recent[-lookback_days]
+    st_df = db._connection.execute(
+        "SELECT date, indicator, status, source, error FROM daily_status "
+        "WHERE date >= ? AND date <= ? AND status = 'degraded'",
+        (start, trading_days[-1]),
+    ).fetchall()
+
+    result: dict[str, set[str]] = {}
+    for row in st_df:
+        ind = row[1].lower()
+        if ind in LATE_INDICATORS:
+            result.setdefault(ind, set()).add(row[0])
+    return result
+
+
+def _last_real_date(db: Database, indicator: str, before: str) -> str | None:
+    """Find the most recent date before `before` where this indicator had a non-forward-filled score."""
+    row = db._connection.execute(
+        "SELECT date FROM daily_status "
+        "WHERE indicator = ? AND date < ? AND status = 'normal' AND source != 'forward_fill' "
+        "ORDER BY date DESC LIMIT 1",
+        (indicator, before),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Backfill late-released indicator data")
+    parser.add_argument("--days", type=int, default=3, help="Look back N trading days (default 3)")
+    parser.add_argument("--force", action="store_true", help="Recheck all forward-filled entries")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    data_manager = _setup_manager()
+    calendar = TradingCalendar()
+    trading_days = resolve_trading_days("2000-01-01", "2099-12-31")
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    if not trading_days:
+        logger.warning("No trading days available, cannot backfill")
+        return
+
+    with Database(DB_PATH) as db:
+        db.init_schema()
+
+        # Step 1: Find degraded dates
+        degraded = _find_forward_filled_dates(db, args.days, trading_days, today)
+        if not degraded:
+            logger.info("No degraded indicators found in recent %d trading days", args.days)
+            return
+
+        logger.info("Found degraded indicators: %s", {k: len(v) for k, v in degraded.items()})
+
+        calculator = FGICalculator(data_manager, db)
+        affected_dates: set[str] = set()
+
+        # Step 2: Re-fetch each indicator for its degraded dates
+        for indicator, dates in sorted(degraded.items()):
+            # Map indicator short name to uppercase calculator name
+            calc_name = indicator.upper()
+            if calc_name not in calculator._calculators:
+                continue
+
+            calc = calculator._calculators[calc_name]
+            logger.info("Re-fetching %s for %d dates...", indicator, len(dates))
+            for date_str in sorted(dates):
+                try:
+                    result = calc.run(date_str)
+                    if result.get("status") in ("normal", "degraded"):
+                        affected_dates.add(date_str)
+                        logger.info("  %s: %s → score=%s", indicator, date_str, result.get(calc_name.lower()))
+                    else:
+                        logger.info("  %s: %s → still missing (status=%s)", indicator, date_str, result.get("status"))
+                except Exception as e:
+                    logger.warning("  %s: %s → error: %s", indicator, date_str, e)
+
+        db.commit()
+
+        if not affected_dates:
+            logger.info("No affected dates to recompute")
+            return
+
+        # Step 3: Recompute FGI for affected dates
+        logger.info("Recomputing FGI for %d dates...", len(affected_dates))
+        for date_str in sorted(affected_dates):
+            try:
+                # Clear old scores for this date
+                db.clear_table_range("scores_daily", date_str, date_str)
+                db.clear_table_range("daily_status", date_str, date_str)
+
+                result = calculator.run(date_str)
+                record_indicator_status(db, date_str, result.get("indicator_results", {}))
+                logger.info("  FGI %s: raw=%.1f final=%.1f health=%.0f",
+                           date_str,
+                           result.get("fgi_raw") or 0,
+                           result.get("fgi_final") or 0,
+                           result.get("health_score") or 0)
+            except Exception as e:
+                logger.warning("  FGI %s: recompute error: %s", date_str, e)
+
+        db.commit()
+
+    # Step 4: Export web data
+    logger.info("Re-exporting web data...")
+    os.chdir(Path(__file__).resolve().parent.parent)
+    from scripts.export_fgi_web_data import main as export_main
+    try:
+        # trick: set sys.argv for export
+        old_argv = sys.argv
+        sys.argv = ["export_fgi_web_data.py", "--full"]
+        export_main()
+        sys.argv = old_argv
+    except Exception as e:
+        logger.warning("Web data export failed: %s", e)
+
+    logger.info("Backfill complete.")
+
+
+if __name__ == "__main__":
+    main()

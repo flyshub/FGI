@@ -69,6 +69,13 @@ jobs:
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
         run: python -m fgi.output.daily_run --date "$TARGET_DATE"
 
+      - name: Backfill late data
+        id: backfill
+        if: steps.check.outputs.skip != 'true'
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.target_date }}
+        run: python scripts/backfill_late_data.py --days 5
+
       - name: Upload results
         if: always() && steps.check.outputs.skip != 'true'
         env:
