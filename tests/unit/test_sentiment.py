@@ -226,7 +226,8 @@ class TestS3Calculator:
         from fgi.collector.base import DataSourceResult, DataSourceStatus
 
         def mock_fetch(start_date, end_date):
-            if start_date == dates[-1]:  # today-only fetch from calculator.run line 76
+            # S3 now calls fetch_data(recent_start, date) with a 30-day range
+            if end_date == dates[-1]:
                 df = pd.DataFrame({
                     "date": [dates[-1]],
                     "limit_up_count": [60],
