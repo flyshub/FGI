@@ -46,21 +46,24 @@ class Database:
     def scores(self):
         """ScoreRepository — scores_daily CRUD and aggregates."""
         from fgi.storage.repositories import ScoreRepository
-        self._scores = self._repo(ScoreRepository, '_scores')
+
+        self._scores = self._repo(ScoreRepository, "_scores")
         return self._scores
 
     @property
     def raw_data(self):
         """RawDataRepository — raw_data CRUD and diagnostics."""
         from fgi.storage.repositories import RawDataRepository
-        self._raw_data = self._repo(RawDataRepository, '_raw_data')
+
+        self._raw_data = self._repo(RawDataRepository, "_raw_data")
         return self._raw_data
 
     @property
     def status(self):
         """StatusRepository — daily_status CRUD and queries."""
         from fgi.storage.repositories import StatusRepository
-        self._status = self._repo(StatusRepository, '_status')
+
+        self._status = self._repo(StatusRepository, "_status")
         return self._status
 
     # ── Backward-compatible delegation ───────────────────────
