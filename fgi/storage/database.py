@@ -1,7 +1,13 @@
-import sqlite3
-from pathlib import Path
+"""SQLite connection manager with domain repository accessors (#105).
 
-import pandas as pd
+Connection lifecycle and schema live here. Domain-specific queries are in
+ScoreRepository, RawDataRepository, and StatusRepository (repositories.py),
+accessible as db.scores / db.raw_data / db.status properties.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
 
 from fgi.config.settings import DB_PATH
 
@@ -12,14 +18,122 @@ class Database:
     # 的外部访问将被 dev 守卫 (scripts/check_no_external_conn.sh) 拒绝。
     def __init__(self, db_path: Path | None = None):
         self._path = db_path or DB_PATH
-        self._connection: sqlite3.Connection | None = None
+        self._connection = None
+        self._scores = None
+        self._raw_data = None
+        self._status = None
 
     @property
     def path(self) -> Path:
         """数据库文件路径（公开只读接口）。"""
         return self._path
 
+    @property
+    def connection(self):
+        """Raw sqlite3 connection — prefer repositories over direct access."""
+        return self._connection
+
+    # ── Domain repository accessors ──────────────────────────
+    # Lazy-init: first access after connect() creates the repository.
+    # These are the primary query interface going forward.
+
+    @property
+    def scores(self):
+        """ScoreRepository — scores_daily CRUD and aggregates."""
+        if self._scores is None:
+            from fgi.storage.repositories import ScoreRepository
+            self._scores = ScoreRepository(self._connection)  # type: ignore[arg-type]
+        return self._scores
+
+    @property
+    def raw_data(self):
+        """RawDataRepository — raw_data CRUD and diagnostics."""
+        if self._raw_data is None:
+            from fgi.storage.repositories import RawDataRepository
+            self._raw_data = RawDataRepository(self._connection)  # type: ignore[arg-type]
+        return self._raw_data
+
+    @property
+    def status(self):
+        """StatusRepository — daily_status CRUD and queries."""
+        if self._status is None:
+            from fgi.storage.repositories import StatusRepository
+            self._status = StatusRepository(self._connection)  # type: ignore[arg-type]
+        return self._status
+
+    # ── Backward-compatible delegation ───────────────────────
+    # Existing callers use db.upsert_raw_data(...) etc. These thin
+    # wrappers delegate to the repository so 23 caller files don't
+    # need updating in this commit. New code should use db.raw_data.*
+    # directly.
+
+    def upsert_raw_data(self, date, indicator, value):
+        return self.raw_data.upsert_raw_data(date, indicator, value)
+
+    def upsert_raw_data_batch(self, df, indicator):
+        return self.raw_data.upsert_raw_data_batch(df, indicator)
+
+    def get_raw_data(self, indicator, start_date, end_date):
+        return self.raw_data.get_raw_data(indicator, start_date, end_date)
+
+    def delete_raw_data(self, indicator):
+        return self.raw_data.delete_raw_data(indicator)
+
+    def get_latest_raw_date(self, indicator, on_or_before):
+        return self.raw_data.get_latest_raw_date(indicator, on_or_before)
+
+    def get_raw_date_range(self, indicator):
+        return self.raw_data.get_raw_date_range(indicator)
+
+    def get_raw_value_stats(self, indicator):
+        return self.raw_data.get_raw_value_stats(indicator)
+
+    def count_raw_data_by_indicator(self, indicator):
+        return self.raw_data.count_raw_data_by_indicator(indicator)
+
+    def get_missing_dates(self, indicator, start_date, end_date, trading_days=None):
+        return self.raw_data.get_missing_dates(indicator, start_date, end_date, trading_days)
+
+    def upsert_score(self, date, scores):
+        return self.scores.upsert_score(date, scores)
+
+    def update_score_field(self, date, field, value):
+        return self.scores.update_score_field(date, field, value)
+
+    def get_scores(self, start_date, end_date):
+        return self.scores.get_scores(start_date, end_date)
+
+    def get_score_on_date(self, date):
+        return self.scores.get_score_on_date(date)
+
+    def get_latest_score_date(self):
+        return self.scores.get_latest_score_date()
+
+    def count_scores_with_data(self):
+        return self.scores.count_scores_with_data()
+
+    def count_scores_below(self, fgi):
+        return self.scores.count_scores_below(fgi)
+
+    def upsert_status(self, date, indicator, status, source="", error=""):
+        return self.status.upsert_status(date, indicator, status, source, error)
+
+    def upsert_status_keep_source(self, date, indicator, status, error=""):
+        return self.status.upsert_status_keep_source(date, indicator, status, error)
+
+    def get_status(self, date):
+        return self.status.get_status(date)
+
+    def get_indicator_status(self, date):
+        return self.status.get_indicator_status(date)
+
+    def get_degraded_dates(self, start_date, end_date):
+        return self.status.get_degraded_dates(start_date, end_date)
+
+    # ── Connection lifecycle ──────────────────────────────────
+
     def connect(self):
+        import sqlite3
         self._connection = sqlite3.connect(str(self._path))
         self._connection.execute("PRAGMA journal_mode=WAL")
         return self
@@ -28,6 +142,9 @@ class Database:
         if self._connection:
             self._connection.close()
             self._connection = None
+        self._scores = None
+        self._raw_data = None
+        self._status = None
 
     def __enter__(self):
         return self.connect()
@@ -42,6 +159,12 @@ class Database:
             self._connection.commit()
         self.close()
         return False  # propagate any exception
+
+    def commit(self):
+        if self._connection is not None:
+            self._connection.commit()
+
+    # ── Schema management ────────────────────────────────────
 
     def init_schema(self):
         if self._connection is None:
@@ -91,10 +214,7 @@ class Database:
         )
 
     def _migrate_scores_daily_columns(self):
-        """Add any scores_daily columns missing from older DB schemas.
-        Needed because CREATE TABLE IF NOT EXISTS is a no-op on existing tables,
-        so indicator columns added in later specs (V4, FGI_current, health_score)
-        require explicit ALTER TABLE on legacy DBs."""
+        """Add any scores_daily columns missing from older DB schemas."""
         if self._connection is None:
             return
         existing = {r[1] for r in self._connection.execute("PRAGMA table_info(scores_daily)").fetchall()}
@@ -106,152 +226,7 @@ class Database:
         for col in defined - existing:
             self._connection.execute(f"ALTER TABLE scores_daily ADD COLUMN {col} REAL")
 
-    def upsert_raw_data(self, date: str, indicator: str, value: float):
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        self._connection.execute("""
-            INSERT INTO raw_data (date, indicator, value)
-            VALUES (?, ?, ?)
-            ON CONFLICT (date, indicator) DO UPDATE SET
-                value = excluded.value,
-                update_time = CURRENT_TIMESTAMP
-        """, (date, indicator, value))
-
-    def upsert_raw_data_batch(self, df: pd.DataFrame, indicator: str):
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        records = [(row["date"], indicator, row["value"]) for _, row in df.iterrows()]
-        self._connection.executemany("""
-            INSERT INTO raw_data (date, indicator, value)
-            VALUES (?, ?, ?)
-            ON CONFLICT (date, indicator) DO UPDATE SET
-                value = excluded.value,
-                update_time = CURRENT_TIMESTAMP
-        """, records)
-
-    def get_raw_data(self, indicator: str, start_date: str, end_date: str) -> pd.DataFrame:
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        query = """
-            SELECT date, value FROM raw_data
-            WHERE indicator = ? AND date >= ? AND date <= ?
-            ORDER BY date
-        """
-        return pd.read_sql_query(query, self._connection, params=(indicator, start_date, end_date))
-
-    def upsert_score(self, date: str, scores: dict):
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        scores = dict(scores)
-        scores.pop("FGI_legacy", None)  # FGI_legacy 保持 NULL（回滚字段，由版本切换流程写）
-        if "FGI_current" not in scores and scores.get("FGI_final") is not None:
-            scores["FGI_current"] = scores["FGI_final"]
-
-        # 字段白名单：与 init_schema 保持同步，防止拼接到 SQL 中
-        allowed = {
-            "M1", "M2", "M3", "M4", "S1", "S2", "S3",
-            "V1", "V2", "V4", "F1", "F2", "F3",
-            "FGI_raw", "FGI_final", "FGI_current", "health_score",
-        }
-        unknown = set(scores.keys()) - allowed
-        if unknown:
-            raise ValueError(f"unknown score field(s): {sorted(unknown)}")
-
-        fields = list(scores.keys())
-        values = [scores[f] for f in fields]
-        placeholders = ", ".join(["?"] * len(fields))
-        field_names = ", ".join(fields)
-        update_clause = ", ".join([f"{f} = excluded.{f}" for f in fields])
-
-        self._connection.execute(f"""
-            INSERT INTO scores_daily (date, {field_names})
-            VALUES (?, {placeholders})
-            ON CONFLICT (date) DO UPDATE SET {update_clause}
-        """, [date] + values)
-
-    def get_scores(self, start_date: str, end_date: str) -> pd.DataFrame:
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        query = """
-            SELECT * FROM scores_daily
-            WHERE date >= ? AND date <= ?
-            ORDER BY date
-        """
-        return pd.read_sql_query(query, self._connection, params=(start_date, end_date))
-
-    def get_score_on_date(self, date: str) -> dict | None:
-        """返回 scores_daily 某日完整行（dict），无数据返回 None。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        cur = self._connection.execute("SELECT * FROM scores_daily WHERE date = ?", (date,))
-        row = cur.fetchone()
-        if not row:
-            return None
-        cols = [d[0] for d in cur.description]
-        return dict(zip(cols, row, strict=False))
-
-    def upsert_status(self, date: str, indicator: str, status: str, source: str = "", error: str = ""):
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        indicator = indicator.lower()  # 统一小写，避免大小写双写
-        self._connection.execute("""
-            INSERT INTO daily_status (date, indicator, status, source, error)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (date, indicator) DO UPDATE SET
-                status = excluded.status,
-                source = excluded.source,
-                error = excluded.error
-        """, (date, indicator, status, source, error or ""))
-
-    def upsert_status_keep_source(self, date: str, indicator: str, status: str, error: str = ""):
-        """同 upsert_status 但不覆盖已存在的 source 字段（#51）；error 为空时也不覆盖（保留 forward-fill elapsed 轨迹）。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        indicator = indicator.lower()
-        self._connection.execute("""
-            INSERT INTO daily_status (date, indicator, status, source, error)
-            VALUES (?, ?, ?, COALESCE((SELECT source FROM daily_status WHERE date = ? AND indicator = ?), ''), ?)
-            ON CONFLICT (date, indicator) DO UPDATE SET
-                status = excluded.status,
-                error = CASE WHEN excluded.error != '' THEN excluded.error ELSE daily_status.error END
-        """, (date, indicator, status, date, indicator, error or ""))
-
-    def get_status(self, date: str) -> pd.DataFrame:
-        query = """
-            SELECT * FROM daily_status WHERE date = ? ORDER BY indicator
-        """
-        return pd.read_sql_query(query, self._connection, params=(date,))
-
-    def get_latest_score_date(self) -> str | None:
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        cursor = self._connection.execute("SELECT MAX(date) FROM scores_daily")
-        row = cursor.fetchone()
-        return row[0] if row else None
-
-    def get_missing_dates(self, indicator: str, start_date: str, end_date: str,
-                          trading_days: list | None = None) -> list:
-        """trading_days 传入真实交易日历；缺省回退 m3_close 已有日期，再回退工作日。"""
-        query = """
-            SELECT date FROM raw_data
-            WHERE indicator = ? AND date >= ? AND date <= ?
-            ORDER BY date
-        """
-        df = pd.read_sql_query(query, self._connection, params=(indicator, start_date, end_date))
-        if trading_days is None:
-            m3 = self.get_raw_data("m3_close", start_date, end_date)
-            trading_days = m3["date"].tolist() if not m3.empty else None
-        if trading_days is None:
-            all_dates = [d.strftime("%Y-%m-%d") for d in pd.date_range(start=start_date, end=end_date, freq="B")]
-        else:
-            all_dates = [str(d) for d in trading_days]
-        existing = set(df["date"].tolist())
-        return [d for d in all_dates if d not in existing]
-
-    def commit(self):
-        self._connection.commit()
-
-    # --- 扩展公共查询接口（避免外部直接访问 _connection） ---
+    # ── Generic table utilities ──────────────────────────────
 
     def count_rows(self, table: str) -> int:
         """全表行数。table 限 'raw_data' / 'scores_daily' / 'daily_status'。"""
@@ -260,31 +235,6 @@ class Database:
         if table not in ("raw_data", "scores_daily", "daily_status"):
             raise ValueError(f"unknown table: {table}")
         return self._connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-
-    def count_raw_data_by_indicator(self, indicator: str) -> int:
-        """统计 raw_data 中某个 indicator 的行数。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        return self._connection.execute(
-            "SELECT COUNT(*) FROM raw_data WHERE indicator = ?", (indicator,)
-        ).fetchone()[0]
-
-    def count_scores_with_data(self) -> int:
-        """scores_daily 中 FGI_final 不为空的行数。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        return self._connection.execute(
-            "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL"
-        ).fetchone()[0]
-
-    def count_scores_below(self, fgi: float) -> int:
-        """scores_daily 中非空 FGI_final 小于给定值的行数。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        return self._connection.execute(
-            "SELECT COUNT(*) FROM scores_daily WHERE FGI_final IS NOT NULL AND FGI_final < ?",
-            (fgi,),
-        ).fetchone()[0]
 
     def clear_table(self, table: str):
         """清空指定表数据。table 限 'scores_daily' / 'daily_status' / 'raw_data'。"""
@@ -309,85 +259,3 @@ class Database:
             (start_date, end_date),
         )
         return cur.rowcount or 0
-
-
-    def update_score_field(self, date: str, field: str, value):
-        """更新 scores_daily 单个字段。field 必须是 scores_daily 的合法列名。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        # 字段白名单（与 init_schema 同步）
-        allowed = {
-            "M1", "M2", "M3", "M4", "S1", "S2", "S3", "V1", "V2", "V4", "F1", "F2", "F3",
-            "FGI_raw", "FGI_final", "FGI_legacy", "FGI_current", "health_score",
-        }
-        if field not in allowed:
-            raise ValueError(f"unknown score field: {field}")
-        self._connection.execute(
-            f"UPDATE scores_daily SET {field} = ? WHERE date = ?",
-            (value, date),
-        )
-
-    def get_indicator_status(self, date: str) -> list:
-        """返回 [(indicator, status), ...]，按 indicator 升序。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        return self._connection.execute(
-            "SELECT indicator, status FROM daily_status WHERE date = ? ORDER BY indicator",
-            (date,),
-        ).fetchall()
-
-    def get_degraded_dates(self, start_date: str, end_date: str) -> list:
-        """返回 (date, indicator, status, source, error) — 指定日期范围内的所有 degraded 记录。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        return self._connection.execute(
-            "SELECT date, indicator, status, source, error FROM daily_status "
-            "WHERE date >= ? AND date <= ? AND status = 'degraded' ORDER BY date, indicator",
-            (start_date, end_date),
-        ).fetchall()
-
-    def get_latest_raw_date(self, indicator: str, on_or_before: str) -> str | None:
-        """返回 <= on_or_before 的最大 raw_data.date（无则 None）。
-
-        用于 forward-fill 溯源：从最后得分日回溯到该指标的真实写入日。
-        """
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        row = self._connection.execute(
-            "SELECT date FROM raw_data WHERE indicator = ? AND date <= ? ORDER BY date DESC LIMIT 1",
-            (indicator, on_or_before),
-        ).fetchone()
-        return row[0] if row else None
-
-    def get_raw_date_range(self, indicator: str) -> tuple | None:
-        """返回 raw_data 中某 indicator 的 (min_date, max_date)；无数据返回 None。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        row = self._connection.execute(
-            "SELECT MIN(date), MAX(date) FROM raw_data WHERE indicator = ?",
-            (indicator,),
-        ).fetchone()
-        if not row or row[0] is None:
-            return None
-        return row[0], row[1]
-
-    def delete_raw_data(self, indicator: str) -> int:
-        """删除 raw_data 中某 indicator 的所有行，返回删除行数。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        cur = self._connection.execute(
-            "DELETE FROM raw_data WHERE indicator = ?", (indicator,)
-        )
-        return cur.rowcount
-
-    def get_raw_value_stats(self, indicator: str) -> tuple | None:
-        """返回 raw_data 中某 indicator 的 (min_value, max_value, avg_value)；无数据返回 None。"""
-        if self._connection is None:
-            raise RuntimeError("Database not connected")
-        row = self._connection.execute(
-            "SELECT MIN(value), MAX(value), AVG(value) FROM raw_data WHERE indicator = ?",
-            (indicator,),
-        ).fetchone()
-        if not row or row[0] is None:
-            return None
-        return row[0], row[1], row[2]
