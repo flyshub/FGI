@@ -65,7 +65,7 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
                 r = calc.run(d)
                 record_indicator_status(db, d, r.get("indicator_results", {}))
                 fgi = r.get("fgi_final")
-                if isinstance(fgi, (int, float)):
+                if isinstance(fgi, int | float):
                     ok += 1
                 else:
                     miss += 1

@@ -114,7 +114,7 @@ def main(start: str = "2015-01-01", end: str | None = None,
                 r = calc.run(d)
                 record_indicator_status(db, d, r.get("indicator_results", {}))
                 fgi = r.get("fgi_final")
-                if isinstance(fgi, (int, float)):
+                if isinstance(fgi, int | float):
                     ok += 1
                 else:
                     miss += 1

@@ -156,7 +156,7 @@ def compute_fgi_daily(calculator, db, dates: list[str]):
             result = calculator.run(date)
             record_indicator_status(db, date, result.get("indicator_results", {}))
             fgi = result.get("fgi_final", None)
-            if isinstance(fgi, (int, float)):
+            if isinstance(fgi, int | float):
                 print(f"[{i+1}/{total}] {date}: FGI={fgi:.1f}")
             else:
                 print(f"[{i+1}/{total}] {date}: skipped (FGI={fgi})")

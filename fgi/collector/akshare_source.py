@@ -57,7 +57,7 @@ class AKShareSource(DataSource):
         result = fn()
         if result is None:
             return None
-        if isinstance(result, (pd.DataFrame, list, dict)) and len(result) == 0:
+        if isinstance(result, pd.DataFrame | list | dict) and len(result) == 0:
             return result
         self._cache[key] = (now, result)
         if len(self._cache) > self._cache_max:
