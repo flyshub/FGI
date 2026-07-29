@@ -19,20 +19,10 @@ class V1Calculator:
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_pe_data(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "v1_pe",
-            "fetch_pe_data",
-            start_date,
-            end_date
-        )
+        return self._data_manager.fetch("v1_pe", "fetch_pe_data", start_date, end_date)
 
     def fetch_bond_yield(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "v1_bond",
-            "fetch_bond_yield",
-            start_date,
-            end_date
-        )
+        return self._data_manager.fetch("v1_bond", "fetch_bond_yield", start_date, end_date)
 
     def calculate_erp(self, pe_df: pd.DataFrame, bond_df: pd.DataFrame) -> pd.DataFrame:
         pe_df = pe_df.copy()
@@ -75,26 +65,32 @@ class V1Calculator:
 
         # 回写完整 PE-TTM 历史序列（幂等 upsert），供 V2 和 OFFLINE_RAW_MAPPING 使用
         pe_data = pe_result.data
-        pe_history = pd.DataFrame({
-            "date": pe_data["date"].astype(str),
-            "value": pd.to_numeric(pe_data["滚动市盈率"], errors="coerce"),
-        }).dropna()
+        pe_history = pd.DataFrame(
+            {
+                "date": pe_data["date"].astype(str),
+                "value": pd.to_numeric(pe_data["滚动市盈率"], errors="coerce"),
+            }
+        ).dropna()
         self._db.upsert_raw_data_batch(pe_history, "v1_pe_ttm")
 
         # 回写完整债券收益率历史序列，供 OFFLINE_RAW_MAPPING 使用
         bond_data = bond_result.data
         assert bond_data is not None
-        bond_history = pd.DataFrame({
-            "date": bond_data["date"].astype(str),
-            "value": pd.to_numeric(bond_data["yield_10y"], errors="coerce"),
-        }).dropna()
+        bond_history = pd.DataFrame(
+            {
+                "date": bond_data["date"].astype(str),
+                "value": pd.to_numeric(bond_data["yield_10y"], errors="coerce"),
+            }
+        ).dropna()
         self._db.upsert_raw_data_batch(bond_history, "v1_bond_yield")
 
         # 回写完整 ERP 历史序列（幂等 upsert），供 V2 的 250 日 ΔERP 窗口使用
-        erp_history = pd.DataFrame({
-            "date": df["date"].astype(str),
-            "value": df["erp"],
-        }).dropna()
+        erp_history = pd.DataFrame(
+            {
+                "date": df["date"].astype(str),
+                "value": df["erp"],
+            }
+        ).dropna()
         self._db.upsert_raw_data_batch(erp_history, "v1_erp")
         self._db.commit()
 

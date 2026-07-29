@@ -42,6 +42,7 @@ class Database:
         """ScoreRepository — scores_daily CRUD and aggregates."""
         if self._scores is None:
             from fgi.storage.repositories import ScoreRepository
+
             self._scores = ScoreRepository(self._connection)  # type: ignore[arg-type]
         return self._scores
 
@@ -50,6 +51,7 @@ class Database:
         """RawDataRepository — raw_data CRUD and diagnostics."""
         if self._raw_data is None:
             from fgi.storage.repositories import RawDataRepository
+
             self._raw_data = RawDataRepository(self._connection)  # type: ignore[arg-type]
         return self._raw_data
 
@@ -58,6 +60,7 @@ class Database:
         """StatusRepository — daily_status CRUD and queries."""
         if self._status is None:
             from fgi.storage.repositories import StatusRepository
+
             self._status = StatusRepository(self._connection)  # type: ignore[arg-type]
         return self._status
 
@@ -134,6 +137,7 @@ class Database:
 
     def connect(self):
         import sqlite3
+
         self._connection = sqlite3.connect(str(self._path))
         self._connection.execute("PRAGMA journal_mode=WAL")
         return self
@@ -209,19 +213,34 @@ class Database:
         if self._connection is None:
             return
         # F3 switched to proxy (price×volume) — f3_industry_net_flow is dead data (#77)
-        self._connection.execute(
-            "DELETE FROM raw_data WHERE indicator = 'f3_industry_net_flow'"
-        )
+        self._connection.execute("DELETE FROM raw_data WHERE indicator = 'f3_industry_net_flow'")
 
     def _migrate_scores_daily_columns(self):
         """Add any scores_daily columns missing from older DB schemas."""
         if self._connection is None:
             return
-        existing = {r[1] for r in self._connection.execute("PRAGMA table_info(scores_daily)").fetchall()}
+        existing = {
+            r[1] for r in self._connection.execute("PRAGMA table_info(scores_daily)").fetchall()
+        }
         defined = {
-            "M1", "M2", "M3", "M4", "S1", "S2", "S3",
-            "V1", "V2", "V4", "F1", "F2", "F3",
-            "FGI_raw", "FGI_final", "FGI_legacy", "FGI_current", "health_score",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "S1",
+            "S2",
+            "S3",
+            "V1",
+            "V2",
+            "V4",
+            "F1",
+            "F2",
+            "F3",
+            "FGI_raw",
+            "FGI_final",
+            "FGI_legacy",
+            "FGI_current",
+            "health_score",
         }
         for col in defined - existing:
             self._connection.execute(f"ALTER TABLE scores_daily ADD COLUMN {col} REAL")
@@ -253,7 +272,9 @@ class Database:
         if self._connection is None:
             raise RuntimeError("Database not connected")
         if table not in ("scores_daily", "daily_status"):
-            raise ValueError(f"clear_table_range supports scores_daily/daily_status only, got: {table}")
+            raise ValueError(
+                f"clear_table_range supports scores_daily/daily_status only, got: {table}"
+            )
         cur = self._connection.execute(
             f"DELETE FROM {table} WHERE date BETWEEN ? AND ?",
             (start_date, end_date),

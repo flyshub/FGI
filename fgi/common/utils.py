@@ -18,8 +18,14 @@ def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     recompute 场景下同一 series 的二次调用通过 cache 直接返回。
     """
     arr = series.values
-    key = (len(arr), hash(arr.tobytes()), window,
-           series.index[0], series.index[-1], len(series.index))
+    key = (
+        len(arr),
+        hash(arr.tobytes()),
+        window,
+        series.index[0],
+        series.index[-1],
+        len(series.index),
+    )
     cached = _PERCENTILE_CACHE.get(key)
     if cached is not None:
         return cached
@@ -39,7 +45,7 @@ def rolling_percentile(series: pd.Series, window: int = 1260) -> pd.Series:
     # 计算其中 <= 当前值 的个数（排除 NaN）和唯一值个数
     for i in range(min_p - 1, n):
         start = max(0, i - window + 1)
-        w = vals[start:i + 1]
+        w = vals[start : i + 1]
         w_valid = w[~np.isnan(w)]
         cur = vals[i]
         if np.isnan(cur):
@@ -173,7 +179,9 @@ def calculate_health_score(status_df: pd.DataFrame) -> float:
         return 0
 
     normal_count = len(status_df[status_df["status"] == "normal"])
-    impaired_count = len(status_df[status_df["status"].isin(["degraded", "substituted", "missing", "error"])])
+    impaired_count = len(
+        status_df[status_df["status"].isin(["degraded", "substituted", "missing", "error"])]
+    )
 
     normal_ratio = normal_count / total
     impaired_ratio = impaired_count / total

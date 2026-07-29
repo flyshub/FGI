@@ -31,6 +31,7 @@ class Alert:
             self._send_webhook(message)
         try:
             from fgi.output.pushplus import send_alert
+
             send_alert(f"FGI 异常告警 · {date}", message)
         except Exception as e:
             logger.error(f"PushPlus alert skipped: {e}")
@@ -41,11 +42,15 @@ class Alert:
         try:
             db_path = self.db_path or DB_PATH
             with Database(db_path) as db:
-                lookback = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=QUERY_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+                lookback = (
+                    datetime.strptime(date, "%Y-%m-%d") - timedelta(days=QUERY_LOOKBACK_DAYS)
+                ).strftime("%Y-%m-%d")
                 df = db.get_scores(lookback, date)
                 # 排除当日，用最近 1260 个交易日的历史 |ΔFGI| 的 99% 分位做阈值
                 hist = df[df["date"] < date] if not df.empty else df
-                fgi_changes = hist["FGI_final"].diff().abs().dropna().tail(ANOMALY_WINDOW_TRADING_DAYS)
+                fgi_changes = (
+                    hist["FGI_final"].diff().abs().dropna().tail(ANOMALY_WINDOW_TRADING_DAYS)
+                )
                 today_fgi = fgi_result.get("fgi_final")
                 if not fgi_changes.empty and today_fgi is not None:
                     prev_fgi = hist["FGI_final"].dropna().iloc[-1]
@@ -77,12 +82,7 @@ class Alert:
 
     def _send_webhook_text(self, message: str):
         try:
-            data = {
-                "msgtype": "text",
-                "text": {
-                    "content": message
-                }
-            }
+            data = {"msgtype": "text", "text": {"content": message}}
             response = requests.post(self.webhook_url, json=data, timeout=10)
             response.raise_for_status()
         except Exception as e:

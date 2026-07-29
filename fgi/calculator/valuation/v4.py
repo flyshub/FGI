@@ -25,7 +25,10 @@ class V4Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "v4_qvix", "fetch_qvix", start_date, end_date,
+            "v4_qvix",
+            "fetch_qvix",
+            start_date,
+            end_date,
         )
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -41,7 +44,9 @@ class V4Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = (pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)).strftime("%Y-%m-%d")
+        start_date = (pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)).strftime(
+            "%Y-%m-%d"
+        )
 
         # DB-first：从 raw_data 读历史，缺失时从源拉取并持久化
         db_data = self._db.get_raw_data("v4_qvix", start_date, end_date)

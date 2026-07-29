@@ -6,6 +6,7 @@ overwrite full history so percentile is computed on a consistent caliber.
 
 Usage: python3.12 -m scripts.backfill_f1_margin
 """
+
 import sys
 from pathlib import Path
 
@@ -45,7 +46,10 @@ def main():
 
     if stats:
         min_v, max_v, avg_v = stats
-        print(f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}", flush=True)
+        print(
+            f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}",
+            flush=True,
+        )
     else:
         print(f"\nDONE: {n_new} rows, no stats available", flush=True)
 

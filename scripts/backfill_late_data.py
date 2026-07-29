@@ -11,6 +11,7 @@ Usage:
     python scripts/backfill_late_data.py              # default: look back 3 trading days
     python scripts/backfill_late_data.py --days 5      # look back 5 trading days
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,8 +41,9 @@ def _setup_manager():
     return setup_data_manager()
 
 
-def _find_forward_filled_dates(db: Database, lookback_days: int,
-                                trading_days: list[str], today: str) -> dict[str, set[str]]:
+def _find_forward_filled_dates(
+    db: Database, lookback_days: int, trading_days: list[str], today: str
+) -> dict[str, set[str]]:
     """Find dates where each indicator was forward-filled in recent trading days.
 
     Returns {indicator_name: {date_str, ...}}.
@@ -107,9 +109,19 @@ def main():
                     result = calc.run(date_str)
                     if result.get("status") in ("normal", "degraded"):
                         affected_dates.add(date_str)
-                        logger.info("  %s: %s → score=%s", indicator, date_str, result.get(calc_name.lower()))
+                        logger.info(
+                            "  %s: %s → score=%s",
+                            indicator,
+                            date_str,
+                            result.get(calc_name.lower()),
+                        )
                     else:
-                        logger.info("  %s: %s → still missing (status=%s)", indicator, date_str, result.get("status"))
+                        logger.info(
+                            "  %s: %s → still missing (status=%s)",
+                            indicator,
+                            date_str,
+                            result.get("status"),
+                        )
                 except Exception as e:
                     logger.warning("  %s: %s → error: %s", indicator, date_str, e)
 
@@ -129,11 +141,13 @@ def main():
 
                 result = calculator.run(date_str)
                 record_indicator_status(db, date_str, result.get("indicator_results", {}))
-                logger.info("  FGI %s: raw=%.1f final=%.1f health=%.0f",
-                           date_str,
-                           result.get("fgi_raw") or 0,
-                           result.get("fgi_final") or 0,
-                           result.get("health_score") or 0)
+                logger.info(
+                    "  FGI %s: raw=%.1f final=%.1f health=%.0f",
+                    date_str,
+                    result.get("fgi_raw") or 0,
+                    result.get("fgi_final") or 0,
+                    result.get("health_score") or 0,
+                )
             except Exception as e:
                 logger.warning("  FGI %s: recompute error: %s", date_str, e)
 
@@ -143,6 +157,7 @@ def main():
     logger.info("Re-exporting web data...")
     os.chdir(Path(__file__).resolve().parent.parent)
     from scripts.export_fgi_web_data import main as export_main
+
     try:
         # trick: set sys.argv for export
         old_argv = sys.argv

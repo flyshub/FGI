@@ -27,10 +27,19 @@ def data_manager():
     mock = MockSource("mock", healthy=True)
     manager.register_source("mock", mock)
     for chain in [
-        "m1_zt_stats", "m2_market_overview", "m3_index", "m4_cyb_volume",
-        "s2_sentiment", "s3_zt_daily", "v1_pe", "v1_bond",
-        "f1_margin", "f1_market_cap", "f2_fund_position",
-        "f3_industry_flow", "f3_index",
+        "m1_zt_stats",
+        "m2_market_overview",
+        "m3_index",
+        "m4_cyb_volume",
+        "s2_sentiment",
+        "s3_zt_daily",
+        "v1_pe",
+        "v1_bond",
+        "f1_margin",
+        "f1_market_cap",
+        "f2_fund_position",
+        "f3_industry_flow",
+        "f3_index",
     ]:
         manager.configure_chain(chain, ["mock"])
     return manager
@@ -123,10 +132,24 @@ class TestFGICalculator:
         db.upsert_score("2024-01-01", {"M2": 70.0})
         # 2024-01-01 (Mon) + 15 trading days after → 01-22 (Mon)
         # elapsed > MISSING_DAY_LIMIT=10 → 应保持 missing
-        for d in ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04",
-                  "2024-01-05", "2024-01-08", "2024-01-09", "2024-01-10",
-                  "2024-01-11", "2024-01-12", "2024-01-15", "2024-01-16",
-                  "2024-01-17", "2024-01-18", "2024-01-19", "2024-01-22"]:
+        for d in [
+            "2024-01-01",
+            "2024-01-02",
+            "2024-01-03",
+            "2024-01-04",
+            "2024-01-05",
+            "2024-01-08",
+            "2024-01-09",
+            "2024-01-10",
+            "2024-01-11",
+            "2024-01-12",
+            "2024-01-15",
+            "2024-01-16",
+            "2024-01-17",
+            "2024-01-18",
+            "2024-01-19",
+            "2024-01-22",
+        ]:
             db.upsert_score(d, {"M1": 50.0})
         db.commit()
         results = {"M2": {"score": None, "status": "missing"}}
@@ -139,9 +162,20 @@ class TestFGICalculator:
         第 11 日起→missing。"""
         # 01-01 为最后真实得分；01-02 ~ 01-17 连续缺失（01-06/07/13/14 为周末）
         db.upsert_score("2024-01-01", {"M2": 70.0})
-        missing_days = ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05",
-                        "2024-01-08", "2024-01-09", "2024-01-10", "2024-01-11",
-                        "2024-01-12", "2024-01-15", "2024-01-16", "2024-01-17"]
+        missing_days = [
+            "2024-01-02",
+            "2024-01-03",
+            "2024-01-04",
+            "2024-01-05",
+            "2024-01-08",
+            "2024-01-09",
+            "2024-01-10",
+            "2024-01-11",
+            "2024-01-12",
+            "2024-01-15",
+            "2024-01-16",
+            "2024-01-17",
+        ]
         for d in ["2024-01-01"] + missing_days:
             db.upsert_score(d, {"M1": 50.0})  # 模拟当日其他指标正常，产生交易日行
         db.commit()
@@ -149,7 +183,9 @@ class TestFGICalculator:
         # 第 1 个缺失交易日：T+1 延迟 → normal
         results = {"M2": {"score": None, "status": "missing"}}
         calculator._apply_forward_fill(results, missing_days[0])
-        assert results["M2"]["score"] == 70.0, f"day 1 ({missing_days[0]}) should be filled as normal"
+        assert results["M2"]["score"] == 70.0, (
+            f"day 1 ({missing_days[0]}) should be filled as normal"
+        )
         assert results["M2"]["status"] == "normal"
 
         # 第 2~10 个缺失交易日：degraded

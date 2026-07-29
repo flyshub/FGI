@@ -126,7 +126,9 @@ class TestDataSourceManager:
         source = MockSource("mock", healthy=True)
         manager.register_source("mock", source)
         manager.configure_chain("test_indicator", ["mock"])
-        result = manager.fetch("test_indicator", "fetch_daily", "000001", "2024-01-01", "2024-01-10")
+        result = manager.fetch(
+            "test_indicator", "fetch_daily", "000001", "2024-01-01", "2024-01-10"
+        )
         assert result.status == DataSourceStatus.HEALTHY
 
     def test_fetch_no_chain(self):

@@ -80,8 +80,12 @@ class TestRecordIndicatorStatus:
 
     def test_overwrites_same_date(self, db):
         """同日期覆写"""
-        record_indicator_status(db, "2024-01-02", {"M1": {"score": 50.0, "status": "normal", "source": "akshare"}})
-        record_indicator_status(db, "2024-01-02", {"M1": {"score": 50.0, "status": "degraded", "source": "akshare"}})
+        record_indicator_status(
+            db, "2024-01-02", {"M1": {"score": 50.0, "status": "normal", "source": "akshare"}}
+        )
+        record_indicator_status(
+            db, "2024-01-02", {"M1": {"score": 50.0, "status": "degraded", "source": "akshare"}}
+        )
         status = db.get_status("2024-01-02")
         assert len(status) == 1
         assert status.iloc[0]["status"] == "degraded"

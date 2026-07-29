@@ -11,6 +11,7 @@ Use `fgi.output.signal_report` instead:
   - Report:    scripts/generate_signal_report.py
 
 """
+
 raise NotImplementedError(
     "BacktestEngine is deprecated. Use fgi.output.signal_report for "
     "Rank IC analysis, layer backtest, and DCA simulation (ADR-0003)."
@@ -45,7 +46,7 @@ class BacktestEngine:
 
         ic_values = []
         for i in range(len(scores) - 19):
-            window = scores.iloc[i:i+20]
+            window = scores.iloc[i : i + 20]
             if len(window) >= 10:
                 corr = window["FGI_final"].corr(window["future_return"])
                 if not pd.isna(corr):
@@ -60,8 +61,9 @@ class BacktestEngine:
 
         return {"ic_mean": ic_mean, "ic_std": ic_std, "icir": icir}
 
-    def layer_backtest(self, scores: pd.DataFrame, n_layers: int = 5,
-                       holding_days: int = 5) -> dict[str, list[float]]:
+    def layer_backtest(
+        self, scores: pd.DataFrame, n_layers: int = 5, holding_days: int = 5
+    ) -> dict[str, list[float]]:
         if len(scores) < holding_days + 1:
             return {"layer_returns": [0.0] * n_layers}
 
@@ -83,8 +85,13 @@ class BacktestEngine:
 
         return {"layer_returns": layer_returns}
 
-    def strategy_simulation(self, scores: pd.DataFrame, holding_days: int = 5,
-                           threshold_high: float = 70, threshold_low: float = 30) -> dict[str, float]:
+    def strategy_simulation(
+        self,
+        scores: pd.DataFrame,
+        holding_days: int = 5,
+        threshold_high: float = 70,
+        threshold_low: float = 30,
+    ) -> dict[str, float]:
         if len(scores) < holding_days + 1:
             return {"total_return": 0.0, "win_rate": 0.0, "sharpe": 0.0}
 
@@ -109,7 +116,11 @@ class BacktestEngine:
 
         total_return = float((1 + scores["strategy_return"]).prod() - 1)
         win_rate = float((scores["strategy_return"] > 0).sum() / len(scores))
-        sharpe = float(scores["strategy_return"].mean() / scores["strategy_return"].std() * np.sqrt(252)) if scores["strategy_return"].std() > 0 else 0.0
+        sharpe = (
+            float(scores["strategy_return"].mean() / scores["strategy_return"].std() * np.sqrt(252))
+            if scores["strategy_return"].std() > 0
+            else 0.0
+        )
 
         return {"total_return": total_return, "win_rate": win_rate, "sharpe": sharpe}
 

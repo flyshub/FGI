@@ -7,9 +7,9 @@ from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 logger = logging.getLogger(__name__)
 
 
-COOLDOWN = 300          # 失败后冷却秒数
-MAX_FAILURES = 5        # 连续失败达到此次数进入长禁用
-LONG_COOLDOWN = 3600    # 长禁用秒数
+COOLDOWN = 300  # 失败后冷却秒数
+MAX_FAILURES = 5  # 连续失败达到此次数进入长禁用
+LONG_COOLDOWN = 3600  # 长禁用秒数
 
 
 # FGI_OFFLINE 模式下从 raw_data 重构 DataFrame 的映射表。
@@ -22,7 +22,10 @@ OFFLINE_RAW_MAPPING: dict[str, tuple] = {
     "fetch_market_cap": (("f1_market_cap",), ("market_cap",)),
     "fetch_fund_position": (("f2_fund_position",), ("position",)),
     "fetch_market_hot_sentiment": (("s2_heat",), ("p_close",)),
-    "fetch_zt_daily_summary": (("m1_zt_count", "s3_seal_fund"), ("limit_up_count", "seal_fund_sum")),
+    "fetch_zt_daily_summary": (
+        ("m1_zt_count", "s3_seal_fund"),
+        ("limit_up_count", "seal_fund_sum"),
+    ),
     "fetch_pe_data": (("v1_pe_ttm",), ("滚动市盈率",)),
     "fetch_pb_data": (("v1_pb",), ("市净率",)),
     "fetch_bond_yield": (("v1_bond_yield",), ("yield_10y",)),
@@ -91,8 +94,11 @@ class FallbackChain:
             if func is None:
                 # 不支持该方法的源直接从链里剔除，不计入失败次数
                 self._unsupported.add(i)
-                logger.info("Source %s does not implement %s, removed from chain",
-                            type(source).__name__, method)
+                logger.info(
+                    "Source %s does not implement %s, removed from chain",
+                    type(source).__name__,
+                    method,
+                )
                 continue
             try:
                 result = func(*args, **kwargs)
@@ -100,14 +106,20 @@ class FallbackChain:
                     self._record_success(i)
                     return result
                 self._record_failure(i, result.status)
-                if result.status == DataSourceStatus.DEGRADED and result.data is not None and degraded is None:
+                if (
+                    result.status == DataSourceStatus.DEGRADED
+                    and result.data is not None
+                    and degraded is None
+                ):
                     degraded = result
             except Exception:
                 self._record_failure(i, DataSourceStatus.FAILED)
                 continue
         if degraded is not None:
             return degraded
-        return DataSourceResult(None, DataSourceStatus.FAILED, "fallback_chain", "All sources failed")
+        return DataSourceResult(
+            None, DataSourceStatus.FAILED, "fallback_chain", "All sources failed"
+        )
 
     def health_check(self) -> dict[int, DataSourceStatus]:
         statuses = {}
@@ -137,7 +149,9 @@ class DataSourceManager:
         sources = [self._sources[name] for name in source_names if name in self._sources]
         self._chains[indicator] = FallbackChain(sources)
 
-    def _offline_reconstruct(self, indicator: str, method: str, start_date: str, end_date: str) -> DataSourceResult | None:
+    def _offline_reconstruct(
+        self, indicator: str, method: str, start_date: str, end_date: str
+    ) -> DataSourceResult | None:
         """从 raw_data 重构 DataFrame；找不到映射或无数据返回 None。"""
         if self._db is None:
             return None
@@ -178,10 +192,16 @@ class DataSourceManager:
                 reconstructed = self._offline_reconstruct(indicator, method, start_date, end_date)
                 if reconstructed is not None:
                     return reconstructed
-            return DataSourceResult(None, DataSourceStatus.FAILED, "offline",
-                                    f"offline mode: no raw data for {indicator}/{method}")
+            return DataSourceResult(
+                None,
+                DataSourceStatus.FAILED,
+                "offline",
+                f"offline mode: no raw data for {indicator}/{method}",
+            )
         if indicator not in self._chains:
-            return DataSourceResult(None, DataSourceStatus.FAILED, "manager", f"No chain for {indicator}")
+            return DataSourceResult(
+                None, DataSourceStatus.FAILED, "manager", f"No chain for {indicator}"
+            )
         return self._chains[indicator].fetch(method, *args, **kwargs)
 
     def health_check(self) -> dict[str, dict[int, DataSourceStatus]]:

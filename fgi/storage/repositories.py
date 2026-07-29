@@ -16,11 +16,27 @@ class ScoreRepository:
     """scores_daily CRUD and aggregates."""
 
     # Field whitelist — keep in sync with init_schema
-    ALLOWED_FIELDS = frozenset({
-        "M1", "M2", "M3", "M4", "S1", "S2", "S3",
-        "V1", "V2", "V4", "F1", "F2", "F3",
-        "FGI_raw", "FGI_final", "FGI_current", "health_score",
-    })
+    ALLOWED_FIELDS = frozenset(
+        {
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "S1",
+            "S2",
+            "S3",
+            "V1",
+            "V2",
+            "V4",
+            "F1",
+            "F2",
+            "F3",
+            "FGI_raw",
+            "FGI_final",
+            "FGI_current",
+            "health_score",
+        }
+    )
 
     def __init__(self, conn: sqlite3.Connection):
         self._handle = conn
@@ -43,11 +59,14 @@ class ScoreRepository:
         field_names = ", ".join(fields)
         update_clause = ", ".join([f"{f} = excluded.{f}" for f in fields])
 
-        self._handle.execute(f"""
+        self._handle.execute(
+            f"""
             INSERT INTO scores_daily (date, {field_names})
             VALUES (?, {placeholders})
             ON CONFLICT (date) DO UPDATE SET {update_clause}
-        """, [date] + values)
+        """,
+            [date] + values,
+        )
 
     def update_score_field(self, date: str, field: str, value) -> None:
         if field not in self.ALLOWED_FIELDS:
@@ -62,7 +81,8 @@ class ScoreRepository:
     def get_scores(self, start_date: str, end_date: str) -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM scores_daily WHERE date >= ? AND date <= ? ORDER BY date",
-            self._handle, params=[start_date, end_date],
+            self._handle,
+            params=[start_date, end_date],
         )
 
     def get_score_on_date(self, date: str) -> dict | None:
@@ -98,28 +118,32 @@ class RawDataRepository:
     # ── write ────────────────────────────────────────────────
 
     def upsert_raw_data(self, date: str, indicator: str, value: float) -> None:
-        self._handle.execute("""
+        self._handle.execute(
+            """
             INSERT INTO raw_data (date, indicator, value)
             VALUES (?, ?, ?)
             ON CONFLICT (date, indicator) DO UPDATE SET
                 value = excluded.value,
                 update_time = CURRENT_TIMESTAMP
-        """, (date, indicator, value))
+        """,
+            (date, indicator, value),
+        )
 
     def upsert_raw_data_batch(self, df: pd.DataFrame, indicator: str) -> None:
         records = [(row["date"], indicator, row["value"]) for _, row in df.iterrows()]
-        self._handle.executemany("""
+        self._handle.executemany(
+            """
             INSERT INTO raw_data (date, indicator, value)
             VALUES (?, ?, ?)
             ON CONFLICT (date, indicator) DO UPDATE SET
                 value = excluded.value,
                 update_time = CURRENT_TIMESTAMP
-        """, records)
+        """,
+            records,
+        )
 
     def delete_raw_data(self, indicator: str) -> int:
-        cur = self._handle.execute(
-            "DELETE FROM raw_data WHERE indicator = ?", (indicator,)
-        )
+        cur = self._handle.execute("DELETE FROM raw_data WHERE indicator = ?", (indicator,))
         return cur.rowcount
 
     # ── read ─────────────────────────────────────────────────
@@ -128,7 +152,8 @@ class RawDataRepository:
         return pd.read_sql_query(
             "SELECT date, value FROM raw_data "
             "WHERE indicator = ? AND date >= ? AND date <= ? ORDER BY date",
-            self._handle, params=[indicator, start_date, end_date],
+            self._handle,
+            params=[indicator, start_date, end_date],
         )
 
     def get_latest_raw_date(self, indicator: str, on_or_before: str) -> str | None:
@@ -158,7 +183,10 @@ class RawDataRepository:
         return row[0], row[1], row[2]
 
     def get_missing_dates(
-        self, indicator: str, start_date: str, end_date: str,
+        self,
+        indicator: str,
+        start_date: str,
+        end_date: str,
         trading_days: list | None = None,
     ) -> list:
         """返回 [start_date, end_date] 范围内缺少的日期列表。
@@ -175,7 +203,10 @@ class RawDataRepository:
             m3 = self.get_raw_data("m3_close", start_date, end_date)
             trading_days = m3["date"].tolist() if not m3.empty else None
         if trading_days is None:
-            all_dates = [d.strftime("%Y-%m-%d") for d in pd.date_range(start=start_date, end=end_date, freq="B")]
+            all_dates = [
+                d.strftime("%Y-%m-%d")
+                for d in pd.date_range(start=start_date, end=end_date, freq="B")
+            ]
         else:
             all_dates = [str(d) for d in trading_days]
         existing = set(df["date"].tolist())
@@ -199,25 +230,37 @@ class StatusRepository:
     # ── write ────────────────────────────────────────────────
 
     def upsert_status(
-        self, date: str, indicator: str, status: str,
-        source: str = "", error: str = "",
+        self,
+        date: str,
+        indicator: str,
+        status: str,
+        source: str = "",
+        error: str = "",
     ) -> None:
         indicator = indicator.lower()
-        self._handle.execute("""
+        self._handle.execute(
+            """
             INSERT INTO daily_status (date, indicator, status, source, error)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT (date, indicator) DO UPDATE SET
                 status = excluded.status,
                 source = excluded.source,
                 error = excluded.error
-        """, (date, indicator, status, source, error or ""))
+        """,
+            (date, indicator, status, source, error or ""),
+        )
 
     def upsert_status_keep_source(
-        self, date: str, indicator: str, status: str, error: str = "",
+        self,
+        date: str,
+        indicator: str,
+        status: str,
+        error: str = "",
     ) -> None:
         """Same as upsert_status but preserves existing source field (#51)."""
         indicator = indicator.lower()
-        self._handle.execute("""
+        self._handle.execute(
+            """
             INSERT INTO daily_status (date, indicator, status, source, error)
             VALUES (?, ?, ?, COALESCE(
                 (SELECT source FROM daily_status WHERE date = ? AND indicator = ?), ''
@@ -226,14 +269,17 @@ class StatusRepository:
                 status = excluded.status,
                 error = CASE WHEN excluded.error != '' THEN excluded.error
                              ELSE daily_status.error END
-        """, (date, indicator, status, date, indicator, error or ""))
+        """,
+            (date, indicator, status, date, indicator, error or ""),
+        )
 
     # ── read ─────────────────────────────────────────────────
 
     def get_status(self, date: str) -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM daily_status WHERE date = ? ORDER BY indicator",
-            self._handle, params=[date],
+            self._handle,
+            params=[date],
         )
 
     def get_indicator_status(self, date: str) -> list:

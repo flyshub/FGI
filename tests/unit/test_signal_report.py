@@ -1,4 +1,5 @@
 """Tests for SignalReportEngine: zone assignment, forward returns, statistics."""
+
 import tempfile
 from pathlib import Path
 
@@ -55,6 +56,7 @@ class TestZoneAssignment:
 
     def test_nan_returns_unknown(self):
         from fgi.output.signal_report import assign_zone
+
         assert assign_zone(None) == "未知"
         assert assign_zone(float("nan")) == "未知"
 
@@ -65,13 +67,16 @@ class TestForwardReturns:
         n = 10
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
         closes = [100, 101, 99, 102, 103, 105, 104, 106, 108, 110]
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": [50] * n,
-            "close": closes,
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": [50] * n,
+                "close": closes,
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns
+
         result = compute_forward_returns(df, horizons=[2])
 
         # forward_2 = close[t+2]/close[t] - 1
@@ -87,13 +92,16 @@ class TestForwardReturns:
     def test_all_horizons_added(self):
         n = 100
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": [50] * n,
-            "close": np.linspace(100, 120, n),
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": [50] * n,
+                "close": np.linspace(100, 120, n),
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns
+
         result = compute_forward_returns(df, horizons=[5, 20, 60])
         assert "forward_5" in result.columns
         assert "forward_20" in result.columns
@@ -103,13 +111,16 @@ class TestForwardReturns:
         """Early rows with enough future data should NOT be NaN."""
         n = 200
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": [50] * n,
-            "close": [100 + i * 0.5 for i in range(n)],
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": [50] * n,
+                "close": [100 + i * 0.5 for i in range(n)],
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns
+
         result = compute_forward_returns(df, horizons=[5])
         # First row has 199 future rows → valid
         assert not pd.isna(result["forward_5"].iloc[0])
@@ -127,11 +138,13 @@ class TestZoneStats:
         fgis = [25 if i % 2 == 0 else 50 for i in range(n)]
         # Close: 100, 101, 102, ..., monotonically up → all forward returns positive
         closes = [100 + i for i in range(n)]
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": fgis,
-            "close": closes,
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": fgis,
+                "close": closes,
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns, compute_zone_stats
 
@@ -152,11 +165,13 @@ class TestZoneStats:
         """n < 30 → CI fields are None, not computed."""
         n = 20
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": [50] * n,
-            "close": [100 + i for i in range(n)],
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": [50] * n,
+                "close": [100 + i for i in range(n)],
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns, compute_zone_stats
 
@@ -172,11 +187,13 @@ class TestZoneStats:
         """Every zone appears in stats output even if n=0."""
         n = 100
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": [50] * n,
-            "close": [100 + i for i in range(n)],
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": [50] * n,
+                "close": [100 + i for i in range(n)],
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns, compute_zone_stats
 
@@ -191,13 +208,20 @@ class TestZoneStats:
         n = 100
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
         # All neutral
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": [50] * n,
-            "close": [
-                100, 102, 98, 101, 103,  # up, down, up, up
-            ] * 20,  # repeat 20x
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": [50] * n,
+                "close": [
+                    100,
+                    102,
+                    98,
+                    101,
+                    103,  # up, down, up, up
+                ]
+                * 20,  # repeat 20x
+            }
+        )
 
         from fgi.output.signal_report import compute_forward_returns, compute_zone_stats
 
@@ -216,8 +240,11 @@ class TestZoneStats:
 class TestEngineIntegration:
     def test_load_data_joins_fgi_and_close(self, db):
         """SignalReportEngine.load_data() produces a joined DataFrame."""
-        _seed(db, [("2020-01-02", 55.0), ("2020-01-03", 62.0)],
-              [("2020-01-02", 3050.0), ("2020-01-03", 3080.0)])
+        _seed(
+            db,
+            [("2020-01-02", 55.0), ("2020-01-03", 62.0)],
+            [("2020-01-02", 3050.0), ("2020-01-03", 3080.0)],
+        )
 
         from fgi.output.signal_report import SignalReportEngine
 
@@ -251,9 +278,11 @@ class TestEngineIntegration:
         closes = 3000 + np.cumsum(rng.normal(0, 20, n))
         fgis = rng.uniform(15, 85, n)
 
-        _seed(db,
-              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis, strict=False)],
-              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes, strict=False)])
+        _seed(
+            db,
+            [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis, strict=False)],
+            [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes, strict=False)],
+        )
 
         from fgi.output.signal_report import SignalReportEngine
 
@@ -283,9 +312,11 @@ class TestEngineIntegration:
         closes = 3000 + np.cumsum(rng.normal(0, 20, len(all_dates)))
         fgis = rng.uniform(20, 80, len(all_dates))
 
-        _seed(db,
-              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(all_dates, fgis, strict=False)],
-              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(all_dates, closes, strict=False)])
+        _seed(
+            db,
+            [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(all_dates, fgis, strict=False)],
+            [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(all_dates, closes, strict=False)],
+        )
 
         from fgi.output.signal_report import SignalReportEngine
 
@@ -317,11 +348,51 @@ class TestMarkdownReport:
             },
             "stats": {
                 5: [
-                    {"zone": "极度恐惧", "n": 8, "mean": 0.032, "std": 0.045, "ci_lower": None, "ci_upper": None, "win_rate": 0.875},
-                    {"zone": "恐惧", "n": 334, "mean": 0.008, "std": 0.032, "ci_lower": 0.0046, "ci_upper": 0.0114, "win_rate": 0.62},
-                    {"zone": "中性", "n": 1467, "mean": 0.002, "std": 0.028, "ci_lower": 0.0006, "ci_upper": 0.0034, "win_rate": 0.54},
-                    {"zone": "贪婪", "n": 753, "mean": -0.003, "std": 0.025, "ci_lower": -0.0048, "ci_upper": -0.0012, "win_rate": 0.44},
-                    {"zone": "极度贪婪", "n": 10, "mean": -0.015, "std": 0.038, "ci_lower": None, "ci_upper": None, "win_rate": 0.30},
+                    {
+                        "zone": "极度恐惧",
+                        "n": 8,
+                        "mean": 0.032,
+                        "std": 0.045,
+                        "ci_lower": None,
+                        "ci_upper": None,
+                        "win_rate": 0.875,
+                    },
+                    {
+                        "zone": "恐惧",
+                        "n": 334,
+                        "mean": 0.008,
+                        "std": 0.032,
+                        "ci_lower": 0.0046,
+                        "ci_upper": 0.0114,
+                        "win_rate": 0.62,
+                    },
+                    {
+                        "zone": "中性",
+                        "n": 1467,
+                        "mean": 0.002,
+                        "std": 0.028,
+                        "ci_lower": 0.0006,
+                        "ci_upper": 0.0034,
+                        "win_rate": 0.54,
+                    },
+                    {
+                        "zone": "贪婪",
+                        "n": 753,
+                        "mean": -0.003,
+                        "std": 0.025,
+                        "ci_lower": -0.0048,
+                        "ci_upper": -0.0012,
+                        "win_rate": 0.44,
+                    },
+                    {
+                        "zone": "极度贪婪",
+                        "n": 10,
+                        "mean": -0.015,
+                        "std": 0.038,
+                        "ci_lower": None,
+                        "ci_upper": None,
+                        "win_rate": 0.30,
+                    },
                 ],
             },
             "in_sample": None,
@@ -403,9 +474,11 @@ class TestZoneContextCard:
         closes = 3000 + np.cumsum(rng.normal(0, 20, n))
         fgis = rng.uniform(45, 55, n)  # all neutral
 
-        _seed(db,
-              [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis, strict=False)],
-              [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes, strict=False)])
+        _seed(
+            db,
+            [(d.strftime("%Y-%m-%d"), float(f)) for d, f in zip(dates, fgis, strict=False)],
+            [(d.strftime("%Y-%m-%d"), float(c)) for d, c in zip(dates, closes, strict=False)],
+        )
 
         from fgi.output.signal_report import render_zone_context_card
 
@@ -432,17 +505,20 @@ class TestRankIC:
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
         closes = 3000 + np.cumsum(rng.normal(0, 20, n))
         fgis = rng.uniform(20, 80, n)
-        return pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": fgis,
-            "close": closes,
-            "M1": rng.uniform(0, 100, n),
-            "M2": rng.uniform(0, 100, n),
-            "S2": rng.uniform(0, 100, n),
-        })
+        return pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": fgis,
+                "close": closes,
+                "M1": rng.uniform(0, 100, n),
+                "M2": rng.uniform(0, 100, n),
+                "S2": rng.uniform(0, 100, n),
+            }
+        )
 
     def test_compute_rank_ic_returns_dict(self):
         from fgi.output.signal_report import compute_rank_ic
+
         df = self._make_df(200)
         result = compute_rank_ic(df)
         assert result is not None
@@ -452,12 +528,14 @@ class TestRankIC:
 
     def test_compute_rank_ic_insufficient_data(self):
         from fgi.output.signal_report import compute_rank_ic
+
         df = self._make_df(20)
         result = compute_rank_ic(df)
         assert result is None
 
     def test_rolling_ic_window_structure(self):
         from fgi.output.signal_report import compute_rolling_ic_window
+
         df = self._make_df(800)  # need >756 for at least one window
         results = compute_rolling_ic_window(df, half_year=126)
         assert len(results) >= 1
@@ -475,14 +553,17 @@ class TestLayerBacktest10:
         dates = pd.date_range("2020-01-02", periods=n, freq="B")
         closes = 3000 + np.cumsum(rng.normal(0, 20, n))
         fgis = rng.uniform(20, 80, n)
-        return pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": fgis,
-            "close": closes,
-        })
+        return pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": fgis,
+                "close": closes,
+            }
+        )
 
     def test_layer_backtest_returns_all_horizons(self):
         from fgi.output.signal_report import layer_backtest_10
+
         df = self._make_df(200)
         result = layer_backtest_10(df)
         for h in [5, 20, 60]:
@@ -492,6 +573,7 @@ class TestLayerBacktest10:
     def test_layer_backtest_monotonicity_check(self):
         """Lowest decile (layer 1) should tend to have higher 60d return than highest decile (layer 10)."""
         from fgi.output.signal_report import layer_backtest_10
+
         rng = np.random.default_rng(789)
         n = 500
         dates = pd.date_range("2018-01-02", periods=n, freq="B")
@@ -501,19 +583,22 @@ class TestLayerBacktest10:
         forward_60 = base + noise  # increasing over time
         closes = 3000 * np.cumprod(1 + np.concatenate([[0], forward_60[:-1] / 100]))
         fgis = 100 - (np.linspace(20, 80, n) + rng.normal(0, 5, n))  # inverse
-        df = pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": fgis.clip(1, 99),
-            "close": closes,
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": fgis.clip(1, 99),
+                "close": closes,
+            }
+        )
         result = layer_backtest_10(df)
         layer_60 = result[60]
         if len(layer_60) >= 2:
             # Top decile wins should differ from bottom decile
             bottom = layer_60[0]
             top = layer_60[-1]
-            assert bottom["mean_return"] > top["mean_return"], \
+            assert bottom["mean_return"] > top["mean_return"], (
                 f"Expected low-FGI decile to outperform high-FGI decile, got {bottom['mean_return']:.4f} vs {top['mean_return']:.4f}"
+            )
 
 
 class TestDCA:
@@ -528,14 +613,17 @@ class TestDCA:
         daily_ret = rng.normal(0.0003, 0.015, n)
         closes = 3000 * np.cumprod(1 + daily_ret)
         fgis = rng.uniform(30, 70, n)
-        return pd.DataFrame({
-            "date": dates.strftime("%Y-%m-%d"),
-            "FGI_final": fgis,
-            "close": closes,
-        })
+        return pd.DataFrame(
+            {
+                "date": dates.strftime("%Y-%m-%d"),
+                "FGI_final": fgis,
+                "close": closes,
+            }
+        )
 
     def test_dca_returns_expected_keys(self):
         from fgi.output.signal_report import simulate_dca
+
         df = self._make_df(5)
         result = simulate_dca(df)
         assert "dca_total_return" in result
@@ -546,6 +634,7 @@ class TestDCA:
 
     def test_dca_insufficient_data(self):
         from fgi.output.signal_report import simulate_dca
+
         df = self._make_df(1)  # only ~12 months
         result = simulate_dca(df)
         # should work with 12 months
@@ -564,11 +653,16 @@ class TestCliEntry:
         path = tmp_path / "test_fgi.db"
         try:
             import fgi.config.settings as settings
+
             settings.DB_PATH = path
             test_db = Database(path).connect()
             test_db.init_schema()
-            _seed(test_db, [(f"2020-01-{d:02d}", 30 + (d % 40)) for d in range(3, 23)],
-                  [(f"2020-01-{d:02d}", 3000 + i * 10) for i, d in enumerate(range(3, 23))], "2020-01-03")
+            _seed(
+                test_db,
+                [(f"2020-01-{d:02d}", 30 + (d % 40)) for d in range(3, 23)],
+                [(f"2020-01-{d:02d}", 3000 + i * 10) for i, d in enumerate(range(3, 23))],
+                "2020-01-03",
+            )
             test_db.commit()
 
             engine = SignalReportEngine(test_db)
@@ -579,4 +673,5 @@ class TestCliEntry:
             test_db.close()
         finally:
             import fgi.config.settings as settings
+
             settings.DB_PATH = orig_path

@@ -7,6 +7,7 @@ Usage:
     python scripts/export_fgi_web_data.py --full              # all files
     python scripts/export_fgi_web_data.py --output-dir docs/data
 """
+
 from __future__ import annotations
 
 import argparse
@@ -68,13 +69,13 @@ def _get_fgi_percentile(db: Database, fgi: float) -> tuple[float, str, str]:
 def _compute_percentile_label(pct: float) -> tuple[float, str, str]:
     """Return (pct, human_label, extreme_note) for a given percentile (0-100)."""
     tiers = [
-        (10,   f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
-        (25,   f"低于历史上 {100-pct:.0f}% 的日子（偏低）", ""),
-        (40,   f"位于历史中下区域（{pct:.0f}%分位）", ""),
-        (60,   f"位于历史中部（{pct:.0f}%分位）", ""),
-        (75,   f"位于历史中上区域（{pct:.0f}%分位）", ""),
-        (90,   f"高于历史上 {pct:.0f}% 的日子（偏高）", ""),
-        (100,  f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"),
+        (10, f"低于历史上 {100 - pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
+        (25, f"低于历史上 {100 - pct:.0f}% 的日子（偏低）", ""),
+        (40, f"位于历史中下区域（{pct:.0f}%分位）", ""),
+        (60, f"位于历史中部（{pct:.0f}%分位）", ""),
+        (75, f"位于历史中上区域（{pct:.0f}%分位）", ""),
+        (90, f"高于历史上 {pct:.0f}% 的日子（偏高）", ""),
+        (100, f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"),
     ]
     for limit, label, note in tiers:
         if pct <= limit:
@@ -146,7 +147,13 @@ def _compute_anchor(db: Database, fgi: float, date_str: str) -> dict | None:
             return None
 
         # Trend purity: check if the CURRENT trend is directional enough
-        trend_series = all_scores[all_scores["date"] <= date_str]["FGI_final"].dropna().tail(6).astype(float).values
+        trend_series = (
+            all_scores[all_scores["date"] <= date_str]["FGI_final"]
+            .dropna()
+            .tail(6)
+            .astype(float)
+            .values
+        )
         if len(trend_series) == 6:
             changes = np.abs(np.diff(trend_series))
             total_v = np.sum(changes)
@@ -172,11 +179,13 @@ def _compute_anchor(db: Database, fgi: float, date_str: str) -> dict | None:
                 d = str(cr["date"])
                 r = _get_forward_return(db, d, horizon=20)
                 if r is not None:
-                    detail_table.append({
-                        "date": d,
-                        "fgi": round(float(cr["FGI_final"]), 1),
-                        "forward_20": round(r * 100, 1),
-                    })
+                    detail_table.append(
+                        {
+                            "date": d,
+                            "fgi": round(float(cr["FGI_final"]), 1),
+                            "forward_20": round(r * 100, 1),
+                        }
+                    )
         except Exception:
             pass
 
@@ -195,7 +204,11 @@ def _get_dimension_scores(scores: dict) -> dict:
     """Compute 5 dimension averages from indicator scores."""
     result = {}
     for dim, indicators in DIMENSION_INDICATORS.items():
-        vals = [scores.get(n) for n in indicators if scores.get(n) is not None and not pd.isna(scores.get(n))]
+        vals = [
+            scores.get(n)
+            for n in indicators
+            if scores.get(n) is not None and not pd.isna(scores.get(n))
+        ]
         result[dim] = round(sum(vals) / len(vals), 1) if vals else None
     return result
 
@@ -242,7 +255,9 @@ def export_latest(db: Database, date_str: str | None = None, stats: dict | None 
         pass
 
     # Zone context
-    zone_ctx = _zone_context(stats, zone, stats.get("metadata", {}).get("total_days")) if stats else None
+    zone_ctx = (
+        _zone_context(stats, zone, stats.get("metadata", {}).get("total_days")) if stats else None
+    )
 
     # Anchor
     anchor = _compute_anchor(db, fgi_final, date_str)
@@ -259,7 +274,9 @@ def export_latest(db: Database, date_str: str | None = None, stats: dict | None 
         "percentile": round(pct, 1),
         "percentile_label": pct_label,
         "extreme_note": extreme_note,
-        "scores": {k: (round(v, 1) if v is not None else None) for k, v in indicator_scores.items()},
+        "scores": {
+            k: (round(v, 1) if v is not None else None) for k, v in indicator_scores.items()
+        },
         "dimensions": dimension_scores,
         "statuses": statuses,
         "decision_matrix": dm.to_dict() if dm else None,
@@ -295,13 +312,19 @@ def export_history(db: Database) -> list[dict]:
 
     records = []
     for _, r in df.iterrows():
-        records.append({
-            "date": str(r["date"]),
-            "FGI_final": round(float(r["FGI_final"]), 2) if pd.notna(r.get("FGI_final")) else None,
-            "FGI_raw": round(float(r["FGI_raw"]), 2) if pd.notna(r.get("FGI_raw")) else None,
-            "health_score": round(float(r["health_score"]), 1) if pd.notna(r.get("health_score")) else None,
-            "close": round(float(r["close"]), 2) if pd.notna(r.get("close")) else None,
-        })
+        records.append(
+            {
+                "date": str(r["date"]),
+                "FGI_final": round(float(r["FGI_final"]), 2)
+                if pd.notna(r.get("FGI_final"))
+                else None,
+                "FGI_raw": round(float(r["FGI_raw"]), 2) if pd.notna(r.get("FGI_raw")) else None,
+                "health_score": round(float(r["health_score"]), 1)
+                if pd.notna(r.get("health_score"))
+                else None,
+                "close": round(float(r["close"]), 2) if pd.notna(r.get("close")) else None,
+            }
+        )
     return records
 
 
@@ -411,8 +434,16 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
         # Percentile
         pct, pct_label, extreme_note = 0.0, "无历史数据", ""
         try:
-            below = sum(1 for s in all_scores_list if s["date"] < date_str and s["FGI_final"] is not None and s["FGI_final"] < fgi_final)
-            total_before = sum(1 for s in all_scores_list if s["date"] < date_str and s["FGI_final"] is not None)
+            below = sum(
+                1
+                for s in all_scores_list
+                if s["date"] < date_str
+                and s["FGI_final"] is not None
+                and s["FGI_final"] < fgi_final
+            )
+            total_before = sum(
+                1 for s in all_scores_list if s["date"] < date_str and s["FGI_final"] is not None
+            )
             if total_before > 0:
                 pct = below / total_before * 100
                 _, pct_label, extreme_note = _compute_percentile_label(pct)
@@ -422,7 +453,9 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
         zone = assign_zone(fgi_final)
         dm = compute_decision_matrix(db, date_str, fgi_final)
         extreme = _get_extreme_signals(scores)
-        indicator_scores = {k: (float(scores.get(k)) if pd.notna(scores.get(k)) else None) for k in INDICATOR_NAMES}
+        indicator_scores = {
+            k: (float(scores.get(k)) if pd.notna(scores.get(k)) else None) for k in INDICATOR_NAMES
+        }
         indicator_scores_clean = {}
         for k, v in indicator_scores.items():
             indicator_scores_clean[k] = round(v, 1) if v is not None else None
@@ -443,26 +476,28 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
         # Anchor
         anchor = _compute_anchor(db, fgi_final, date_str)
 
-        all_dates.append({
-            "date": date_str,
-            "fgi_final": round(fgi_final, 2),
-            "fgi_raw": round(fgi_raw, 2),
-            "health_score": round(health, 1) if health is not None else None,
-            "zone": zone,
-            "trend": arrow,
-            "delta": delta,
-            "prev_fgi": round(prev.get("FGI_final"), 2) if prev else None,
-            "percentile": round(pct, 1),
-            "percentile_label": pct_label,
-            "extreme_note": extreme_note,
-            "scores": indicator_scores_clean,
-            "dimensions": dimension_scores,
-            "statuses": statuses,
-            "decision_matrix": dm.to_dict() if dm else None,
-            "extreme_signals": extreme,
-            "zone_context": zone_ctx,
-            "anchor": anchor,
-        })
+        all_dates.append(
+            {
+                "date": date_str,
+                "fgi_final": round(fgi_final, 2),
+                "fgi_raw": round(fgi_raw, 2),
+                "health_score": round(health, 1) if health is not None else None,
+                "zone": zone,
+                "trend": arrow,
+                "delta": delta,
+                "prev_fgi": round(prev.get("FGI_final"), 2) if prev else None,
+                "percentile": round(pct, 1),
+                "percentile_label": pct_label,
+                "extreme_note": extreme_note,
+                "scores": indicator_scores_clean,
+                "dimensions": dimension_scores,
+                "statuses": statuses,
+                "decision_matrix": dm.to_dict() if dm else None,
+                "extreme_signals": extreme,
+                "zone_context": zone_ctx,
+                "anchor": anchor,
+            }
+        )
     return all_dates
 
 
@@ -483,14 +518,16 @@ def export_anchors_history(db: Database) -> list[dict]:
         if closest is None:
             continue
         fr = _get_forward_return(db, closest[0], horizon=20)
-        result.append({
-            "date": date_str,
-            "fgi": round(fgi, 1),
-            "anchor_date": closest[0],
-            "anchor_fgi": round(closest[1], 1),
-            "anchor_delta": round(closest[1] - closest[2], 1),
-            "forward_20": round(fr * 100, 1) if fr is not None else None,
-        })
+        result.append(
+            {
+                "date": date_str,
+                "fgi": round(fgi, 1),
+                "anchor_date": closest[0],
+                "anchor_fgi": round(closest[1], 1),
+                "anchor_delta": round(closest[1] - closest[2], 1),
+                "forward_20": round(fr * 100, 1) if fr is not None else None,
+            }
+        )
     return result
 
 
@@ -552,7 +589,9 @@ def main():
             write_json(anchors, output_dir / "fgi_anchors_history.json")
 
             # 6. All dates pre-computed data (for date switching)
-            all_dates = export_all_dates(db, signal_report if signal_report and not signal_report.get("error") else None)
+            all_dates = export_all_dates(
+                db, signal_report if signal_report and not signal_report.get("error") else None
+            )
             write_json(all_dates, output_dir / "fgi_all_dates.json")
 
     logger.info("Done.")

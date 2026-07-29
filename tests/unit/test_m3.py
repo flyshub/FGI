@@ -37,10 +37,12 @@ def calculator(data_manager, db):
 
 class TestM3Calculator:
     def test_calculate_deviation(self, calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "close": [100 + i * 0.1 for i in range(100)]
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "close": [100 + i * 0.1 for i in range(100)],
+            }
+        )
         result = calculator.calculate_deviation(df)
         assert "deviation" in result.columns
         assert "ma60" in result.columns

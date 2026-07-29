@@ -2,6 +2,7 @@
 
 Thin HTTP transport layer. Markdown/HTML rendering lives in renderer.py.
 """
+
 from __future__ import annotations
 
 import logging
@@ -92,13 +93,13 @@ def _get_fgi_percentile(db: Database, fgi: float) -> tuple[str, str]:
             return "无历史数据", ""
         pct = below / total * 100
         tiers = [
-            (10,  f"低于历史上 {100-pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
-            (25,  f"低于历史上 {100-pct:.0f}% 的日子（偏低）",  ""),
-            (40,  f"位于历史中下区域（{pct:.0f}%分位）",        ""),
-            (60,  f"位于历史中部（{pct:.0f}%分位）",            ""),
-            (75,  f"位于历史中上区域（{pct:.0f}%分位）",        ""),
-            (90,  f"高于历史上 {pct:.0f}% 的日子（偏高）",      ""),
-            (100, f"高于历史上 {pct:.0f}% 的日子（极高）",      "⚠️ 处于历史极高区间"),
+            (10, f"低于历史上 {100 - pct:.0f}% 的日子（极低）", "⚠️ 处于历史极低区间"),
+            (25, f"低于历史上 {100 - pct:.0f}% 的日子（偏低）", ""),
+            (40, f"位于历史中下区域（{pct:.0f}%分位）", ""),
+            (60, f"位于历史中部（{pct:.0f}%分位）", ""),
+            (75, f"位于历史中上区域（{pct:.0f}%分位）", ""),
+            (90, f"高于历史上 {pct:.0f}% 的日子（偏高）", ""),
+            (100, f"高于历史上 {pct:.0f}% 的日子（极高）", "⚠️ 处于历史极高区间"),
         ]
         for limit, label, note in tiers:
             if pct <= limit:
@@ -109,7 +110,9 @@ def _get_fgi_percentile(db: Database, fgi: float) -> tuple[str, str]:
 
 
 def _get_most_changed_indicators(
-    db: Database, indicator_results: dict, date_str: str,
+    db: Database,
+    indicator_results: dict,
+    date_str: str,
     indicator_names: dict,
 ) -> list:
     """返回当日变动最大的前 3 个指标（变动 >= 5 分）。"""
@@ -121,7 +124,9 @@ def _get_most_changed_indicators(
         today = extract_indicator_score(indicator_results.get(name, {}), name)
         yesterday = prev.get(name)
         if today is not None and yesterday is not None:
-            changes.append((abs(today - yesterday), name, label, today - yesterday, yesterday, today))
+            changes.append(
+                (abs(today - yesterday), name, label, today - yesterday, yesterday, today)
+            )
     changes.sort(reverse=True)
     return [c for c in changes[:3] if c[0] >= 5]
 
@@ -131,10 +136,16 @@ def _get_zone_context_card(db: Database, fgi: float) -> str:
     return render_zone_context_card(fgi, db)
 
 
-def send_fgi_report(db: Database, fgi_raw: float, dimension_scores: dict,
-                    indicator_results: dict, health: float, *,
-                    date_str: str | None = None,
-                    decision_matrix: dict | None = None) -> bool:
+def send_fgi_report(
+    db: Database,
+    fgi_raw: float,
+    dimension_scores: dict,
+    indicator_results: dict,
+    health: float,
+    *,
+    date_str: str | None = None,
+    decision_matrix: dict | None = None,
+) -> bool:
     """Send FGI daily report via PushPlus.
 
     Returns True on success, False otherwise.
@@ -151,7 +162,11 @@ def send_fgi_report(db: Database, fgi_raw: float, dimension_scores: dict,
 
     # Pure rendering
     content = build_fgi_markdown(
-        fgi_raw, dimension_scores, indicator_results, health, date_str,
+        fgi_raw,
+        dimension_scores,
+        indicator_results,
+        health,
+        date_str,
         prev_scores=prev_scores,
         fgi_percentile_result=fgi_percentile_result,
         movers=movers,

@@ -78,12 +78,20 @@ class FGICalculator:
                     result["source_date"] = date
                 results[name] = result
             except Exception as e:
-                logger.warning("calculator %s failed for %s: %s: %s", name, date, type(e).__name__, e)
-                results[name] = {"score": None, "status": "error", "source_date": None, "error": str(e)}
+                logger.warning(
+                    "calculator %s failed for %s: %s: %s", name, date, type(e).__name__, e
+                )
+                results[name] = {
+                    "score": None,
+                    "status": "error",
+                    "source_date": None,
+                    "error": str(e),
+                }
         return results
 
-    def calculate_dimension_score(self, indicator_results: dict, dimension: str,
-                                  weights: dict = None):
+    def calculate_dimension_score(
+        self, indicator_results: dict, dimension: str, weights: dict = None
+    ):
         weights = (weights or INDICATOR_WEIGHTS)[dimension]
         scores = []
         for ind, weight in weights.items():
@@ -101,10 +109,12 @@ class FGICalculator:
         statuses = []
         for name in indicator_results:
             r = indicator_results[name]
-            statuses.append({
-                "indicator": name,
-                "status": r.get("status", "missing"),
-            })
+            statuses.append(
+                {
+                    "indicator": name,
+                    "status": r.get("status", "missing"),
+                }
+            )
         if not statuses:
             return 0
         # correlation_exceed_rate 已废弃 — 不再参与 health_score 计算
@@ -118,7 +128,9 @@ class FGICalculator:
         注意：填充值只写入内存中的 indicator_results 供当日 FGI 聚合使用，
         不落库 scores_daily —— 否则次日会把填充值误当真实得分，elapsed 永远
         重置为 1，「连续缺失 10 日剔除」永不触发。"""
-        start = (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=MISSING_DAY_LIMIT * 3 + 10)).strftime("%Y-%m-%d")
+        start = (
+            datetime.strptime(date, "%Y-%m-%d") - timedelta(days=MISSING_DAY_LIMIT * 3 + 10)
+        ).strftime("%Y-%m-%d")
         history = self._db.get_scores(start, date)
         if history is None or history.empty:
             return
@@ -141,8 +153,13 @@ class FGICalculator:
             result["score"] = last_score
             result["source_date"] = self._resolve_source_date(name, last_date, date)
             result["status"] = "normal" if elapsed == 1 else "degraded"
-            self._db.upsert_status(date, name.lower(), result["status"], "forward_fill",
-                                   f"filled from {last_date} (elapsed={elapsed})")
+            self._db.upsert_status(
+                date,
+                name.lower(),
+                result["status"],
+                "forward_fill",
+                f"filled from {last_date} (elapsed={elapsed})",
+            )
         self._db.commit()
 
     def _resolve_source_date(self, indicator: str, last_score_date: str, target_date: str) -> str:
@@ -168,9 +185,7 @@ class FGICalculator:
 
         dimension_scores = {}
         for dim in DIMENSION_WEIGHTS:
-            dimension_scores[dim] = self.calculate_dimension_score(
-                indicator_results, dim, weights
-            )
+            dimension_scores[dim] = self.calculate_dimension_score(indicator_results, dim, weights)
 
         raw_fgi = calculate_fgi(dimension_scores)
 

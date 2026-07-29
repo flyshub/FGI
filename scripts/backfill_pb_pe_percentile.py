@@ -7,6 +7,7 @@ v1_pe_percentile / v1_pb_percentile raw_data for fast O(1) lookup at runtime.
 Usage:
     python3.12 -m scripts.backfill_pb_pe_percentile
 """
+
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ def rolling_pct(series: pd.Series, window: int = ROLLING_WINDOW) -> pd.Series:
     out = np.full(n, np.nan)
     for i in range(n):
         lo = max(0, i - window + 1)
-        w = vals[lo:i + 1]
+        w = vals[lo : i + 1]
         w = w[~np.isnan(w)]
         if len(w) < 252 or np.unique(w).size <= 1:
             out[i] = np.nan
@@ -71,7 +72,6 @@ def main():
 
     db = Database(DB_PATH)
     with db:
-
         # write PB raw
         n_existing_pb = db.count_raw_data_by_indicator("v1_pb")
         if n_existing_pb:
@@ -109,9 +109,21 @@ def main():
         pb_stats = db.get_raw_value_stats("v1_pb")
         pe_pct_stats = db.get_raw_value_stats("v1_pe_percentile")
         pb_pct_stats = db.get_raw_value_stats("v1_pb_percentile")
-        print(f"\nv1_pb stats: min={pb_stats[0]:.4f} max={pb_stats[1]:.4f} avg={pb_stats[2]:.4f}" if pb_stats else "v1_pb: no stats")
-        print(f"v1_pe_percentile stats: min={pe_pct_stats[0]:.3f} max={pe_pct_stats[1]:.3f} avg={pe_pct_stats[2]:.3f}" if pe_pct_stats else "v1_pe_percentile: no stats")
-        print(f"v1_pb_percentile stats: min={pb_pct_stats[0]:.3f} max={pb_pct_stats[1]:.3f} avg={pb_pct_stats[2]:.3f}" if pb_pct_stats else "v1_pb_percentile: no stats")
+        print(
+            f"\nv1_pb stats: min={pb_stats[0]:.4f} max={pb_stats[1]:.4f} avg={pb_stats[2]:.4f}"
+            if pb_stats
+            else "v1_pb: no stats"
+        )
+        print(
+            f"v1_pe_percentile stats: min={pe_pct_stats[0]:.3f} max={pe_pct_stats[1]:.3f} avg={pe_pct_stats[2]:.3f}"
+            if pe_pct_stats
+            else "v1_pe_percentile: no stats"
+        )
+        print(
+            f"v1_pb_percentile stats: min={pb_pct_stats[0]:.3f} max={pb_pct_stats[1]:.3f} avg={pb_pct_stats[2]:.3f}"
+            if pb_pct_stats
+            else "v1_pb_percentile: no stats"
+        )
     print("\nDONE.", flush=True)
 
 

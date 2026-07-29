@@ -58,10 +58,12 @@ class TestS2Calculator:
     """V3.8: 股吧热度 (formerly S3) - zzshare market_hot_sentiment"""
 
     def test_calculate_heat(self, s2_calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "p_close": [5000.0 + i * 10 for i in range(100)]
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "p_close": [5000.0 + i * 10 for i in range(100)],
+            }
+        )
         result = s2_calculator.calculate_heat(df)
         assert "heat" in result.columns
         assert result["heat"].iloc[0] == 5000.0
@@ -96,27 +98,27 @@ class TestS2Calculator:
         log + Z-score 应捕捉短期热度偏离，而非长期绝对水平"""
         # 模拟长期上升趋势的 heat（每年翻倍）
         n = 500
-        heat = [1000 * (1.005 ** i) + (i % 20) * 50 for i in range(n)]
-        df = pd.DataFrame({
-            "date": pd.date_range("2022-01-03", periods=n).strftime("%Y-%m-%d"),
-            "p_close": heat
-        })
+        heat = [1000 * (1.005**i) + (i % 20) * 50 for i in range(n)]
+        df = pd.DataFrame(
+            {"date": pd.date_range("2022-01-03", periods=n).strftime("%Y-%m-%d"), "p_close": heat}
+        )
         df = s2_calculator.calculate_heat(df)
         df = s2_calculator.calculate_zscore(df)
         # Z-score 应有正常分布（std > 0.5，不应为常数）
         valid_zscore = df["heat_zscore"].dropna()
-        assert valid_zscore.std() > 0.1, \
-            f"Z-score std={valid_zscore.std():.3f} 太低，趋势未被对冲"
+        assert valid_zscore.std() > 0.1, f"Z-score std={valid_zscore.std():.3f} 太低，趋势未被对冲"
 
 
 class TestS3Calculator:
     """V3.8: 涨停封单量 (formerly S4) - levistock/AKShare zt_daily_summary"""
 
     def test_calculate_zt_ratio(self, s3_calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "seal_fund_sum": [1000000000.0] * 100,
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "seal_fund_sum": [1000000000.0] * 100,
+            }
+        )
         result = s3_calculator.calculate_zt_ratio(df)
         assert "zt_ratio" in result.columns
         # 统一单位为亿元（与 raw_data 的 s3_seal_fund 一致）
@@ -157,17 +159,22 @@ class TestS3Calculator:
 
         def mock_fetch(start, end):
             if start == "2024-01-10":
-                df = pd.DataFrame({
-                    "date": ["2024-01-10"],
-                    "limit_up_count": [0],
-                    "seal_fund_sum": [0.0],
-                })
+                df = pd.DataFrame(
+                    {
+                        "date": ["2024-01-10"],
+                        "limit_up_count": [0],
+                        "seal_fund_sum": [0.0],
+                    }
+                )
                 return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
             return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+
         monkeypatch.setattr(s3_calculator, "fetch_data", mock_fetch)
 
         result = s3_calculator.run("2024-01-10", lookback_days=300)
-        assert result["status"] == "missing", "S3 raw=0 today must be treated as missing (pollution)"
+        assert result["status"] == "missing", (
+            "S3 raw=0 today must be treated as missing (pollution)"
+        )
         assert result["s3"] is None
 
     def test_window_zeros_excluded_from_percentile(self, s3_calculator, db):
@@ -177,9 +184,11 @@ class TestS3Calculator:
         dates = pd.date_range("2023-01-01", periods=1001).strftime("%Y-%m-%d")
         for i, d in enumerate(dates):
             if i < 500:
-                db.upsert_raw_data(d, "s3_seal_fund", 10.0 + (i % 50))  # vary to avoid nunique==1 NaN
+                db.upsert_raw_data(
+                    d, "s3_seal_fund", 10.0 + (i % 50)
+                )  # vary to avoid nunique==1 NaN
             elif i < 1000:
-                db.upsert_raw_data(d, "s3_seal_fund", 0.0)   # pollution
+                db.upsert_raw_data(d, "s3_seal_fund", 0.0)  # pollution
             else:
                 db.upsert_raw_data(d, "s3_seal_fund", 50.0)  # today, valid
         db.commit()
@@ -228,13 +237,16 @@ class TestS3Calculator:
         def mock_fetch(start_date, end_date):
             # S3 now calls fetch_data(recent_start, date) with a 30-day range
             if end_date == dates[-1]:
-                df = pd.DataFrame({
-                    "date": [dates[-1]],
-                    "limit_up_count": [60],
-                    "seal_fund_sum": [50.0 * 1e8],  # 50 亿
-                })
+                df = pd.DataFrame(
+                    {
+                        "date": [dates[-1]],
+                        "limit_up_count": [60],
+                        "seal_fund_sum": [50.0 * 1e8],  # 50 亿
+                    }
+                )
                 return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
             return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+
         monkeypatch.setattr(s3_calculator, "fetch_data", mock_fetch)
 
         result = s3_calculator.run(dates[-1], lookback_days=400)

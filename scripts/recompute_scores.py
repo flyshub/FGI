@@ -5,6 +5,7 @@
 - 自动设 FGI_OFFLINE=1，强制从 raw_data 重构，无网络依赖
 - 默认 T+1 模式（end=昨日），避免当日数据未入库；--include-today 包含今日
 """
+
 import os
 import sys
 import time
@@ -75,13 +76,16 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
                     print(f"  ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
 
             if (i + 1) % 300 == 0:
-                print(f"  [{i+1}/{len(dates)}] ok={ok} miss={miss} err={err} ({time.time()-t0:.0f}s)", flush=True)
+                print(
+                    f"  [{i + 1}/{len(dates)}] ok={ok} miss={miss} err={err} ({time.time() - t0:.0f}s)",
+                    flush=True,
+                )
 
         db.commit()
         n = db.count_rows("scores_daily")
         nonnull = db.count_scores_with_data()
         status_n = db.count_rows("daily_status")
-        print(f"DONE ok={ok} miss={miss} err={err} in {time.time()-t0:.0f}s", flush=True)
+        print(f"DONE ok={ok} miss={miss} err={err} in {time.time() - t0:.0f}s", flush=True)
         print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
         print(f"daily_status: {status_n} rows", flush=True)
 
@@ -103,17 +107,27 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
                 if health_err <= 5:
                     print(f"  HEALTH ERR {d}: {type(e).__name__}: {str(e)[:120]}", flush=True)
         db.commit()
-        print(f"Health updated: {updated} rows, errors: {health_err} in {time.time()-t1:.0f}s", flush=True)
+        print(
+            f"Health updated: {updated} rows, errors: {health_err} in {time.time() - t1:.0f}s",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Offline FGI score recompute")
     parser.add_argument("start", nargs="?", default="2015-01-01")
     parser.add_argument("end", nargs="?", default=None, help="end date (default: yesterday)")
-    parser.add_argument("--include-today", action="store_true",
-                        help="include today in recompute (default excludes today for T+1 mode)")
-    parser.add_argument("--resume", action="store_true",
-                        help="resume mode: skip dates where FGI_final already exists, keep existing data")
+    parser.add_argument(
+        "--include-today",
+        action="store_true",
+        help="include today in recompute (default excludes today for T+1 mode)",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume mode: skip dates where FGI_final already exists, keep existing data",
+    )
     args = parser.parse_args()
     main(args.start, args.end, include_today=args.include_today, resume=args.resume)

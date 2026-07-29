@@ -1,4 +1,5 @@
 """Tests for PushPlus markdown rendering, especially health_score<60 warning and FGI_LEVELS."""
+
 from fgi.output.renderer import FGI_LEVELS, fgi_header, fgi_level, score_bar
 
 

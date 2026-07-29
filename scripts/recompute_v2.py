@@ -15,6 +15,7 @@ v2 改进：
     python3.12 -m scripts.recompute_v2 --resume 2017-06-02 2026-07-23
     python3.12 -m scripts.recompute_v2 --include-today 2020-01-01
 """
+
 from __future__ import annotations
 
 import argparse
@@ -50,6 +51,7 @@ def write_heartbeat(msg: str) -> None:
 def write_progress(i: int, total: int, ok: int, miss: int, err: int, elapsed: float) -> None:
     """JSON 进度文件，供外部脚本（如 kill-and-resume）查询"""
     import json
+
     avg = elapsed / (i + 1) if i >= 0 else 0
     eta = avg * (total - i - 1) if i >= 0 else 0
     payload = {
@@ -57,7 +59,9 @@ def write_progress(i: int, total: int, ok: int, miss: int, err: int, elapsed: fl
         "done": i + 1,
         "total": total,
         "pct": round((i + 1) / total * 100, 2) if total > 0 else 0,
-        "ok": ok, "miss": miss, "err": err,
+        "ok": ok,
+        "miss": miss,
+        "err": err,
         "elapsed_s": int(elapsed),
         "eta_s": int(eta),
         "avg_s_per_day": round(avg, 3),
@@ -65,14 +69,21 @@ def write_progress(i: int, total: int, ok: int, miss: int, err: int, elapsed: fl
     PROGRESS_FILE.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 
-def main(start: str = "2015-01-01", end: str | None = None,
-         include_today: bool = False, resume: bool = False) -> None:
+def main(
+    start: str = "2015-01-01",
+    end: str | None = None,
+    include_today: bool = False,
+    resume: bool = False,
+) -> None:
     if end is None:
         end = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     if include_today:
         end = datetime.now().strftime("%Y-%m-%d")
 
-    print(f"=== recompute v2: {start} -> {end} (resume={resume}, include_today={include_today}) ===", flush=True)
+    print(
+        f"=== recompute v2: {start} -> {end} (resume={resume}, include_today={include_today}) ===",
+        flush=True,
+    )
     write_heartbeat(f"START {start} -> {end}, resume={resume}")
 
     with Database() as db:
@@ -89,7 +100,10 @@ def main(start: str = "2015-01-01", end: str | None = None,
             write_heartbeat(f"RESUME done={len(done)}/{total_all}, remaining={len(dates)}")
         else:
             # v2: 范围清理，只清指定范围而非整表
-            print(f"Range clearing: scores_daily/daily_status WHERE date BETWEEN {start} AND {end}...", flush=True)
+            print(
+                f"Range clearing: scores_daily/daily_status WHERE date BETWEEN {start} AND {end}...",
+                flush=True,
+            )
             write_heartbeat(f"Range clearing {start}~{end}")
             sd = db.clear_table_range("scores_daily", start, end)
             ds = db.clear_table_range("daily_status", start, end)
@@ -138,8 +152,10 @@ def main(start: str = "2015-01-01", end: str | None = None,
                 eta_min = int(eta // 60)
                 eta_s = int(eta % 60)
                 pct = (i + 1) / total * 100
-                msg = (f"  [{i+1}/{total}] {pct:5.1f}% | ok={ok} miss={miss} err={err} | "
-                       f"avg={avg:.2f}s/d | ETA {eta_min}m{eta_s:02d}s | elapsed {int(elapsed)}s")
+                msg = (
+                    f"  [{i + 1}/{total}] {pct:5.1f}% | ok={ok} miss={miss} err={err} | "
+                    f"avg={avg:.2f}s/d | ETA {eta_min}m{eta_s:02d}s | elapsed {int(elapsed)}s"
+                )
                 print(msg, flush=True)
                 write_heartbeat(msg)
                 write_progress(i, total, ok, miss, err, elapsed)
@@ -149,7 +165,7 @@ def main(start: str = "2015-01-01", end: str | None = None,
         n = db.count_rows("scores_daily")
         nonnull = db.count_scores_with_data()
         status_n = db.count_rows("daily_status")
-        summary = f"DONE ok={ok} miss={miss} err={err} in {int(elapsed)}s ({elapsed/60:.1f}min)"
+        summary = f"DONE ok={ok} miss={miss} err={err} in {int(elapsed)}s ({elapsed / 60:.1f}min)"
         print(summary, flush=True)
         print(f"scores_daily: {n} rows, FGI_final non-null: {nonnull}", flush=True)
         print(f"daily_status: {status_n} rows", flush=True)
@@ -177,7 +193,9 @@ def main(start: str = "2015-01-01", end: str | None = None,
                     print(msg, flush=True)
                     write_heartbeat(msg)
         db.commit()
-        health_summary = f"Health updated: {updated} rows, errors: {health_err} in {int(time.time()-t1)}s"
+        health_summary = (
+            f"Health updated: {updated} rows, errors: {health_err} in {int(time.time() - t1)}s"
+        )
         print(health_summary, flush=True)
         write_heartbeat(health_summary)
 
@@ -189,7 +207,8 @@ if __name__ == "__main__":
     parser.add_argument("start", nargs="?", default="2015-01-01")
     parser.add_argument("end", nargs="?", default=None)
     parser.add_argument("--include-today", action="store_true")
-    parser.add_argument("--resume", action="store_true",
-                        help="skip dates where FGI_final already exists")
+    parser.add_argument(
+        "--resume", action="store_true", help="skip dates where FGI_final already exists"
+    )
     args = parser.parse_args()
     main(args.start, args.end, include_today=args.include_today, resume=args.resume)

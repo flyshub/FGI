@@ -4,7 +4,6 @@ daily_run 和 backfill 共用此配置，按需追加兜底来源（如 mootdx/t
 FallbackChain 自动剔除不支持的方法，追加到所有链是安全的。
 """
 
-
 from fgi.collector.fallback import DataSourceManager
 
 # 指标 → 首选来源列表

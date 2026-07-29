@@ -38,10 +38,12 @@ class V2Calculator:
             self._db.upsert_status(date, "v2", "missing", "database", "No ERP data available")
             return {"v2": None, "status": "missing"}
 
-        erp_df = pd.DataFrame({
-            "date": raw["date"],
-            "erp": raw["value"],
-        }).sort_values("date")
+        erp_df = pd.DataFrame(
+            {
+                "date": raw["date"],
+                "erp": raw["value"],
+            }
+        ).sort_values("date")
 
         scores = self.calculate_derp_zscore(erp_df["erp"])
         erp_df["score"] = scores
