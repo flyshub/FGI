@@ -10,6 +10,7 @@
 每个候选连测 N 次，记录延迟、异常、shape、字段、日期覆盖、与 proxy 的相关性。
 输出：stdout Markdown 报告 + /tmp/f3_spike_report.md
 """
+
 from __future__ import annotations
 
 import sys
@@ -79,7 +80,10 @@ def main():
     except Exception as e:
         print(f"  sample fetch failed: {e}")
     s1 = summarize("stock_sse_summary", r1, df1)
-    print(f"  ok={s1['ok_rate']} p50={s1['p50_s']}s p95={s1['p95_s']}s errors={s1['errors']}\n", flush=True)
+    print(
+        f"  ok={s1['ok_rate']} p50={s1['p50_s']}s p95={s1['p95_s']}s errors={s1['errors']}\n",
+        flush=True,
+    )
 
     # ===== 候选 2: 全市场主力资金净流入 =====
     print("[2/4] ak.stock_market_fund_flow() — 全市场主力资金（120 天历史）", flush=True)
@@ -93,7 +97,10 @@ def main():
     except Exception as e:
         print(f"  sample fetch failed: {e}")
     s2 = summarize("stock_market_fund_flow", r2, df2)
-    print(f"  ok={s2['ok_rate']} p50={s2['p50_s']}s p95={s2['p95_s']}s errors={s2['errors']}\n", flush=True)
+    print(
+        f"  ok={s2['ok_rate']} p50={s2['p50_s']}s p95={s2['p95_s']}s errors={s2['errors']}\n",
+        flush=True,
+    )
 
     # ===== 候选 3: 行业资金流 =====
     print("[3/4] ak.stock_fund_flow_industrial(symbol='即时') — 行业资金流", flush=True)
@@ -107,7 +114,10 @@ def main():
     except Exception as e:
         print(f"  sample fetch failed: {e}")
     s3 = summarize("stock_fund_flow_industrial", r3, df3)
-    print(f"  ok={s3['ok_rate']} p50={s3['p50_s']}s p95={s3['p95_s']}s errors={s3['errors']}\n", flush=True)
+    print(
+        f"  ok={s3['ok_rate']} p50={s3['p50_s']}s p95={s3['p95_s']}s errors={s3['errors']}\n",
+        flush=True,
+    )
 
     # ===== 候选 4: 当前 proxy 对照 =====
     print("[4/4] ak.stock_zh_index_daily(sh000001) — 当前 proxy 基线", flush=True)
@@ -120,10 +130,15 @@ def main():
     except Exception as e:
         print(f"  sample fetch failed: {e}")
     s4 = summarize("stock_zh_index_daily (proxy)", r4, df4)
-    print(f"  ok={s4['ok_rate']} p50={s4['p50_s']}s p95={s4['p95_s']}s errors={s4['errors']}\n", flush=True)
+    print(
+        f"  ok={s4['ok_rate']} p50={s4['p50_s']}s p95={s4['p95_s']}s errors={s4['errors']}\n",
+        flush=True,
+    )
 
     # ===== 相关性分析（如候选 2 与 proxy 可对齐日期）=====
-    correlation_block = "**相关性分析**：候选 2（stock_market_fund_flow）与 proxy 在可对齐窗口内的相关性\n\n"
+    correlation_block = (
+        "**相关性分析**：候选 2（stock_market_fund_flow）与 proxy 在可对齐窗口内的相关性\n\n"
+    )
     if df2 is not None and df4 is not None and not df2.empty and not df4.empty:
         try:
             # 候选 2: 主力净流入-净额
@@ -140,11 +155,15 @@ def main():
             df4b["price_change"] = df4b["close"].diff()
             df4b["proxy"] = df4b["price_change"] * df4b["volume"]
 
-            merged = pd.merge(df2b[["date", "net_flow"]], df4b[["date", "proxy"]], on="date").dropna()
+            merged = pd.merge(
+                df2b[["date", "net_flow"]], df4b[["date", "proxy"]], on="date"
+            ).dropna()
             if len(merged) > 10:
                 pearson = merged["net_flow"].corr(merged["proxy"])
                 spearman = merged["net_flow"].corr(merged["proxy"], method="spearman")
-                correlation_block += f"- 对齐 {len(merged)} 天，Pearson={pearson:.3f}，Spearman={spearman:.3f}\n"
+                correlation_block += (
+                    f"- 对齐 {len(merged)} 天，Pearson={pearson:.3f}，Spearman={spearman:.3f}\n"
+                )
                 correlation_block += f"- Pearson>0.7 视为方向有效 → **{'✓ 通过' if pearson > 0.7 else '✗ 未通过'}**\n"
             else:
                 correlation_block += f"- 对齐样本不足（{len(merged)} 天）\n"
@@ -163,24 +182,24 @@ def main():
 
 | # | 候选 | 成功率 | 延迟 p50 | 延迟 p95 | Shape | 备注 |
 |---|------|--------|---------|---------|-------|------|
-| 1 | stock_sse_summary（沪市大单） | {s1['ok_rate']} | {s1['p50_s']}s | {s1['p95_s']}s | {s1['shape']} | {s1['errors'] or '—'} |
-| 2 | stock_market_fund_flow（全市场主力） | {s2['ok_rate']} | {s2['p50_s']}s | {s2['p95_s']}s | {s2['shape']} | {s2['errors'] or '—'} |
-| 3 | stock_fund_flow_industrial（行业即时） | {s3['ok_rate']} | {s3['p50_s']}s | {s3['p95_s']}s | {s3['shape']} | {s3['errors'] or '—'} |
-| 4 | stock_zh_index_daily（当前 proxy 基线） | {s4['ok_rate']} | {s4['p50_s']}s | {s4['p95_s']}s | {s4['shape']} | {s4['errors'] or '—'} |
+| 1 | stock_sse_summary（沪市大单） | {s1["ok_rate"]} | {s1["p50_s"]}s | {s1["p95_s"]}s | {s1["shape"]} | {s1["errors"] or "—"} |
+| 2 | stock_market_fund_flow（全市场主力） | {s2["ok_rate"]} | {s2["p50_s"]}s | {s2["p95_s"]}s | {s2["shape"]} | {s2["errors"] or "—"} |
+| 3 | stock_fund_flow_industrial（行业即时） | {s3["ok_rate"]} | {s3["p50_s"]}s | {s3["p95_s"]}s | {s3["shape"]} | {s3["errors"] or "—"} |
+| 4 | stock_zh_index_daily（当前 proxy 基线） | {s4["ok_rate"]} | {s4["p50_s"]}s | {s4["p95_s"]}s | {s4["shape"]} | {s4["errors"] or "—"} |
 
 ## 字段详情
 
 ### 候选 1: stock_sse_summary
-- 字段：{s1['cols']}
-- 最后样本：``{df1.tail(2).to_dict('records') if df1 is not None and not df1.empty else 'N/A'}``
+- 字段：{s1["cols"]}
+- 最后样本：``{df1.tail(2).to_dict("records") if df1 is not None and not df1.empty else "N/A"}``
 
 ### 候选 2: stock_market_fund_flow
-- 字段：{s2['cols']}
-- 最后样本：``{df2.tail(2).to_dict('records') if df2 is not None and not df2.empty else 'N/A'}``
+- 字段：{s2["cols"]}
+- 最后样本：``{df2.tail(2).to_dict("records") if df2 is not None and not df2.empty else "N/A"}``
 
 ### 候选 3: stock_fund_flow_industrial
-- 字段：{s3['cols']}
-- 前两行：``{df3.head(2).to_dict('records') if df3 is not None and not df3.empty else 'N/A'}``
+- 字段：{s3["cols"]}
+- 前两行：``{df3.head(2).to_dict("records") if df3 is not None and not df3.empty else "N/A"}``
 
 ## {correlation_block}
 

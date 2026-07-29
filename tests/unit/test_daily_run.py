@@ -55,25 +55,45 @@ class TestAnomalyGating:
 
         class _FakeDb:
             path = ":memory:"
+
             def __enter__(self):
                 return self
+
             def __exit__(self, *a):
                 return False
+
             def init_schema(self):
                 pass
 
         monkeypatch.setattr(daily_run, "Database", lambda *a, **k: _FakeDb())
-        monkeypatch.setattr(daily_run, "FGICalculator", lambda *a, **k: type("C", (), {
-            "run": staticmethod(lambda d: {
-                "fgi_final": 70.0, "fgi_raw": 70.0, "health_score": 80.0,
-                "dimension_scores": {}, "indicator_results": {},
-            })
-        }))
+        monkeypatch.setattr(
+            daily_run,
+            "FGICalculator",
+            lambda *a, **k: type(
+                "C",
+                (),
+                {
+                    "run": staticmethod(
+                        lambda d: {
+                            "fgi_final": 70.0,
+                            "fgi_raw": 70.0,
+                            "health_score": 80.0,
+                            "dimension_scores": {},
+                            "indicator_results": {},
+                        }
+                    )
+                },
+            ),
+        )
         monkeypatch.setattr(daily_run, "record_indicator_status", lambda *a, **k: None)
-        monkeypatch.setattr("fgi.output.alert.Alert.check_and_alert",
-                            lambda self, d, r: anomaly_detected)
-        monkeypatch.setattr(daily_run, "send_fgi_report",
-                            lambda db, *a, **k: calls.setdefault("pushed", True) or True)
+        monkeypatch.setattr(
+            "fgi.output.alert.Alert.check_and_alert", lambda self, d, r: anomaly_detected
+        )
+        monkeypatch.setattr(
+            daily_run,
+            "send_fgi_report",
+            lambda db, *a, **k: calls.setdefault("pushed", True) or True,
+        )
         monkeypatch.setattr("sys.argv", ["daily_run", "--date", "2024-01-02"])
 
     def test_no_anomaly_sends_push(self, monkeypatch, capsys):

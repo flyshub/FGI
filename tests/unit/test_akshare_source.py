@@ -1,5 +1,6 @@
 """AKShareSource 单元测试：实例级缓存行为 + fetch_cyb_daily 换手率。
 通过 sys.modules 注入假 akshare，不依赖真实包与网络。"""
+
 import sys
 import types
 
@@ -77,10 +78,12 @@ class TestInstanceCache:
 
 def _cyb_hist_df():
     dates = pd.date_range("2024-01-01", "2024-01-10", freq="B")
-    return pd.DataFrame({
-        "date": dates.strftime("%Y-%m-%d"),
-        "volume": [1e8] * len(dates),
-    })
+    return pd.DataFrame(
+        {
+            "date": dates.strftime("%Y-%m-%d"),
+            "volume": [1e8] * len(dates),
+        }
+    )
 
 
 class TestFetchCybDaily:
@@ -95,6 +98,7 @@ class TestFetchCybDaily:
         assert df["date"].max() <= "2024-01-05"
         # 成交量量级 > 1
         assert df["volume"].min() > 1e6
+
     def test_full_range_cached_and_sliced(self, fake_ak, fast_retry):
         calls = []
         fake_ak.stock_zh_index_daily = lambda **kwargs: calls.append(kwargs) or _cyb_hist_df()
@@ -123,10 +127,12 @@ class TestFetchCybDaily:
 def _market_fund_flow_df():
     """模拟 ak.stock_market_fund_flow() 返回格式：120 天历史主力净流入。"""
     dates = pd.date_range("2024-01-01", periods=120, freq="B")
-    return pd.DataFrame({
-        "日期": dates.strftime("%Y-%m-%d"),
-        "主力净流入-净额": [-1e10 + i * 1e8 for i in range(120)],
-    })
+    return pd.DataFrame(
+        {
+            "日期": dates.strftime("%Y-%m-%d"),
+            "主力净流入-净额": [-1e10 + i * 1e8 for i in range(120)],
+        }
+    )
 
 
 class TestFetchIndustryFundFlow:
@@ -168,13 +174,15 @@ class TestFetchIndustryFundFlow:
 def _qvix_df():
     """模拟 ak.index_option_50etf_qvix() 返回格式：date + OHLC。"""
     dates = pd.date_range("2024-01-01", periods=100, freq="B")
-    return pd.DataFrame({
-        "date": dates.strftime("%Y-%m-%d"),
-        "open": [20.0] * 100,
-        "high": [22.0] * 100,
-        "low": [18.0] * 100,
-        "close": [19.0 + i * 0.05 for i in range(100)],  # 渐变避免退化
-    })
+    return pd.DataFrame(
+        {
+            "date": dates.strftime("%Y-%m-%d"),
+            "open": [20.0] * 100,
+            "high": [22.0] * 100,
+            "low": [18.0] * 100,
+            "close": [19.0 + i * 0.05 for i in range(100)],  # 渐变避免退化
+        }
+    )
 
 
 class TestFetchQvix:

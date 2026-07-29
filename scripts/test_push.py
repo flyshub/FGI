@@ -3,6 +3,7 @@
 Uses daily_run flow (real fetch, not offline) to compute FGI for the target date,
 then sends via PushPlus. Default target date is yesterday (T+1 convention).
 """
+
 import argparse
 import os
 import sys
@@ -56,7 +57,8 @@ def main():
     print("\nSending PushPlus...")
     with Database(DB_PATH) as db:
         ok = send_fgi_report(
-            db, result["fgi_raw"],
+            db,
+            result["fgi_raw"],
             result["dimension_scores"],
             result["indicator_results"],
             result["health_score"],

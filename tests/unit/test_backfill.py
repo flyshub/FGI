@@ -39,8 +39,13 @@ def mock_calculator():
                 "date": date,
                 "fgi_final": 50.0,
                 "health_score": 100.0,
-                "dimension_scores": {"momentum": 50.0, "sentiment": 50.0, "valuation": 50.0, "funding": 50.0},
-                "indicator_results": {}
+                "dimension_scores": {
+                    "momentum": 50.0,
+                    "sentiment": 50.0,
+                    "valuation": 50.0,
+                    "funding": 50.0,
+                },
+                "indicator_results": {},
             }
 
     return MockCalculator()
@@ -105,8 +110,10 @@ class TestTradingCalendarIntegration:
     def test_resolver_used_for_backfill_dates(self, monkeypatch):
         # backfill 直接调用 resolve_trading_days（无中间包装层）
         import fgi.output.backfill as backfill_module
-        monkeypatch.setattr(backfill_module, "resolve_trading_days",
-                            lambda s, e, db=None: ["2024-01-02"])
+
+        monkeypatch.setattr(
+            backfill_module, "resolve_trading_days", lambda s, e, db=None: ["2024-01-02"]
+        )
         assert backfill_module.resolve_trading_days("2024-01-01", "2024-01-05") == ["2024-01-02"]
 
 

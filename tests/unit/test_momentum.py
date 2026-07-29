@@ -63,10 +63,12 @@ def m4_calculator(data_manager, db):
 
 class TestM1Calculator:
     def test_calculate_zt_count(self, m1_calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "limit_up_count": [10] * 100
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "limit_up_count": [10] * 100,
+            }
+        )
         result = m1_calculator.calculate_zt_count(df)
         assert "zt_count" in result.columns
         assert result["zt_count"].iloc[0] == 10
@@ -102,23 +104,26 @@ class TestM1Calculator:
         # 灌入 500 天历史有效值（不含 today），再为 today 写 NULL（模拟清理后状态）
         dates = pd.bdate_range("2022-01-03", "2023-12-28")
         for i, d in enumerate(dates):
-            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m1_zt_count",
-                               float(20 + (i % 50)))
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m1_zt_count", float(20 + (i % 50)))
         db.upsert_raw_data("2023-12-28", "m1_zt_count", None)
         db.commit()
 
         fetched = {"called": False}
+
         def mock_fetch(start_date, end_date):
             fetched["called"] = True
             # M1 now calls fetch_data(recent_start, date) with recent_start ~30 days prior
             # Accept any start_date that includes the target date
             if end_date == "2023-12-28":
-                df = pd.DataFrame({
-                    "date": ["2023-12-28"],
-                    "limit_up_count": [30],
-                })
+                df = pd.DataFrame(
+                    {
+                        "date": ["2023-12-28"],
+                        "limit_up_count": [30],
+                    }
+                )
                 return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
             return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+
         monkeypatch.setattr(m1_calculator, "fetch_data", mock_fetch)
 
         result = m1_calculator.run("2023-12-28", lookback_days=400)
@@ -129,11 +134,13 @@ class TestM1Calculator:
 
 class TestM2Calculator:
     def test_calculate_sentiment_ratio(self, m2_calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "up_num": [100] * 100,
-            "down_num": [50] * 100
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "up_num": [100] * 100,
+                "down_num": [50] * 100,
+            }
+        )
         result = m2_calculator.calculate_sentiment_ratio(df)
         assert "bullish_ratio" in result.columns
         assert result["bullish_ratio"].iloc[0] == 100 / (100 + 50)
@@ -167,10 +174,12 @@ class TestM4Calculator:
     """V3.8 2.1: M4 = 创业板换手率 60 日 Z-score 的滚动百分位"""
 
     def test_calculate_volume_zscore(self, m4_calculator):
-        df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "volume": [1e9 + (i % 10) * 1e7 for i in range(100)]
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "volume": [1e9 + (i % 10) * 1e7 for i in range(100)],
+            }
+        )
         result = m4_calculator.calculate_volume_zscore(df)
         assert "volume_zscore" in result.columns
         # 前 59 行不足 60 日窗口为 NaN，之后为有效 Z-score
@@ -190,8 +199,7 @@ class TestM4Calculator:
     def _seed_volume_history(self, db, end_date="2024-01-10"):
         dates = pd.bdate_range("2022-01-03", end_date)
         for i, d in enumerate(dates):
-            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume",
-                               float(1e9 + (i % 20) * 1e7))
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume", float(1e9 + (i % 20) * 1e7))
         db.commit()
 
     def test_run_with_db_volume(self, m4_calculator, db):
@@ -224,8 +232,7 @@ class TestM4Calculator:
         # 灌入历史 volume（不含当日，让 today_in_db=False）
         dates = pd.bdate_range("2022-01-03", "2024-01-09")
         for i, d in enumerate(dates):
-            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume",
-                               float(1e9 + (i % 20) * 1e7))
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume", float(1e9 + (i % 20) * 1e7))
         db.commit()
         # 让 fetch_data 返回失败（触发 db_data.empty → last-good-value 路径）
         from fgi.collector.base import DataSourceResult, DataSourceStatus
@@ -234,6 +241,7 @@ class TestM4Calculator:
             return DataSourceResult(
                 status=DataSourceStatus.FAILED, data=None, source="mock", error="simulated"
             )
+
         monkeypatch.setattr(m4_calculator, "fetch_data", fake_fetch)
         # 让 _get_last_good_volume 返回有效值（绕过 db_data.empty 但触发 last-good）
         monkeypatch.setattr(m4_calculator, "_get_last_good_volume", lambda date: 1.5e9)
@@ -247,8 +255,10 @@ class TestM4Calculator:
             # 第 1 次（M4.run 初始 db_data）返回空 → 进入 fetch 分支
             if call_count["n"] == 1:
                 import pandas as _pd
+
                 return _pd.DataFrame(columns=["date", "value"])
             return original_get(indicator, start, end)
+
         monkeypatch.setattr(db, "get_raw_data", patched_get)
         monkeypatch.setattr(m4_calculator._db, "get_raw_data", patched_get)
 
@@ -259,8 +269,9 @@ class TestM4Calculator:
         status = db.get_status("2024-01-10")
         m4_status = status[status["indicator"] == "m4"]
         assert len(m4_status) == 1
-        assert m4_status.iloc[0]["status"] == "degraded", \
+        assert m4_status.iloc[0]["status"] == "degraded", (
             f"#46 regression: degraded overwritten to {m4_status.iloc[0]['status']}"
+        )
 
     def test_null_today_triggers_refetch(self, m4_calculator, db, monkeypatch):
         """当 db_data 里 today 的 value 是 NULL 时，calc 应该触发 fetch 而非跳过"""
@@ -269,21 +280,24 @@ class TestM4Calculator:
         # 灌入 500 天历史 volume（不含 today），再为 today 写 NULL
         dates = pd.bdate_range("2022-01-03", "2023-12-28")
         for i, d in enumerate(dates):
-            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume",
-                               float(1e9 + (i % 30) * 1e7))
+            db.upsert_raw_data(d.strftime("%Y-%m-%d"), "m4_volume", float(1e9 + (i % 30) * 1e7))
         db.upsert_raw_data("2023-12-28", "m4_volume", None)
         db.commit()
 
         fetched = {"called": False}
+
         def mock_fetch(start_date, end_date):
             fetched["called"] = True
             if end_date == "2023-12-28":
-                df = pd.DataFrame({
-                    "date": ["2023-12-28"],
-                    "volume": [1.5e9],
-                })
+                df = pd.DataFrame(
+                    {
+                        "date": ["2023-12-28"],
+                        "volume": [1.5e9],
+                    }
+                )
                 return DataSourceResult(df, DataSourceStatus.HEALTHY, "mock")
             return DataSourceResult(None, DataSourceStatus.FAILED, "mock")
+
         monkeypatch.setattr(m4_calculator, "fetch_data", mock_fetch)
 
         result = m4_calculator.run("2023-12-28", lookback_days=400)

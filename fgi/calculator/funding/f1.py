@@ -18,20 +18,10 @@ class F1Calculator:
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_margin_data(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "f1_margin",
-            "fetch_margin_data",
-            start_date,
-            end_date
-        )
+        return self._data_manager.fetch("f1_margin", "fetch_margin_data", start_date, end_date)
 
     def fetch_market_cap(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "f1_market_cap",
-            "fetch_market_cap",
-            start_date,
-            end_date
-        )
+        return self._data_manager.fetch("f1_market_cap", "fetch_market_cap", start_date, end_date)
 
     def calculate_margin_ratio(self, margin_df: pd.DataFrame, cap_df: pd.DataFrame) -> pd.DataFrame:
         margin_df = margin_df.copy()
@@ -77,7 +67,9 @@ class F1Calculator:
 
         df = self.calculate_margin_ratio(margin_result.data, cap_result.data)
         for _, row in df.iterrows():
-            self._db.upsert_raw_data(str(row["date"]), "f1_margin_balance", float(row["margin_balance"]))
+            self._db.upsert_raw_data(
+                str(row["date"]), "f1_margin_balance", float(row["margin_balance"])
+            )
         self._db.commit()
         df = self.calculate_percentile(df)
 

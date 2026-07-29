@@ -1,4 +1,5 @@
 """TDD tests for fgi.output.decision_matrix."""
+
 import tempfile
 from pathlib import Path
 
@@ -138,5 +139,3 @@ class TestComputeDecisionMatrix:
         assert d["sentiment_tier"] == "恐惧"
         assert d["valuation_tier"] == "低估"
         assert d["fgi"] == 30.0
-
-

@@ -30,7 +30,7 @@ def get_date_range(start_date: str, end_date: str) -> list[str]:
 
 
 def batch_dates(dates: list[str], batch_size: int) -> list[list[str]]:
-    return [dates[i:i + batch_size] for i in range(0, len(dates), batch_size)]
+    return [dates[i : i + batch_size] for i in range(0, len(dates), batch_size)]
 
 
 def backfill_indicator(db: Database, calculator, indicator: str, dates: list[str]):
@@ -73,15 +73,87 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     full_start = "2015-01-01"
 
     indicators_config = [
-        ("M3 上证指数", "m3_index", "fetch_index_daily", ("sh000001", full_start, today), "close", "date", "m3_close"),
-        ("M4 创业板", "m4_cyb_volume", "fetch_cyb_daily", (full_start, today), "volume", "date", "m4_volume"),
-        ("V1 PE-TTM", "v1_pe", "fetch_pe_data", ("2014-01-01", today), "滚动市盈率", "date", "v1_pe_ttm"),
-        ("V1 国债收益", "v1_bond", "fetch_bond_yield", ("2014-01-01", today), "yield_10y", "date", "v1_bond_yield"),
-        ("F1 融资余额", "f1_margin", "fetch_margin_data", (full_start, today), "融资余额", "date", "f1_margin_balance"),
-        ("F1 总市值", "f1_market_cap", "fetch_market_cap", (full_start, today), "market_cap", "date", "f1_market_cap"),
-        ("F2 基金仓位", "f2_fund_position", "fetch_fund_position", (full_start, today), "position", "date", "f2_fund_position"),
-        ("F3 上证代理", "f3_index", "fetch_index_daily", ("sh000001", full_start, today), "close", "date", "f3_proxy_close"),
-        ("F3 成交额", "f3_index", "fetch_index_daily", ("sh000001", full_start, today), "volume", "date", "f3_proxy_volume"),
+        (
+            "M3 上证指数",
+            "m3_index",
+            "fetch_index_daily",
+            ("sh000001", full_start, today),
+            "close",
+            "date",
+            "m3_close",
+        ),
+        (
+            "M4 创业板",
+            "m4_cyb_volume",
+            "fetch_cyb_daily",
+            (full_start, today),
+            "volume",
+            "date",
+            "m4_volume",
+        ),
+        (
+            "V1 PE-TTM",
+            "v1_pe",
+            "fetch_pe_data",
+            ("2014-01-01", today),
+            "滚动市盈率",
+            "date",
+            "v1_pe_ttm",
+        ),
+        (
+            "V1 国债收益",
+            "v1_bond",
+            "fetch_bond_yield",
+            ("2014-01-01", today),
+            "yield_10y",
+            "date",
+            "v1_bond_yield",
+        ),
+        (
+            "F1 融资余额",
+            "f1_margin",
+            "fetch_margin_data",
+            (full_start, today),
+            "融资余额",
+            "date",
+            "f1_margin_balance",
+        ),
+        (
+            "F1 总市值",
+            "f1_market_cap",
+            "fetch_market_cap",
+            (full_start, today),
+            "market_cap",
+            "date",
+            "f1_market_cap",
+        ),
+        (
+            "F2 基金仓位",
+            "f2_fund_position",
+            "fetch_fund_position",
+            (full_start, today),
+            "position",
+            "date",
+            "f2_fund_position",
+        ),
+        (
+            "F3 上证代理",
+            "f3_index",
+            "fetch_index_daily",
+            ("sh000001", full_start, today),
+            "close",
+            "date",
+            "f3_proxy_close",
+        ),
+        (
+            "F3 成交额",
+            "f3_index",
+            "fetch_index_daily",
+            ("sh000001", full_start, today),
+            "volume",
+            "date",
+            "f3_proxy_volume",
+        ),
     ]
 
     for label, chain, method, args, val_col, date_col, key in indicators_config:
@@ -115,9 +187,13 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     # M2 sentiment from zzshare（S1 指标已删除，不再写 s1_* 键）
     print("\n  [M2 sentiment] zzshare...", end=" ")
     try:
-        result = data_manager.fetch("m2_market_overview", "fetch_open_sentiment", "2020-01-01", today)
-        if result.status in (DataSourceStatus.HEALTHY, DataSourceStatus.DEGRADED) \
-                and result.data is not None:
+        result = data_manager.fetch(
+            "m2_market_overview", "fetch_open_sentiment", "2020-01-01", today
+        )
+        if (
+            result.status in (DataSourceStatus.HEALTHY, DataSourceStatus.DEGRADED)
+            and result.data is not None
+        ):
             for _, row in result.data.iterrows():
                 ds = str(row["date"])
                 db.upsert_raw_data(ds, "m2_up_num", float(row["up_num"]))
@@ -132,7 +208,9 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
     # S2 股吧热度
     print("  [S2 股吧热度] zzshare...", end=" ")
     try:
-        result = data_manager.fetch("s2_sentiment", "fetch_market_hot_sentiment", "2020-01-01", today)
+        result = data_manager.fetch(
+            "s2_sentiment", "fetch_market_hot_sentiment", "2020-01-01", today
+        )
         if result.status == DataSourceStatus.HEALTHY and result.data is not None:
             n = store_indicator_data(db, "s2_heat", result.data, "p_close", "date")
             print(f"OK ({n} records)")
@@ -157,12 +235,12 @@ def compute_fgi_daily(calculator, db, dates: list[str]):
             record_indicator_status(db, date, result.get("indicator_results", {}))
             fgi = result.get("fgi_final", None)
             if isinstance(fgi, int | float):
-                print(f"[{i+1}/{total}] {date}: FGI={fgi:.1f}")
+                print(f"[{i + 1}/{total}] {date}: FGI={fgi:.1f}")
             else:
-                print(f"[{i+1}/{total}] {date}: skipped (FGI={fgi})")
+                print(f"[{i + 1}/{total}] {date}: skipped (FGI={fgi})")
             success += 1
         except Exception as e:
-            print(f"[{i+1}/{total}] {date}: ERR - {e}")
+            print(f"[{i + 1}/{total}] {date}: ERR - {e}")
             failed += 1
     return success, failed
 
@@ -188,6 +266,7 @@ def backfill(start_date: str | None = None, end_date: str | None = None):
     print(f"Trading days: {len(dates)}")
 
     from fgi.calculator.fgi import FGICalculator
+
     calculator = FGICalculator(data_manager, db)
 
     success, failed = compute_fgi_daily(calculator, db, dates)
@@ -199,6 +278,7 @@ def backfill(start_date: str | None = None, end_date: str | None = None):
 
 if __name__ == "__main__":
     import sys
+
     start = sys.argv[1] if len(sys.argv) > 1 else None
     end = sys.argv[2] if len(sys.argv) > 2 else None
     backfill(start, end)

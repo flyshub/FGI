@@ -6,6 +6,7 @@ Usage:
     python scripts/generate_signal_report.py --start 2020-01-01 --end 2025-12-31
     python scripts/generate_signal_report.py --output reports/custom.md
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,7 +38,9 @@ def main() -> None:
     output_dir.mkdir(exist_ok=True)
 
     date_str = datetime.now().strftime("%Y-%m-%d")
-    out_path = Path(args.output) if args.output else output_dir / f"fgi_signal_validation_{date_str}.md"
+    out_path = (
+        Path(args.output) if args.output else output_dir / f"fgi_signal_validation_{date_str}.md"
+    )
 
     print("Generating FGI signal validation report...")
     with Database() as db:
@@ -99,15 +102,21 @@ def main() -> None:
     report_sections.append(_render_dca_section(dca_full, title="逆情绪 DCA vs 等额定投（全样本）"))
     if "error" not in dca_in and "error" not in dca_out:
         report_sections.append("")
-        report_sections.append(_render_dca_section(dca_in, title="逆情绪 DCA vs 等额定投（样本内 2015-2022）"))
+        report_sections.append(
+            _render_dca_section(dca_in, title="逆情绪 DCA vs 等额定投（样本内 2015-2022）")
+        )
         report_sections.append("")
-        report_sections.append(_render_dca_section(dca_out, title="逆情绪 DCA vs 等额定投（样本外 2023-2026）"))
+        report_sections.append(
+            _render_dca_section(dca_out, title="逆情绪 DCA vs 等额定投（样本外 2023-2026）")
+        )
 
     md = "\n".join(report_sections)
     out_path.write_text(md, encoding="utf-8")
 
     print(f"Report saved to {out_path}")
-    print(f"  Data range: {result['metadata'].get('start_date')} ~ {result['metadata'].get('end_date')}")
+    print(
+        f"  Data range: {result['metadata'].get('start_date')} ~ {result['metadata'].get('end_date')}"
+    )
     print(f"  Total days: {result['metadata'].get('total_days')}")
 
 

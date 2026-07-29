@@ -1,4 +1,5 @@
 """V4Calculator (QVIX 期权隐含波动率) 单元测试。"""
+
 import tempfile
 from pathlib import Path
 

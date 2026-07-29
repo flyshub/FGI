@@ -1,5 +1,6 @@
 """zt_backfill 单元测试：写 s3_seal_fund（非 s4_seal_fund）、封单额亿元、M1/S3 同源。
 注入假 levistock，不依赖真实包与网络。"""
+
 import sys
 import types
 
@@ -13,16 +14,16 @@ def ztb(monkeypatch, tmp_path):
     """导入 zt_backfill 并把模块级 levistock 句柄替换为假实现。"""
     fake_ls = types.SimpleNamespace()
     fake_ls.market_emotion_kph = lambda date=None: {"sjzt": 42, "zt": 40}
-    fake_ls.limit_up_his_kph = lambda date=None: [
-        {"seal_money": 2e8}, {"seal_money": 1e8}]
+    fake_ls.limit_up_his_kph = lambda date=None: [{"seal_money": 2e8}, {"seal_money": 1e8}]
     try:
         import fgi.output.zt_backfill as module
     except ImportError:
         monkeypatch.setitem(sys.modules, "levistock", fake_ls)
         import fgi.output.zt_backfill as module
     monkeypatch.setattr(module, "ls", fake_ls)
-    monkeypatch.setattr(module, "resolve_trading_days",
-                        lambda s, e, db=None: [s] if s == e else [s, e])
+    monkeypatch.setattr(
+        module, "resolve_trading_days", lambda s, e, db=None: [s] if s == e else [s, e]
+    )
     return module, fake_ls
 
 

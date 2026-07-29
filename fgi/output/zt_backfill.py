@@ -27,8 +27,7 @@ def fetch_m1_s3(date_str: str) -> dict:
         zt_count = len(limit_up) if has_limit_up_data else None
 
     seal_fund_sum = (
-        sum(item.get("seal_money", 0) for item in limit_up) / 1e8
-        if has_limit_up_data else None
+        sum(item.get("seal_money", 0) for item in limit_up) / 1e8 if has_limit_up_data else None
     )
 
     return {
@@ -82,7 +81,7 @@ def zt_backfill(start_date: str, end_date: str, db_path: Path | None = None):
 
                 if zt_count is None and seal_fund is None:
                     skipped_no_data += 1
-                    print(f"  [{i+1:>4}/{len(todo)}] {date_str} | ⚠ no source data, skipped")
+                    print(f"  [{i + 1:>4}/{len(todo)}] {date_str} | ⚠ no source data, skipped")
                     continue
 
                 if zt_count is not None:
@@ -96,17 +95,19 @@ def zt_backfill(start_date: str, end_date: str, db_path: Path | None = None):
                 seal_display = f"{seal_fund:.1f}" if seal_fund is not None else "-"
                 speed = f"{avg:.1f}s/date"
                 eta_str = f"{int(eta // 60)}m{int(eta % 60):02d}s" if eta > 60 else f"{eta:.0f}s"
-                print(f"  [{i+1:>4}/{len(todo)}] {date_str} | ↑{zt_display:>4} ¥{seal_display:>7}亿 | {speed} | ETA {eta_str}")
+                print(
+                    f"  [{i + 1:>4}/{len(todo)}] {date_str} | ↑{zt_display:>4} ¥{seal_display:>7}亿 | {speed} | ETA {eta_str}"
+                )
 
             except Exception as e:
                 errors.append((date_str, str(e)))
-                print(f"  [{i+1:>4}/{len(todo)}] {date_str} | ⚠ ERROR: {e}")
+                print(f"  [{i + 1:>4}/{len(todo)}] {date_str} | ⚠ ERROR: {e}")
                 skipped += 1
 
         total_time = time.time() - start_time
         total_min = int(total_time // 60)
         total_sec = int(total_time % 60)
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print(f"Backfill complete in {total_min}m{total_sec:02d}s")
         print(f"  Fetched:           {fetched} dates")
         print(f"  Skipped (errors):  {skipped} dates")
@@ -117,17 +118,18 @@ def zt_backfill(start_date: str, end_date: str, db_path: Path | None = None):
                 print(f"    {d}: {e}")
             if len(errors) > 10:
                 print(f"    ... and {len(errors) - 10} more")
-        count = (db.count_raw_data_by_indicator("m1_zt_count")
-                 + db.count_raw_data_by_indicator("s3_seal_fund"))
+        count = db.count_raw_data_by_indicator("m1_zt_count") + db.count_raw_data_by_indicator(
+            "s3_seal_fund"
+        )
         print(f"  Database: {count} raw records")
 
 
 def main():
     parser = argparse.ArgumentParser(description="M1/S3 涨停板数据回填（levistock）")
-    parser.add_argument("--start", type=str, default="2020-01-01",
-                        help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end", type=str, default=None,
-                        help="End date (YYYY-MM-DD), default today")
+    parser.add_argument("--start", type=str, default="2020-01-01", help="Start date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--end", type=str, default=None, help="End date (YYYY-MM-DD), default today"
+    )
     args = parser.parse_args()
 
     end = args.end or datetime.now().strftime("%Y-%m-%d")

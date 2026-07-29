@@ -2,6 +2,7 @@
 
 新浪 stock_zh_index_daily 稳定可用，不走东财反爬。全量历史 3918 行一次拉取入 DB。
 """
+
 import sys
 from pathlib import Path
 
@@ -24,7 +25,10 @@ def main():
             return 1
 
         df = r.data
-        print(f"fetched {len(df)} rows, range {df['date'].iloc[0]} ~ {df['date'].iloc[-1]}", flush=True)
+        print(
+            f"fetched {len(df)} rows, range {df['date'].iloc[0]} ~ {df['date'].iloc[-1]}",
+            flush=True,
+        )
 
         for _, row in df.iterrows():
             d = row["date"]
@@ -35,7 +39,10 @@ def main():
         after_n = db.count_raw_data_by_indicator("m4_volume")
         after_range = db.get_raw_date_range("m4_volume")
         if after_range:
-            print(f"m4_volume in DB: {after_n} rows, range {after_range[0]} ~ {after_range[1]}", flush=True)
+            print(
+                f"m4_volume in DB: {after_n} rows, range {after_range[0]} ~ {after_range[1]}",
+                flush=True,
+            )
         else:
             print("m4_volume in DB: 0 rows", flush=True)
     return 0

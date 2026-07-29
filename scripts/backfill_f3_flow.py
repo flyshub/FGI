@@ -15,6 +15,7 @@ back to proxy (price_change × volume) at compute time. This is by design.
 
 Usage: python3.12 -m scripts.backfill_f3_flow
 """
+
 import sys
 from pathlib import Path
 
@@ -30,10 +31,12 @@ from fgi.storage.database import Database
 def main():
     print("Fetching historical 主力净流入 from stock_market_fund_flow...", flush=True)
     df = ak.stock_market_fund_flow()
-    df = df[["日期", "主力净流入-净额"]].rename(columns={
-        "日期": "date",
-        "主力净流入-净额": "net_flow",
-    })
+    df = df[["日期", "主力净流入-净额"]].rename(
+        columns={
+            "日期": "date",
+            "主力净流入-净额": "net_flow",
+        }
+    )
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
     df["net_flow"] = pd.to_numeric(df["net_flow"], errors="coerce")
     df = df.dropna(subset=["net_flow"]).sort_values("date").reset_index(drop=True)
@@ -64,8 +67,7 @@ def main():
     if stats:
         min_v, max_v, avg_v = stats
         print(
-            f"\nDONE: {n_new} rows\n"
-            f"  range: {min_v:.2e} ~ {max_v:.2e}  avg={avg_v:.2e}",
+            f"\nDONE: {n_new} rows\n  range: {min_v:.2e} ~ {max_v:.2e}  avg={avg_v:.2e}",
             flush=True,
         )
     else:

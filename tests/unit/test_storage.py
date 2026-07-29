@@ -53,10 +53,7 @@ class TestRawData:
         assert df.iloc[0]["value"] == 0.7
 
     def test_upsert_batch(self, db):
-        df = pd.DataFrame({
-            "date": ["2024-01-01", "2024-01-02"],
-            "value": [0.5, 0.6]
-        })
+        df = pd.DataFrame({"date": ["2024-01-01", "2024-01-02"], "value": [0.5, 0.6]})
         db.upsert_raw_data_batch(df, "m3")
         result = db.get_raw_data("m3", "2024-01-01", "2024-01-02")
         assert len(result) == 2
@@ -186,8 +183,9 @@ class TestFgiCurrentFill:
 class TestGetMissingDatesCalendar:
     def test_with_explicit_trading_days(self, db):
         db.upsert_raw_data("2024-01-01", "m3", 0.5)
-        missing = db.get_missing_dates("m3", "2024-01-01", "2024-01-05",
-                                       trading_days=["2024-01-01", "2024-01-03"])
+        missing = db.get_missing_dates(
+            "m3", "2024-01-01", "2024-01-05", trading_days=["2024-01-01", "2024-01-03"]
+        )
         assert missing == ["2024-01-03"]
 
     def test_m3_close_fallback(self, db):

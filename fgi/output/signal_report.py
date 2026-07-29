@@ -12,6 +12,7 @@ Usage:
         result = engine.run()
         # result["stats"][horizon] = list of zone stat dicts
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -159,8 +160,12 @@ class SignalReportEngine:
             "total_days": len(df),
             "benchmark": "上证综指 (m3_close)",
             "fgi_definition": "FGI_final",
-            "in_sample_range": f"{in_df['date'].iloc[0]} ~ {in_df['date'].iloc[-1]}" if len(in_df) > 0 else "N/A",
-            "out_sample_range": f"{out_df['date'].iloc[0]} ~ {out_df['date'].iloc[-1]}" if len(out_df) > 0 else "N/A",
+            "in_sample_range": f"{in_df['date'].iloc[0]} ~ {in_df['date'].iloc[-1]}"
+            if len(in_df) > 0
+            else "N/A",
+            "out_sample_range": f"{out_df['date'].iloc[0]} ~ {out_df['date'].iloc[-1]}"
+            if len(out_df) > 0
+            else "N/A",
         }
 
         return {
@@ -214,7 +219,13 @@ def _distribution_table(stats_by_horizon: dict, total_days: int) -> str:
     lines.append("|------|---------|---------|------|")
     for zs in stats_by_horizon[h]:
         zone = zs["zone"]
-        range_map = {"极度恐惧": "<20", "恐惧": "20–40", "中性": "40–60", "贪婪": "60–80", "极度贪婪": "≥80"}
+        range_map = {
+            "极度恐惧": "<20",
+            "恐惧": "20–40",
+            "中性": "40–60",
+            "贪婪": "60–80",
+            "极度贪婪": "≥80",
+        }
         rng = range_map.get(zone, "—")
         pct = f"{zs['n'] / total_days * 100:.1f}%" if total_days > 0 else "—"
         lines.append(f"| {zone} | {rng} | {zs['n']} | {pct} |")
@@ -274,12 +285,16 @@ def render_markdown(result: dict) -> str:
 
     # Zone distribution
     parts.append(_distribution_table(stats, meta.get("total_days", 0)))
-    parts.append("> 💡 **大白话**：FGI 把每个交易日的情绪打分到 0-100 分。上面这张表告诉我们：历史上大多数日子（约 58%）市场情绪比较平淡（40-60 分），真正恐慌（<20）和真正疯狂（≥80）的日子非常少，加起来不到 1%。")
+    parts.append(
+        "> 💡 **大白话**：FGI 把每个交易日的情绪打分到 0-100 分。上面这张表告诉我们：历史上大多数日子（约 58%）市场情绪比较平淡（40-60 分），真正恐慌（<20）和真正疯狂（≥80）的日子非常少，加起来不到 1%。"
+    )
     parts.append("")
 
     # Combined (full sample) forward returns
     parts.append(_zone_table(stats, "全量样本前瞻收益分析"))
-    parts.append("> 💡 **大白话**：这张表回答一个核心问题——当市场情绪处于某个区间时，接下来一段时间大盘会怎么走？比如看 60 日那张表，恐惧区间的股票平均涨 2.86%（胜率 57%），贪婪区间的股票平均跌 -0.44%（胜率 46%）。简单说：别人恐惧时你买入，60 天后大概率赚钱；别人贪婪时你追高，60 天后大概率亏钱。")
+    parts.append(
+        "> 💡 **大白话**：这张表回答一个核心问题——当市场情绪处于某个区间时，接下来一段时间大盘会怎么走？比如看 60 日那张表，恐惧区间的股票平均涨 2.86%（胜率 57%），贪婪区间的股票平均跌 -0.44%（胜率 46%）。简单说：别人恐惧时你买入，60 天后大概率赚钱；别人贪婪时你追高，60 天后大概率亏钱。"
+    )
     parts.append("")
     parts.append("> ⚠️ 注：日频滚动窗口下观测非独立，置信区间需谨慎解读。")
     parts.append("")
@@ -299,9 +314,13 @@ def render_markdown(result: dict) -> str:
     parts.append("")
     parts.append("## 极端信号专项")
     parts.append("")
-    parts.append('> 💡 **大白话**：极端信号就是市场情绪的"极端值"——极度恐慌（FGI<20）或极度贪婪（FGI≥80）。历史上这样的日子屈指可数，说明市场真正疯狂或恐惧的时刻非常罕见。正因为罕见，每次出现都值得特别关注。但要注意：样本太少（不到 12 天），统计结论仅供参考，不能当成可靠买卖信号。')
+    parts.append(
+        '> 💡 **大白话**：极端信号就是市场情绪的"极端值"——极度恐慌（FGI<20）或极度贪婪（FGI≥80）。历史上这样的日子屈指可数，说明市场真正疯狂或恐惧的时刻非常罕见。正因为罕见，每次出现都值得特别关注。但要注意：样本太少（不到 12 天），统计结论仅供参考，不能当成可靠买卖信号。'
+    )
     parts.append("")
-    parts.append("> 注：极端恐惧（FGI<20）仅 8 个交易日、极端贪婪（FGI≥80）仅约 12 个交易日。样本量极小，统计结论仅供参考。")
+    parts.append(
+        "> 注：极端恐惧（FGI<20）仅 8 个交易日、极端贪婪（FGI≥80）仅约 12 个交易日。样本量极小，统计结论仅供参考。"
+    )
     parts.append("")
     parts.append("详见下方极端信号时间线。")
 
@@ -320,26 +339,42 @@ def render_markdown(result: dict) -> str:
         extreme_greed = next((z for z in stats[5] if z["zone"] == "极度贪婪"), None)
         if extreme_fear and extreme_fear["n"] > 0 and extreme_fear["mean"] is not None:
             direction = "上涨" if extreme_fear["mean"] > 0 else "下跌"
-            parts.append(f"- **极度恐惧区间**：{_fmt_pct(extreme_fear['mean'])} 平均前瞻收益，胜率 {_fmt_pct(extreme_fear['win_rate'])}。信号方向（极度恐惧→市场{direction}）与理论一致。")
+            parts.append(
+                f"- **极度恐惧区间**：{_fmt_pct(extreme_fear['mean'])} 平均前瞻收益，胜率 {_fmt_pct(extreme_fear['win_rate'])}。信号方向（极度恐惧→市场{direction}）与理论一致。"
+            )
         if extreme_greed and extreme_greed["n"] > 0 and extreme_greed["mean"] is not None:
             direction = "下跌" if extreme_greed["mean"] < 0 else "上涨"
-            parts.append(f"- **极度贪婪区间**：{_fmt_pct(extreme_greed['mean'])} 平均前瞻收益，胜率 {_fmt_pct(extreme_greed['win_rate'])}。")
+            parts.append(
+                f"- **极度贪婪区间**：{_fmt_pct(extreme_greed['mean'])} 平均前瞻收益，胜率 {_fmt_pct(extreme_greed['win_rate'])}。"
+            )
 
     parts.append("")
     parts.append("### 方法与数据局限")
     parts.append("")
-    parts.append("> 💡 **大白话**：下面列出了这份报告的六大局限。简单说：这份报告只看了上证综指一个指数、样本量有限（尤其是极端行情太少了）、统计方法有一定假设前提。FGI 是一个参考信号，不是精准预测工具——别拿它当买卖依据。")
+    parts.append(
+        "> 💡 **大白话**：下面列出了这份报告的六大局限。简单说：这份报告只看了上证综指一个指数、样本量有限（尤其是极端行情太少了）、统计方法有一定假设前提。FGI 是一个参考信号，不是精准预测工具——别拿它当买卖依据。"
+    )
     parts.append("")
-    parts.append("1. **基准局限**：使用上证综指（m3_close），未纳入沪深 300/中证 500/中证 1000 全收益指数。")
+    parts.append(
+        "1. **基准局限**：使用上证综指（m3_close），未纳入沪深 300/中证 500/中证 1000 全收益指数。"
+    )
     parts.append("2. **重叠观测**：日频滚动窗口产生重叠样本，各观测非独立，显著性检验需谨慎解读。")
-    parts.append("3. **极端区间样本不足**：FGI < 20 和 FGI ≥ 80 的交易日极少（≤12 天），统计推断不可靠。")
-    parts.append("4. **样本外信号衰减**：Rank IC 从样本内 -0.065 衰减至样本外 -0.004，近期预测力显著下降。")
-    parts.append("5. **分层单调性不足**：10 档分层在中段档位收益交叉，非严格单调递减，信号精度有限。")
+    parts.append(
+        "3. **极端区间样本不足**：FGI < 20 和 FGI ≥ 80 的交易日极少（≤12 天），统计推断不可靠。"
+    )
+    parts.append(
+        "4. **样本外信号衰减**：Rank IC 从样本内 -0.065 衰减至样本外 -0.004，近期预测力显著下降。"
+    )
+    parts.append(
+        "5. **分层单调性不足**：10 档分层在中段档位收益交叉，非严格单调递减，信号精度有限。"
+    )
     parts.append("6. **前视偏差控制**：前瞻收益以收盘价计算，未考虑交易滑点和冲击成本。")
     parts.append("")
     parts.append("---")
     parts.append("")
-    parts.append("<sub>本报告由 `fgi/output/signal_report.py` 自动生成。报告仅供参考，不构成投资建议。</sub>")
+    parts.append(
+        "<sub>本报告由 `fgi/output/signal_report.py` 自动生成。报告仅供参考，不构成投资建议。</sub>"
+    )
 
     return "\n".join(parts)
 
@@ -366,7 +401,11 @@ def _find_closest_prior_fgi(db: Database, fgi_value: float, current_date: str) -
             return None
         hist = hist.sort_values("date").reset_index(drop=True)
         # 计算今日方向（当日 vs 前一日）
-        today_prev = hist[hist["date"] < current_date]["FGI_final"].iloc[-1] if len(hist[hist["date"] < current_date]) > 0 else None
+        today_prev = (
+            hist[hist["date"] < current_date]["FGI_final"].iloc[-1]
+            if len(hist[hist["date"] < current_date]) > 0
+            else None
+        )
         if today_prev is None:
             return None
         today_direction = fgi_value - float(today_prev)
@@ -408,7 +447,9 @@ def _get_forward_return(db: Database, date: str, horizon: int = 20) -> float | N
             return None
         if idx + horizon >= len(dates):
             return None
-        ret = float(close_df.iloc[idx + horizon]["value"]) / float(close_df.iloc[idx]["value"]) - 1.0
+        ret = (
+            float(close_df.iloc[idx + horizon]["value"]) / float(close_df.iloc[idx]["value"]) - 1.0
+        )
         return ret
     except Exception:
         return None
@@ -460,13 +501,23 @@ def render_zone_context_card(fgi: float | None, db) -> str:
             all_scores = db.get_scores("2009-01-01", "2099-12-31")
             if all_scores is not None and not all_scores.empty:
                 # 找与当前 fgi 值最匹配的行 → 确定日期
-                candidates = all_scores[all_scores["date"] < meta.get("end_date", "2099-12-31")].dropna(subset=["FGI_final"]).copy()
+                candidates = (
+                    all_scores[all_scores["date"] < meta.get("end_date", "2099-12-31")]
+                    .dropna(subset=["FGI_final"])
+                    .copy()
+                )
                 candidates["_diff"] = (candidates["FGI_final"].astype(float) - float(fgi)).abs()
                 if not candidates.empty:
                     best_row = candidates.loc[candidates["_diff"].idxmin()]
                     best_date = str(best_row["date"])
                     # 取该日期前6个非空FGI值算纯度
-                    trend_series = all_scores[all_scores["date"] <= best_date]["FGI_final"].dropna().tail(6).astype(float).values
+                    trend_series = (
+                        all_scores[all_scores["date"] <= best_date]["FGI_final"]
+                        .dropna()
+                        .tail(6)
+                        .astype(float)
+                        .values
+                    )
                     if len(trend_series) == 6:
                         changes = np.abs(np.diff(trend_series))
                         total_v = np.sum(changes)
@@ -483,7 +534,7 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                                     anchor_line = (
                                         f"📎 **参考**：上次同向接近此水平（{closest_fgi:.1f}）是 **{closest_date}**"
                                         f"（{direction_arrow} {closest_fgi - closest_prev:+.1f}），"
-                                        f"之后 20 日上证综指 {after_arrow} **{forward_ret*100:+.1f}%**"
+                                        f"之后 20 日上证综指 {after_arrow} **{forward_ret * 100:+.1f}%**"
                                     )
                                     # 再查同向匹配中 FGI 最接近的另外 4 次，评估后市一致性
                                     try:
@@ -495,18 +546,27 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                                             if r is not None:
                                                 is_closest = d == closest_date
                                                 arrow = "📈" if r > 0 else "📉"
-                                                ret_label = f"{arrow} {r*100:+.1f}%"
+                                                ret_label = f"{arrow} {r * 100:+.1f}%"
                                                 date_label = f"**{d}**" if is_closest else d
                                                 detail_rows.append((date_label, ret_label))
                                         if len(detail_rows) >= 3:
-                                            r_vals = [float(r.replace("📈 ","").replace("📉 ","").replace("%","")) for _, r in detail_rows]
+                                            r_vals = [
+                                                float(
+                                                    r.replace("📈 ", "")
+                                                    .replace("📉 ", "")
+                                                    .replace("%", "")
+                                                )
+                                                for _, r in detail_rows
+                                            ]
                                             r_min = min(r_vals)
                                             r_max = max(r_vals)
-                                            table = '\n\n其他同向接近情形：\n\n| 日期 | 后市20日 |\n|------|---------|\n'
+                                            table = "\n\n其他同向接近情形：\n\n| 日期 | 后市20日 |\n|------|---------|\n"
                                             for date_label, ret_s in detail_rows:
                                                 table += f"| {date_label} | {ret_s} |\n"
-                                            table += f"| **区间** | **{r_min:+.0f}% ~ {r_max:+.0f}%** |"
-                                            table += '\n\n<sub>最近似日期以**加粗**标注</sub>'
+                                            table += (
+                                                f"| **区间** | **{r_min:+.0f}% ~ {r_max:+.0f}%** |"
+                                            )
+                                            table += "\n\n<sub>最近似日期以**加粗**标注</sub>"
                                             anchor_line += table
                                     except Exception:
                                         pass
@@ -555,8 +615,10 @@ def render_zone_context_card(fgi: float | None, db) -> str:
 # Backtest v2: Rank IC, layer backtest, DCA simulation (ADR-0003)
 # ---------------------------------------------------------------------------
 
-def compute_rank_ic(df: pd.DataFrame, indicator_col: str = "FGI_final",
-                    horizon: int = 20) -> dict | None:
+
+def compute_rank_ic(
+    df: pd.DataFrame, indicator_col: str = "FGI_final", horizon: int = 20
+) -> dict | None:
     """Compute Spearman Rank IC between an indicator and forward market return.
 
     Args:
@@ -577,7 +639,7 @@ def compute_rank_ic(df: pd.DataFrame, indicator_col: str = "FGI_final",
     ic_values = []
     window_size = 20
     for i in range(len(working) - window_size + 1):
-        win = working.iloc[i:i + window_size]
+        win = working.iloc[i : i + window_size]
         if len(win) < 10:
             continue
         val = win[indicator_col].corr(win["forward_return"], method="spearman")
@@ -603,9 +665,13 @@ def compute_rank_ic(df: pd.DataFrame, indicator_col: str = "FGI_final",
     }
 
 
-def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final",
-                              horizon: int = 20, half_year: int = 126,
-                              window_years: int = 3) -> list:
+def compute_rolling_ic_window(
+    df: pd.DataFrame,
+    indicator_col: str = "FGI_final",
+    horizon: int = 20,
+    half_year: int = 126,
+    window_years: int = 3,
+) -> list:
     """Compute rolling Rank IC over semi-annual windows using trailing 3-year data.
 
     Returns a list of {date, ic, n, mean, std, ir, win_rate} dicts, one per
@@ -621,7 +687,7 @@ def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final"
     step = half_year
     n = len(working)
     for end in range(window_size, n, step):
-        window_df = working.iloc[end - window_size:end]
+        window_df = working.iloc[end - window_size : end]
         if len(window_df) < min_valid_obs:
             continue
         ic = float(window_df[indicator_col].corr(window_df["forward_return"], method="spearman"))
@@ -629,7 +695,7 @@ def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final"
         ic_vals = []
         sub_win = 20
         for i in range(len(window_df) - sub_win + 1):
-            s = window_df.iloc[i:i + sub_win]
+            s = window_df.iloc[i : i + sub_win]
             if len(s) < 10:
                 continue
             val = s[indicator_col].corr(s["forward_return"], method="spearman")
@@ -639,15 +705,17 @@ def compute_rolling_ic_window(df: pd.DataFrame, indicator_col: str = "FGI_final"
         win_std = float(np.std(ic_vals, ddof=1)) if len(ic_vals) > 1 else None
         win_ir = win_mean / win_std if (win_std and win_std > 0) else 0.0
         win_wr = float(np.mean(np.array(ic_vals) > 0)) if ic_vals else 0.5
-        results.append({
-            "date": str(window_df["date"].iloc[-1]),
-            "ic": ic,
-            "n": len(window_df),
-            "mean": win_mean,
-            "std": win_std,
-            "ir": win_ir,
-            "win_rate": win_wr,
-        })
+        results.append(
+            {
+                "date": str(window_df["date"].iloc[-1]),
+                "ic": ic,
+                "n": len(window_df),
+                "mean": win_mean,
+                "std": win_std,
+                "ir": win_ir,
+                "win_rate": win_wr,
+            }
+        )
     return results
 
 
@@ -676,18 +744,21 @@ def layer_backtest_10(df: pd.DataFrame, horizons: list | None = None) -> dict:
             if len(subset) == 0:
                 continue
             rets = subset[col].values
-            layers.append({
-                "layer": layer + 1,  # 1-indexed
-                "n": len(subset),
-                "mean_return": float(np.mean(rets)),
-                "win_rate": float(np.mean(rets > 0)),
-            })
+            layers.append(
+                {
+                    "layer": layer + 1,  # 1-indexed
+                    "n": len(subset),
+                    "mean_return": float(np.mean(rets)),
+                    "win_rate": float(np.mean(rets > 0)),
+                }
+            )
         result[h] = layers
     return result
 
 
-def simulate_dca(df: pd.DataFrame, base_amount: float = 10000,
-                 indicator_col: str = "FGI_final") -> dict:
+def simulate_dca(
+    df: pd.DataFrame, base_amount: float = 10000, indicator_col: str = "FGI_final"
+) -> dict:
     """Simulate contrarian DCA: monthly investment scaled by (1 - FGI/100) × 2.
 
     Buys on the first trading day of each month. Benchmark: equal monthly DCA.
@@ -745,8 +816,16 @@ def simulate_dca(df: pd.DataFrame, base_amount: float = 10000,
     # Sharpe (monthly returns annualized)
     dca_monthly_ret = np.diff(dca_portfolio) / dca_portfolio[:-1]
     bench_monthly_ret = np.diff(bench_portfolio) / bench_portfolio[:-1]
-    dca_sharpe = float(np.mean(dca_monthly_ret) / np.std(dca_monthly_ret, ddof=1) * np.sqrt(12)) if np.std(dca_monthly_ret, ddof=1) > 0 else 0.0
-    bench_sharpe = float(np.mean(bench_monthly_ret) / np.std(bench_monthly_ret, ddof=1) * np.sqrt(12)) if np.std(bench_monthly_ret, ddof=1) > 0 else 0.0
+    dca_sharpe = (
+        float(np.mean(dca_monthly_ret) / np.std(dca_monthly_ret, ddof=1) * np.sqrt(12))
+        if np.std(dca_monthly_ret, ddof=1) > 0
+        else 0.0
+    )
+    bench_sharpe = (
+        float(np.mean(bench_monthly_ret) / np.std(bench_monthly_ret, ddof=1) * np.sqrt(12))
+        if np.std(bench_monthly_ret, ddof=1) > 0
+        else 0.0
+    )
 
     return {
         "n_months": len(monthly),
@@ -768,7 +847,7 @@ def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
         "",
         "FGI_final 与上证综指 20 日前瞻收益的 Spearman Rank IC：",
         "",
-        '> 💡 **大白话**：Rank IC 衡量的是「FGI 分数和未来市场涨跌之间的关联有多强」。IC 为负数说明 FGI 越高（市场越贪婪），未来越容易跌——这正是我们希望看到的反向预测能力。IR（信息比率）衡量这种关联是否稳定，绝对值越大越稳定。IC 胜率指「有多少个时间段里 FGI 和未来涨跌是反向关联的」，低于 50% 说明 FGI 大多数时候方向正确（反向指标）。',
+        "> 💡 **大白话**：Rank IC 衡量的是「FGI 分数和未来市场涨跌之间的关联有多强」。IC 为负数说明 FGI 越高（市场越贪婪），未来越容易跌——这正是我们希望看到的反向预测能力。IR（信息比率）衡量这种关联是否稳定，绝对值越大越稳定。IC 胜率指「有多少个时间段里 FGI 和未来涨跌是反向关联的」，低于 50% 说明 FGI 大多数时候方向正确（反向指标）。",
     ]
     if ic_result.get("error"):
         lines.append(f"**数据不足**：{ic_result['error']}")
@@ -780,7 +859,9 @@ def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
     lines.append(f"- IC 标准差：{ic_result.get('std', float('nan')):.4f}")
     lines.append(f"- IR（IC 均值/标准差）：{ic_result.get('ir', float('nan')):.4f}")
     lines.append(f"- IC 胜率（IC>0 占比）：{ic_result.get('win_rate', float('nan')):.1%}")
-    lines.append(f"- Bonferroni 参考阈值（α/36）：{ic_result.get('bonferroni_threshold', 0.05/36):.4f}")
+    lines.append(
+        f"- Bonferroni 参考阈值（α/36）：{ic_result.get('bonferroni_threshold', 0.05 / 36):.4f}"
+    )
     lines.append("")
     if ic_result.get("rolling"):
         lines.append("#### 滚动 IC 窗口（每半年，3 年回顾窗）")
@@ -788,8 +869,10 @@ def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
         lines.append("| 评估日期 | Rank IC | 观测数 | IC 均值 | IR | 胜率 |")
         lines.append("|---------|--------|--------|--------|-----|------|")
         for pt in ic_result["rolling"]:
-            ir_s = f"{pt.get('ir', 0):.3f}" if pt.get('ir') is not None else "—"
-            lines.append(f"| {pt['date']} | {pt['ic']:.4f} | {pt['n']} | {pt.get('mean', 0):.4f} | {ir_s} | {pt.get('win_rate', 0):.1%} |")
+            ir_s = f"{pt.get('ir', 0):.3f}" if pt.get("ir") is not None else "—"
+            lines.append(
+                f"| {pt['date']} | {pt['ic']:.4f} | {pt['n']} | {pt.get('mean', 0):.4f} | {ir_s} | {pt.get('win_rate', 0):.1%} |"
+            )
         lines.append("")
     return "\n".join(lines)
 
@@ -827,7 +910,7 @@ def _render_dca_section(dca_result: dict, title: str = "逆情绪 DCA vs 等额�
     lines = [
         f"### 💰 {title}",
         "",
-        '> 💡 **大白话**：模拟两种每月定投策略。**等额定投**：每月固定投入 1 万元买指数基金，不管涨跌。**逆情绪 DCA**：根据 FGI 调整投入金额——市场越恐慌（FGI 低），投入越多（最多 2 万元）；市场越贪婪（FGI 高），投入越少（最少 0 元）。核心逻辑是「别人恐惧我加仓，别人贪婪我减仓」。通过对比两种策略的总收益、最大回撤和夏普比率，看 FGI 作为定投择时信号是否有实际价值。',
+        "> 💡 **大白话**：模拟两种每月定投策略。**等额定投**：每月固定投入 1 万元买指数基金，不管涨跌。**逆情绪 DCA**：根据 FGI 调整投入金额——市场越恐慌（FGI 低），投入越多（最多 2 万元）；市场越贪婪（FGI 高），投入越少（最少 0 元）。核心逻辑是「别人恐惧我加仓，别人贪婪我减仓」。通过对比两种策略的总收益、最大回撤和夏普比率，看 FGI 作为定投择时信号是否有实际价值。",
         "",
     ]
     if dca_result.get("error"):
@@ -839,7 +922,11 @@ def _render_dca_section(dca_result: dict, title: str = "逆情绪 DCA vs 等额�
     lines.append("")
     lines.append("| 策略 | 总收益 | 年化收益 | 最大回撤 | 夏普比率 |")
     lines.append("|------|--------|---------|---------|---------|")
-    lines.append(f"| 逆情绪 DCA | {_fmt_pct(dca_result['dca_total_return'])} | {_fmt_pct(dca_result['dca_annualized'])} | {_fmt_pct(dca_result['dca_max_drawdown'])} | {dca_result['dca_sharpe']:.2f} |")
-    lines.append(f"| 等额定投 | {_fmt_pct(dca_result['benchmark_total_return'])} | {_fmt_pct(dca_result['benchmark_annualized'])} | {_fmt_pct(dca_result['benchmark_max_drawdown'])} | {dca_result['benchmark_sharpe']:.2f} |")
+    lines.append(
+        f"| 逆情绪 DCA | {_fmt_pct(dca_result['dca_total_return'])} | {_fmt_pct(dca_result['dca_annualized'])} | {_fmt_pct(dca_result['dca_max_drawdown'])} | {dca_result['dca_sharpe']:.2f} |"
+    )
+    lines.append(
+        f"| 等额定投 | {_fmt_pct(dca_result['benchmark_total_return'])} | {_fmt_pct(dca_result['benchmark_annualized'])} | {_fmt_pct(dca_result['benchmark_max_drawdown'])} | {dca_result['benchmark_sharpe']:.2f} |"
+    )
     lines.append("")
     return "\n".join(lines)

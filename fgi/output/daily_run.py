@@ -24,6 +24,7 @@ from fgi.storage.database import Database
 
 try:
     import zzshare  # noqa: F401
+
     ZZSHARE_ENABLED = True
 except ImportError:
     ZZSHARE_ENABLED = False
@@ -71,7 +72,9 @@ def setup_data_manager() -> DataSourceManager:
 def main():
     parser = argparse.ArgumentParser(description="Run daily FGI calculation")
     parser.add_argument("--date", type=str, help="Target date (YYYY-MM-DD)")
-    parser.add_argument("--first-pass", action="store_true", help="Silent run: calculate but skip push")
+    parser.add_argument(
+        "--first-pass", action="store_true", help="Silent run: calculate but skip push"
+    )
     args = parser.parse_args()
 
     target_date = args.date or datetime.now().strftime("%Y-%m-%d")
@@ -107,15 +110,21 @@ def main():
                 anomaly_detected = False
 
             if anomaly_detected:
-                print("Anomaly detected — suspending daily FGI push, manual review required (spec line 262).")
+                print(
+                    "Anomaly detected — suspending daily FGI push, manual review required (spec line 262)."
+                )
             else:
                 dm = compute_decision_matrix(db, target_date, result["fgi_final"])
                 dm_dict = dm.to_dict() if dm else None
                 ok = send_fgi_report(
-                    db, result["fgi_final"], result["dimension_scores"],
-                    result["indicator_results"], result["health_score"],
+                    db,
+                    result["fgi_final"],
+                    result["dimension_scores"],
+                    result["indicator_results"],
+                    result["health_score"],
                     date_str=target_date,
-                    decision_matrix=dm_dict)
+                    decision_matrix=dm_dict,
+                )
                 print(f"PushPlus: {'OK' if ok else 'skipped'}")
 
 

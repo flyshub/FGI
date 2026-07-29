@@ -1,4 +1,5 @@
 """真实交易日历：akshare tool_trade_date_hist_sina，内存 + 磁盘缓存。"""
+
 import logging
 import threading
 from pathlib import Path
@@ -12,6 +13,7 @@ class TradingCalendar:
     def __init__(self, cache_dir: Path | None = None):
         if cache_dir is None:
             from fgi.config.settings import DATA_DIR
+
             cache_dir = DATA_DIR / "cache"
         self._cache_dir = Path(cache_dir)
         self._days: list[str] | None = None
@@ -42,6 +44,7 @@ class TradingCalendar:
     def _fetch_akshare(self) -> list[str] | None:
         try:
             import akshare as ak
+
             df = ak.tool_trade_date_hist_sina()
             if df is None or df.empty:
                 return None
@@ -72,8 +75,9 @@ class TradingCalendar:
             return None
 
 
-def resolve_trading_days(start_date: str, end_date: str, db=None,
-                         calendar: TradingCalendar | None = None) -> list[str]:
+def resolve_trading_days(
+    start_date: str, end_date: str, db=None, calendar: TradingCalendar | None = None
+) -> list[str]:
     """真实交易日历优先；失败时回退 raw_data 中 m3_close 已有日期；最后回退工作日。"""
     calendar = calendar or TradingCalendar()
     days = calendar.trading_days(start_date, end_date)

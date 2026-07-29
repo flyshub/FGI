@@ -15,6 +15,7 @@
 - PE 与 PB 分位等权平均
 - 数据缺失时返回 None，由调用方降级处理
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 # 阈值：恐惧≤35, 中性 35-65, 贪婪≥65（与 FGI_LEVELS 的 20/40/60/80 不同，决策矩阵使用更灵敏的阈值）
 SENTIMENT_LOW = 35.0
 SENTIMENT_HIGH = 65.0
-VALUATION_LOW = 0.25   # 百分位 0-1
+VALUATION_LOW = 0.25  # 百分位 0-1
 VALUATION_HIGH = 0.75
 ROLLING_WINDOW_DAYS = 5 * 252  # 5 年
 
@@ -39,6 +40,7 @@ ROLLING_WINDOW_DAYS = 5 * 252  # 5 年
 @dataclass(frozen=True)
 class DecisionMatrix:
     """决策矩阵输出。"""
+
     fgi: float | None
     sentiment_tier: str  # "恐惧" / "中性" / "贪婪"
     pe_pct: float | None
@@ -84,21 +86,25 @@ def _classify_valuation(pct: float | None) -> str | None:
 # 9 宫格：行=情绪(恐惧/中性/贪婪)，列=估值(低估/合理/高估)
 # 元组：(象限名, 建议文案)
 QUADRANT_TABLE = {
-    ("恐惧", "低估"):   ("强烈关注", "情绪悲观+估值偏低，建议关注左侧机会"),
-    ("恐惧", "合理"):   ("关注",     "情绪悲观但估值合理，建议观察"),
-    ("恐惧", "高估"):   ("观望",     "情绪悲观且估值偏高，建议观望"),
-    ("中性", "低估"):   ("关注",     "估值偏低，建议关注"),
-    ("中性", "合理"):   ("中性",     "情绪与估值均居中，无明确信号"),
-    ("中性", "高估"):   ("谨慎",     "估值偏高，建议谨慎"),
-    ("贪婪", "低估"):   ("观望",     "情绪高涨但估值仍低，建议观望"),
-    ("贪婪", "合理"):   ("谨慎",     "情绪高涨估值合理，建议谨慎"),
-    ("贪婪", "高估"):   ("强烈谨慎", "情绪高涨+估值偏高，建议警惕右侧风险"),
+    ("恐惧", "低估"): ("强烈关注", "情绪悲观+估值偏低，建议关注左侧机会"),
+    ("恐惧", "合理"): ("关注", "情绪悲观但估值合理，建议观察"),
+    ("恐惧", "高估"): ("观望", "情绪悲观且估值偏高，建议观望"),
+    ("中性", "低估"): ("关注", "估值偏低，建议关注"),
+    ("中性", "合理"): ("中性", "情绪与估值均居中，无明确信号"),
+    ("中性", "高估"): ("谨慎", "估值偏高，建议谨慎"),
+    ("贪婪", "低估"): ("观望", "情绪高涨但估值仍低，建议观望"),
+    ("贪婪", "合理"): ("谨慎", "情绪高涨估值合理，建议谨慎"),
+    ("贪婪", "高估"): ("强烈谨慎", "情绪高涨+估值偏高，建议警惕右侧风险"),
 }
 
 # 象限 → emoji（供 pushplus 等渲染层使用）
 QUADRANT_EMOJI = {
-    "强烈关注": "🟢", "关注": "🔵", "中性": "⚪",
-    "观望": "🟡", "谨慎": "🟠", "强烈谨慎": "🔴",
+    "强烈关注": "🟢",
+    "关注": "🔵",
+    "中性": "⚪",
+    "观望": "🟡",
+    "谨慎": "🟠",
+    "强烈谨慎": "🔴",
 }
 
 
@@ -131,7 +137,9 @@ def _compute_valuation_pct(db: Database, date_str: str) -> tuple:
 
 def _compute_pct_realtime(db: Database, date_str: str) -> tuple:
     """从 raw PE/PB 数据实时计算分位（用于 percentile 未 pre-compute 的日期）。"""
-    start = (pd.to_datetime(date_str) - pd.Timedelta(days=ROLLING_WINDOW_DAYS + 90)).strftime("%Y-%m-%d")
+    start = (pd.to_datetime(date_str) - pd.Timedelta(days=ROLLING_WINDOW_DAYS + 90)).strftime(
+        "%Y-%m-%d"
+    )
     pe_data = db.get_raw_data("v1_pe_ttm", start, date_str)
     pb_data = db.get_raw_data("v1_pb", start, date_str)
     if pe_data.empty or pb_data.empty:
@@ -177,7 +185,11 @@ def compute_decision_matrix(
         if sentiment_tier is None or valuation_tier is None:
             logger.warning(
                 "decision_matrix: incomplete inputs (fgi=%s, pe_pct=%s, pb_pct=%s, val_pct=%s) on %s",
-                fgi, pe_pct, pb_pct, val_pct, date_str,
+                fgi,
+                pe_pct,
+                pb_pct,
+                val_pct,
+                date_str,
             )
             return None
 

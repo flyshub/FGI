@@ -1,5 +1,6 @@
 """ZZShareSource 单元测试：字段缺失=NaN、DEGRADED 状态、health_check 相对日期、
 _cached_range 全区间一次拉取+本地切片。注入假 zzshare，不依赖真实包与网络。"""
+
 import sys
 import types
 
@@ -46,14 +47,18 @@ def source_factory(monkeypatch):
 
 
 def _open_item(date, up=3000, down=1500, uplimit=50, downlimit=5):
-    return {"date1": date, "up_num": up, "down_num": down,
-            "uplimit_num": uplimit, "downlimit_num": downlimit}
+    return {
+        "date1": date,
+        "up_num": up,
+        "down_num": down,
+        "uplimit_num": uplimit,
+        "downlimit_num": downlimit,
+    }
 
 
 class TestFetchOpenSentiment:
     def test_complete_data_healthy(self, source_factory):
-        src, _ = source_factory(open_data=[
-            _open_item("2024-01-02"), _open_item("2024-01-03")])
+        src, _ = source_factory(open_data=[_open_item("2024-01-02"), _open_item("2024-01-03")])
         result = src.fetch_open_sentiment("2024-01-01", "2024-01-31")
         assert result.status == DataSourceStatus.HEALTHY
         assert len(result.data) == 2
@@ -76,8 +81,7 @@ class TestFetchOpenSentiment:
         assert result.status == DataSourceStatus.FAILED
 
     def test_cached_range_slices_without_refetch(self, source_factory):
-        src, api = source_factory(open_data=[
-            _open_item("2024-01-02"), _open_item("2024-01-03")])
+        src, api = source_factory(open_data=[_open_item("2024-01-02"), _open_item("2024-01-03")])
         src.fetch_open_sentiment("2024-01-01", "2024-01-10")
         result = src.fetch_open_sentiment("2024-01-02", "2024-01-03")
         assert result.status == DataSourceStatus.HEALTHY
@@ -87,10 +91,12 @@ class TestFetchOpenSentiment:
 
 class TestFetchMarketHotSentiment:
     def test_missing_pclose_is_nan_and_degraded(self, source_factory):
-        src, _ = source_factory(hot_data=[
-            {"date": "2024-01-02", "p_close": 45.5},
-            {"date": "2024-01-03"},  # p_close 缺失
-        ])
+        src, _ = source_factory(
+            hot_data=[
+                {"date": "2024-01-02", "p_close": 45.5},
+                {"date": "2024-01-03"},  # p_close 缺失
+            ]
+        )
         result = src.fetch_market_hot_sentiment("2024-01-01", "2024-01-31")
         assert result.status == DataSourceStatus.DEGRADED
         assert pd.isna(result.data["p_close"].iloc[1])

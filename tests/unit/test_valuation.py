@@ -48,28 +48,36 @@ class TestV1Calculator:
     """V3.8: ERP = 1/PE - 10yr bond yield, reverse direction"""
 
     def test_calculate_erp(self, v1_calculator):
-        pe_df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "滚动市盈率": [12.0] * 100,
-        })
-        bond_df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
-            "yield_10y": [2.80] * 100,
-        })
+        pe_df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "滚动市盈率": [12.0] * 100,
+            }
+        )
+        bond_df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100).strftime("%Y-%m-%d"),
+                "yield_10y": [2.80] * 100,
+            }
+        )
         result = v1_calculator.calculate_erp(pe_df, bond_df)
         assert "erp" in result.columns
         assert "earnings_yield" in result.columns
         assert result["erp"].iloc[0] == pytest.approx(1.0 / 12.0 - 0.028, abs=0.01)
 
     def test_calculate_erp_handles_zero_and_negative_pe(self, v1_calculator):
-        pe_df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=5).strftime("%Y-%m-%d"),
-            "滚动市盈率": [12.0, 0.0, -5.0, np.nan, 15.0],
-        })
-        bond_df = pd.DataFrame({
-            "date": pd.date_range("2024-01-01", periods=5).strftime("%Y-%m-%d"),
-            "yield_10y": [2.80] * 5,
-        })
+        pe_df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=5).strftime("%Y-%m-%d"),
+                "滚动市盈率": [12.0, 0.0, -5.0, np.nan, 15.0],
+            }
+        )
+        bond_df = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=5).strftime("%Y-%m-%d"),
+                "yield_10y": [2.80] * 5,
+            }
+        )
         result = v1_calculator.calculate_erp(pe_df, bond_df)
         assert "earnings_yield" in result.columns
         assert "erp" in result.columns

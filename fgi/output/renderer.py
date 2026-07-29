@@ -3,6 +3,7 @@
 No database access, no HTTP — pure data → Markdown/HTML transformation.
 All data must be pre-fetched and passed in.
 """
+
 from __future__ import annotations
 
 import html
@@ -20,15 +21,26 @@ def _h(s: str | float | None) -> str:
 # --- Static mapping data ---
 
 INDICATOR_NAMES = {
-    "M1": "涨停板家数", "M2": "散户意愿", "M3": "偏离60日均线", "M4": "创业板成交活跃度",
-    "S2": "股吧热度", "S3": "涨停封单量",
-    "V1": "沪深300风险溢价", "V2": "ΔERP Z-score", "V4": "期权隐含波动率",
-    "F1": "融资余额占比", "F2": "基金股票仓位", "F3": "主力资金板块偏好",
+    "M1": "涨停板家数",
+    "M2": "散户意愿",
+    "M3": "偏离60日均线",
+    "M4": "创业板成交活跃度",
+    "S2": "股吧热度",
+    "S3": "涨停封单量",
+    "V1": "沪深300风险溢价",
+    "V2": "ΔERP Z-score",
+    "V4": "期权隐含波动率",
+    "F1": "融资余额占比",
+    "F2": "基金股票仓位",
+    "F3": "主力资金板块偏好",
 }
 
 DIMENSION_NAMES = {
-    "momentum": "动量", "sentiment": "情绪",
-    "valuation": "估值", "volatility": "波动率", "funding": "资金",
+    "momentum": "动量",
+    "sentiment": "情绪",
+    "valuation": "估值",
+    "volatility": "波动率",
+    "funding": "资金",
 }
 
 DIMENSION_INDICATORS = {
@@ -36,7 +48,7 @@ DIMENSION_INDICATORS = {
     "sentiment": ["S2", "S3"],
     "valuation": ["V1", "V2"],
     "volatility": ["V4"],
-    "funding":  ["F1", "F2", "F3"],
+    "funding": ["F1", "F2", "F3"],
 }
 
 _DIM_COLORS = {
@@ -48,13 +60,16 @@ _DIM_COLORS = {
 }
 
 STATUS_LABELS = {
-    "normal": "",          # 不展示，默认就是好
-    "degraded": "⚠️",       # 数据降级（2+天延迟）
-    "missing":  "❌",       # 数据缺失
+    "normal": "",  # 不展示，默认就是好
+    "degraded": "⚠️",  # 数据降级（2+天延迟）
+    "missing": "❌",  # 数据缺失
 }
 
 FGI_LEVELS = [
-    (20, "极度恐惧"), (40, "恐惧"), (60, "中性"), (80, "贪婪"),
+    (20, "极度恐惧"),
+    (40, "恐惧"),
+    (60, "中性"),
+    (80, "贪婪"),
 ]
 
 _CHANGE_DEFS = {
@@ -84,6 +99,7 @@ for _dim, _inds in DIMENSION_INDICATORS.items():
 
 # --- Pure rendering functions ---
 
+
 def fgi_level(fgi: float) -> str:
     for threshold, label in FGI_LEVELS:
         if fgi < threshold:
@@ -107,7 +123,7 @@ def data_cell(source_date: str, status: str) -> str:
         note = '<span style="color:#999;font-size:0.85em">（前向填充）</span>'
     elif status == "substituted":
         note = '<span style="color:#999;font-size:0.85em">（替代指标）</span>'
-    return f'{_h(source_date)}{note}'
+    return f"{_h(source_date)}{note}"
 
 
 def fgi_trend(fgi: float, prev_scores: dict | None) -> str:
@@ -122,7 +138,9 @@ def fgi_trend(fgi: float, prev_scores: dict | None) -> str:
 
 
 def fgi_header(
-    fgi: float, health: float, date_str: str,
+    fgi: float,
+    health: float,
+    date_str: str,
     indicator_results: dict | None = None,
     prev_scores: dict | None = None,
     hist_fgi_percentile: tuple[str, str] | None = None,
@@ -146,6 +164,7 @@ def fgi_header(
                 issues.append(f"{label} 替代估算")
 
     from fgi.config.settings import HEALTHY_THRESHOLD
+
     health_label = f"**{health:.0f}** / 100"
     if issues:
         health_label += "（" + " · ".join(issues) + "）"
@@ -164,17 +183,19 @@ def fgi_header(
     if extreme_note:
         rows.append(f"| 注意 | {_h(extreme_note)} |")
 
-    return "\n".join([
-        f"## 📊 A股恐贪指数 · {_h(date_str)}",
-        "",
-        f"### FGI: {fgi:.1f}",
-        "",
-        f"`{bar} `",
-        "",
-        "| 项目 | 值 |",
-        "|------|----|",
-        *rows,
-    ])
+    return "\n".join(
+        [
+            f"## 📊 A股恐贪指数 · {_h(date_str)}",
+            "",
+            f"### FGI: {fgi:.1f}",
+            "",
+            f"`{bar} `",
+            "",
+            "| 项目 | 值 |",
+            "|------|----|",
+            *rows,
+        ]
+    )
 
 
 def decision_matrix_section(dm: dict) -> str:
@@ -189,9 +210,9 @@ def decision_matrix_section(dm: dict) -> str:
     advice = dm.get("advice", "")
 
     fgi_str = f"{fgi:.1f}" if fgi is not None else "—"
-    val_pct_str = f"{val_pct*100:.0f}%" if val_pct is not None else "—"
-    pe_pct_str = f"{pe_pct*100:.0f}%" if pe_pct is not None else "—"
-    pb_pct_str = f"{pb_pct*100:.0f}%" if pb_pct is not None else "—"
+    val_pct_str = f"{val_pct * 100:.0f}%" if val_pct is not None else "—"
+    pe_pct_str = f"{pe_pct * 100:.0f}%" if pe_pct is not None else "—"
+    pb_pct_str = f"{pb_pct * 100:.0f}%" if pb_pct is not None else "—"
 
     emoji = QUADRANT_EMOJI.get(quadrant, "❓")
 
@@ -207,13 +228,17 @@ def decision_matrix_section(dm: dict) -> str:
     sents_raw = ["恐惧", "中性", "贪婪"]
     sents_display = ["恐惧(<35)", "中性(35-65)", "贪婪(>65)"]
     vals = ["低估", "合理", "高估"]
-    html = ['<table style="width:100%">',
-            '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
-            '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">低估(&lt;25%)</th>'
-            '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">合理(25-75%)</th>'
-            '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">高估(&gt;75%)</th></tr>']
+    html = [
+        '<table style="width:100%">',
+        '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">情绪＼估值<sup>沪深300</sup></th>'
+        '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">低估(&lt;25%)</th>'
+        '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">合理(25-75%)</th>'
+        '<th style="padding:6px 10px;border:1px solid #e0e0e0;color:#222;font-weight:700">高估(&gt;75%)</th></tr>',
+    ]
     for si, s in enumerate(sents_raw):
-        cells = [f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#222">{_h(sents_display[si])}</td>']
+        cells = [
+            f'<td style="padding:6px 10px;border:1px solid #e0e0e0;background:#ececec;font-weight:700;color:#222">{_h(sents_display[si])}</td>'
+        ]
         for v in vals:
             q, _ = QUADRANT_TABLE.get((s, v), ("?", ""))
             cells.append(cell(q, "", s == cur_sent and v == cur_val))
@@ -236,8 +261,11 @@ def decision_matrix_section(dm: dict) -> str:
 
 
 def build_fgi_markdown(
-    fgi_raw: float, dimension_scores: dict, indicator_results: dict,
-    health: float, date_str: str,
+    fgi_raw: float,
+    dimension_scores: dict,
+    indicator_results: dict,
+    health: float,
+    date_str: str,
     prev_scores: dict | None = None,
     fgi_percentile_result: tuple[str, str] | None = None,
     movers: list | None = None,
@@ -245,7 +273,14 @@ def build_fgi_markdown(
     signal_card: str = "",
 ) -> str:
     """主渲染函数：接收预计算数据，返回完整 Markdown 内容。"""
-    parts = [fgi_header(fgi_raw, health, date_str, indicator_results, prev_scores, fgi_percentile_result, movers), "", "---", ""]
+    parts = [
+        fgi_header(
+            fgi_raw, health, date_str, indicator_results, prev_scores, fgi_percentile_result, movers
+        ),
+        "",
+        "---",
+        "",
+    ]
 
     # --- 决策矩阵 ---
     if decision_matrix:
@@ -264,8 +299,12 @@ def build_fgi_markdown(
     parts.append("### 🔍 各维度指标明细")
     parts.append("")
 
-    html = ['<table style="width:100%">', '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">维度</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">名称</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">得分</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">数据</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">状态</th></tr>']
+    html = [
+        '<table style="width:100%">',
+        '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">维度</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">名称</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">得分</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">数据</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">状态</th></tr>',
+    ]
     from fgi.common.utils import extract_indicator_score
+
     for dim in DIMENSION_INDICATORS:
         bg = f' style="background:{_DIM_COLORS[dim]}"'
         dim_label = DIMENSION_NAMES[dim]
@@ -278,7 +317,9 @@ def build_fgi_markdown(
             tag = STATUS_LABELS.get(status, "")
             dim_cell = f"<b>{_h(dim_label)}</b>" if i == 0 else ""
             data_cell_val = data_cell(src_date, status)
-            html.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;font-weight:700;color:#222">{dim_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{_h(INDICATOR_NAMES[name])}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222;white-space:nowrap">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{data_cell_val}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center">{tag}</td></tr>')
+            html.append(
+                f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;font-weight:700;color:#222">{dim_cell}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{_h(INDICATOR_NAMES[name])}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222;white-space:nowrap">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{data_cell_val}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center">{tag}</td></tr>'
+            )
     html.append("</table>")
     parts.append("\n".join(html))
 
@@ -286,12 +327,17 @@ def build_fgi_markdown(
     parts.append("")
     parts.append("### 📐 维度汇总")
     parts.append("")
-    dhtml = ['<table style="width:100%">', '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">维度</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">得分</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">权重</th></tr>']
+    dhtml = [
+        '<table style="width:100%">',
+        '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">维度</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">得分</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">权重</th></tr>',
+    ]
     for dim in DIMENSION_INDICATORS:
         bg = f' style="background:{_DIM_COLORS[dim]}"'
         score = dimension_scores.get(dim)
         s_str = f"{score:.1f}" if score is not None else '<span style="color:#999">—</span>'
-        dhtml.append(f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333;font-weight:700">{_h(DIMENSION_NAMES[dim])}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222;white-space:nowrap">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333">20%</td></tr>')
+        dhtml.append(
+            f'<tr{bg}><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333;font-weight:700">{_h(DIMENSION_NAMES[dim])}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;font-weight:600;color:#222;white-space:nowrap">{s_str}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333">20%</td></tr>'
+        )
     dhtml.append("</table>")
     parts.append("\n".join(dhtml))
 
@@ -311,25 +357,51 @@ def build_fgi_markdown(
         parts.append("### ⚡ 极端信号")
         parts.append("")
         if extreme_high:
-            parts.append("🔴 **极度贪婪（≥85）**: " + " · ".join(f"{_h(l)}（{s:.0f}）" for _, l, s in extreme_high))
+            parts.append(
+                "🔴 **极度贪婪（≥85）**: "
+                + " · ".join(f"{_h(l)}（{s:.0f}）" for _, l, s in extreme_high)
+            )
         if extreme_low:
-            parts.append("🟢 **极度恐惧（≤15）**: " + " · ".join(f"{_h(l)}（{s:.0f}）" for _, l, s in extreme_low))
+            parts.append(
+                "🟢 **极度恐惧（≤15）**: "
+                + " · ".join(f"{_h(l)}（{s:.0f}）" for _, l, s in extreme_low)
+            )
         parts.append("")
-        parts.append("**说明：** " + "；".join([
-            "、".join(f"{_h(l)}" for _, l, _ in extreme_high) + "高于 85 分阈值，属于" + "、".join(sorted({_h(_INDICATOR_DIM[n]) for n, _, _ in extreme_high})) + "历史高位区间" if extreme_high else "",
-            "、".join(f"{_h(l)}" for _, l, _ in extreme_low) + "低于 15 分阈值，属于" + "、".join(sorted({_h(_INDICATOR_DIM[n]) for n, _, _ in extreme_low})) + "历史低位区间" if extreme_low else "",
-        ]))
+        parts.append(
+            "**说明：** "
+            + "；".join(
+                [
+                    "、".join(f"{_h(l)}" for _, l, _ in extreme_high)
+                    + "高于 85 分阈值，属于"
+                    + "、".join(sorted({_h(_INDICATOR_DIM[n]) for n, _, _ in extreme_high}))
+                    + "历史高位区间"
+                    if extreme_high
+                    else "",
+                    "、".join(f"{_h(l)}" for _, l, _ in extreme_low)
+                    + "低于 15 分阈值，属于"
+                    + "、".join(sorted({_h(_INDICATOR_DIM[n]) for n, _, _ in extreme_low}))
+                    + "历史低位区间"
+                    if extreme_low
+                    else "",
+                ]
+            )
+        )
 
     # --- 最大变动 ---
     if movers:
         parts.append("")
         parts.append("### 📈 最大变动")
         parts.append("")
-        mhtml = ['<table style="width:100%">', '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">指标</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">变动</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">昨日→今日</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">口径</th></tr>']
+        mhtml = [
+            '<table style="width:100%">',
+            '<tr style="background:#ececec"><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">指标</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">变动</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">昨日→今日</th><th style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-weight:700">口径</th></tr>',
+        ]
         for diff, _name, label, delta, yesterday, today in movers:
             arrow = "🔼" if delta > 0 else "🔽"
             defn = _CHANGE_DEFS.get(label, "")
-            mhtml.append(f'<tr style="background:#fff"><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{_h(label)}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#222;font-weight:600;white-space:nowrap">{arrow} {diff:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333;white-space:nowrap">{yesterday:.0f}→{today:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{_h(defn)}</td></tr>')
+            mhtml.append(
+                f'<tr style="background:#fff"><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#333">{_h(label)}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#222;font-weight:600;white-space:nowrap">{arrow} {diff:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;text-align:center;color:#333;white-space:nowrap">{yesterday:.0f}→{today:.0f}</td><td style="padding:6px 10px;border:1px solid #e0e0e0;color:#555;font-size:0.9em">{_h(defn)}</td></tr>'
+            )
         mhtml.append("</table>")
         parts.append("\n".join(mhtml))
 
@@ -339,30 +411,45 @@ def build_fgi_markdown(
 
     dim_avgs = {}
     for dim in DIMENSION_INDICATORS:
-        vals = [extract_indicator_score(indicator_results.get(n, {}), n) for n in DIMENSION_INDICATORS[dim]]
+        vals = [
+            extract_indicator_score(indicator_results.get(n, {}), n)
+            for n in DIMENSION_INDICATORS[dim]
+        ]
         vals_clean = [v for v in vals if v is not None]
         dim_avgs[dim] = sum(vals_clean) / len(vals_clean) if vals_clean else None
 
     parts.append("")
     parts.append("### 📝 当日总结")
     parts.append("")
-    dim_line = " · ".join(f"{_h(DIMENSION_NAMES[d])} {dim_avgs[d]:.0f}" for d in DIMENSION_INDICATORS if dim_avgs[d] is not None)
+    dim_line = " · ".join(
+        f"{_h(DIMENSION_NAMES[d])} {dim_avgs[d]:.0f}"
+        for d in DIMENSION_INDICATORS
+        if dim_avgs[d] is not None
+    )
     parts.append(f"- FGI {fgi_raw:.1f}（{level}），{_h(pos_label)}")
     parts.append(f"- 维度：{dim_line}")
 
     if movers:
-        mover_str = " · ".join(f"{_h(_name)} {'🔼' if d>0 else '🔽'}{abs(d):.0f}" for _, _name, _, d, _, _ in movers)
+        mover_str = " · ".join(
+            f"{_h(_name)} {'🔼' if d > 0 else '🔽'}{abs(d):.0f}" for _, _name, _, d, _, _ in movers
+        )
         parts.append(f"- 最大变动：{mover_str}")
 
     parts.append(f"- 极端指标：🔴极度贪婪 {len(extreme_high)}个 · 🟢极度恐惧 {len(extreme_low)}个")
 
     degraded_inds = [(n, indicator_results.get(n, {})) for n in INDICATOR_NAMES]
-    degraded = [(INDICATOR_NAMES[n], r.get("source_date", "")) for n, r in degraded_inds if r.get("status") == "degraded"]
+    degraded = [
+        (INDICATOR_NAMES[n], r.get("source_date", ""))
+        for n, r in degraded_inds
+        if r.get("status") == "degraded"
+    ]
     if degraded:
         for name, sd in degraded:
             parts.append(f"- 前向填充：{_h(name)}（源数据至 {_h(sd)}）")
 
-    substituted = [(INDICATOR_NAMES[n], n) for n, r in degraded_inds if r.get("status") == "substituted"]
+    substituted = [
+        (INDICATOR_NAMES[n], n) for n, r in degraded_inds if r.get("status") == "substituted"
+    ]
     if substituted:
         for name, code in substituted:
             desc = _SUBSTITUTE_DESC.get(code, "代理估算")
@@ -371,6 +458,8 @@ def build_fgi_markdown(
     parts.append("")
     parts.append("---")
     parts.append("")
-    parts.append("📊 查看历史走势与详细图表：[https://flyshub.github.io/FGI/](https://flyshub.github.io/FGI/)")
+    parts.append(
+        "📊 查看历史走势与详细图表：[https://flyshub.github.io/FGI/](https://flyshub.github.io/FGI/)"
+    )
 
     return "\n".join(parts)

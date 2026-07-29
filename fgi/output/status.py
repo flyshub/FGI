@@ -17,7 +17,8 @@ def record_indicator_status(db, date: str, indicator_results: dict):
         error = r.get("error", "") or ""
         if source:
             db.upsert_status(
-                date, name,
+                date,
+                name,
                 r.get("status", "missing"),
                 source,
                 error,
@@ -25,7 +26,8 @@ def record_indicator_status(db, date: str, indicator_results: dict):
         else:
             # 用一个不覆盖 source 的轻量写入：只更新 status/error
             db.upsert_status_keep_source(
-                date, name,
+                date,
+                name,
                 r.get("status", "missing"),
                 error,
             )

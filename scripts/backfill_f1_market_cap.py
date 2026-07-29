@@ -5,6 +5,7 @@ V3.8.3 改为沪深合计但未回填历史 raw_data。本脚本修正全历史 
 
 Usage: python3 scripts/backfill_f1_market_cap.py
 """
+
 import sys
 from pathlib import Path
 
@@ -20,12 +21,20 @@ from fgi.storage.database import Database
 def main():
     print("Fetching macro_china_stock_market_cap...", flush=True)
     df = ak.macro_china_stock_market_cap()
-    df["date"] = df["数据日期"].str.extract(r"(\d{4})年(\d{2})月份") \
+    df["date"] = (
+        df["数据日期"]
+        .str.extract(r"(\d{4})年(\d{2})月份")
         .apply(lambda x: f"{x[0]}-{x[1]}-01", axis=1)
+    )
     sh = pd.to_numeric(df["市价总值-上海"], errors="coerce").fillna(0)
     sz = pd.to_numeric(df["市价总值-深圳"], errors="coerce").fillna(0)
     df["market_cap"] = sh + sz
-    df = df[["date", "market_cap"]].dropna(subset=["market_cap"]).sort_values("date").reset_index(drop=True)
+    df = (
+        df[["date", "market_cap"]]
+        .dropna(subset=["market_cap"])
+        .sort_values("date")
+        .reset_index(drop=True)
+    )
     print(f"Got {len(df)} months, range {df['date'].iloc[0]} ~ {df['date'].iloc[-1]}", flush=True)
 
     with Database(DB_PATH) as db:
@@ -65,7 +74,10 @@ def main():
 
     if stats:
         min_v, max_v, avg_v = stats
-        print(f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}", flush=True)
+        print(
+            f"\nDONE: {n_new} rows, value range {min_v:.2e} ~ {max_v:.2e}, avg {avg_v:.2e}",
+            flush=True,
+        )
     else:
         print(f"\nDONE: {n_new} rows", flush=True)
 

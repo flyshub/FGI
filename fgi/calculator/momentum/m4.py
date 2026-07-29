@@ -23,12 +23,7 @@ class M4Calculator:
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "m4_cyb_volume",
-            "fetch_cyb_daily",
-            start_date,
-            end_date
-        )
+        return self._data_manager.fetch("m4_cyb_volume", "fetch_cyb_daily", start_date, end_date)
 
     def calculate_volume_zscore(self, df: pd.DataFrame) -> pd.DataFrame:
         df["date"] = pd.to_datetime(df["date"])
@@ -92,7 +87,11 @@ class M4Calculator:
 
         if db_data.empty:
             result = self.fetch_data(start_date, end_date)
-            if result.status != DataSourceStatus.HEALTHY or result.data is None or result.data.empty:
+            if (
+                result.status != DataSourceStatus.HEALTHY
+                or result.data is None
+                or result.data.empty
+            ):
                 # last-good-value 回退：成交量是慢变指标，当日拉不到时用最近非 NaN 值
                 fallback_val = self._get_last_good_volume(date)
                 if fallback_val is not None:
@@ -101,22 +100,35 @@ class M4Calculator:
                     historical = self._db.get_raw_data("m4_volume", start_date, date)
                     new_row = pd.DataFrame({"date": [date], "value": [fallback_val]})
                     db_data = pd.concat([historical, new_row], ignore_index=True)
-                    self._db.upsert_status(date, "m4", "degraded", result.source or "fallback",
-                                           f"fetch failed, used last-good-value: {result.error or 'No data'}")
+                    self._db.upsert_status(
+                        date,
+                        "m4",
+                        "degraded",
+                        result.source or "fallback",
+                        f"fetch failed, used last-good-value: {result.error or 'No data'}",
+                    )
                     self._db.commit()
                     is_degraded = True
                 else:
-                    self._db.upsert_status(date, "m4", "missing", result.source or "", result.error or "No data collected")
+                    self._db.upsert_status(
+                        date,
+                        "m4",
+                        "missing",
+                        result.source or "",
+                        result.error or "No data collected",
+                    )
                     return {"m4": None, "status": "missing"}
             else:
                 fetched_freshly = True
                 self._persist_source_data(result)
                 db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
 
-        df = pd.DataFrame({
-            "date": db_data["date"],
-            "volume": db_data["value"],
-        })
+        df = pd.DataFrame(
+            {
+                "date": db_data["date"],
+                "volume": db_data["value"],
+            }
+        )
         df = self.calculate_volume_zscore(df)
         df = self.calculate_percentile(df)
 
@@ -142,4 +154,8 @@ class M4Calculator:
             else:
                 self._db.upsert_status_keep_source(date, "m4", "normal")
 
-        return {"m4": score, "status": "degraded" if is_degraded else "normal", "percentile": percentile}
+        return {
+            "m4": score,
+            "status": "degraded" if is_degraded else "normal",
+            "percentile": percentile,
+        }
