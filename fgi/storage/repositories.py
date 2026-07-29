@@ -33,6 +33,7 @@ class ScoreRepository:
             "F3",
             "FGI_raw",
             "FGI_final",
+            "FGI_legacy",
             "FGI_current",
             "health_score",
         }

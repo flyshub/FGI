@@ -28,40 +28,39 @@ class Database:
         """数据库文件路径（公开只读接口）。"""
         return self._path
 
-    @property
-    def connection(self):
-        """Raw sqlite3 connection — prefer repositories over direct access."""
-        return self._connection
-
     # ── Domain repository accessors ──────────────────────────
-    # Lazy-init: first access after connect() creates the repository.
-    # These are the primary query interface going forward.
+    # Repositories wrap the raw connection. Access after connect() only.
+    # Repositories are recreated when the connection changes (connect/reconnect).
+
+    def _repo(self, cls, cache_attr):
+        """Create or return a cached repository instance.
+
+        Recreates if connection changed since last creation (handles reconnect).
+        """
+        current = getattr(self, cache_attr)
+        if current is not None and current._handle is self._connection:
+            return current
+        return cls(self._connection)
 
     @property
     def scores(self):
         """ScoreRepository — scores_daily CRUD and aggregates."""
-        if self._scores is None:
-            from fgi.storage.repositories import ScoreRepository
-
-            self._scores = ScoreRepository(self._connection)  # type: ignore[arg-type]
+        from fgi.storage.repositories import ScoreRepository
+        self._scores = self._repo(ScoreRepository, '_scores')
         return self._scores
 
     @property
     def raw_data(self):
         """RawDataRepository — raw_data CRUD and diagnostics."""
-        if self._raw_data is None:
-            from fgi.storage.repositories import RawDataRepository
-
-            self._raw_data = RawDataRepository(self._connection)  # type: ignore[arg-type]
+        from fgi.storage.repositories import RawDataRepository
+        self._raw_data = self._repo(RawDataRepository, '_raw_data')
         return self._raw_data
 
     @property
     def status(self):
         """StatusRepository — daily_status CRUD and queries."""
-        if self._status is None:
-            from fgi.storage.repositories import StatusRepository
-
-            self._status = StatusRepository(self._connection)  # type: ignore[arg-type]
+        from fgi.storage.repositories import StatusRepository
+        self._status = self._repo(StatusRepository, '_status')
         return self._status
 
     # ── Backward-compatible delegation ───────────────────────
