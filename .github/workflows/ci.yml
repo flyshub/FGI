@@ -18,8 +18,9 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             pyproject.toml
-      - run: pip install -e ".[dev]"
-      - run: ruff check .
+      - run: pip install pre-commit
+      - run: pre-commit run ruff -a
+      - run: pre-commit run ruff-format -a
 
   typecheck:
     runs-on: ubuntu-latest
@@ -32,8 +33,8 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             pyproject.toml
-      - run: pip install -e ".[dev]"
-      - run: mypy fgi/
+      - run: pip install pre-commit
+      - run: pre-commit run mypy -a
 
   guard:
     runs-on: ubuntu-latest
@@ -54,4 +55,4 @@ jobs:
             requirements.txt
             pyproject.toml
       - run: pip install -e ".[dev]"
-      - run: pytest -x --tb=short --cov=fgi --cov-fail-under=60 --cov-report=term-missing
+      - run: pytest -x --tb=short --cov=fgi --cov-fail-under=70 --cov-report=term-missing
