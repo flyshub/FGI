@@ -8241,10 +8241,10 @@
   },
   {
     "date": "2026-07-30",
-    "fgi": 37.4,
-    "anchor_date": "2018-11-22",
-    "anchor_fgi": 37.4,
-    "anchor_delta": -4.1,
-    "forward_20": -4.1
+    "fgi": 36.6,
+    "anchor_date": "2026-07-07",
+    "anchor_fgi": 36.6,
+    "anchor_delta": -13.8,
+    "forward_20": null
   }
 ]
