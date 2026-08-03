@@ -1,38 +1,38 @@
 {
-  "date": "2026-07-31",
-  "fgi_final": 52.74,
-  "fgi_raw": 52.74,
-  "health_score": 100.0,
+  "date": "2026-08-03",
+  "fgi_final": 41.23,
+  "fgi_raw": 41.23,
+  "health_score": 93.3,
   "zone": "中性",
-  "trend": "↑",
-  "delta": 16.17,
-  "prev_fgi": 36.57,
-  "percentile": 43.4,
-  "percentile_label": "位于历史中部（43%分位）",
+  "trend": "→",
+  "delta": null,
+  "prev_fgi": null,
+  "percentile": 14.0,
+  "percentile_label": "低于历史上 86% 的日子（偏低）",
   "extreme_note": "",
   "scores": {
-    "M1": 92.1,
-    "M2": 95.4,
-    "M3": 7.0,
-    "M4": 65.9,
-    "S2": 1.7,
-    "S3": 61.2,
-    "V1": 76.6,
-    "V2": 51.1,
-    "V4": 30.7,
+    "M1": 77.0,
+    "M2": 81.5,
+    "M3": 5.4,
+    "M4": 12.2,
+    "S2": 1.9,
+    "S3": 80.6,
+    "V1": 72.3,
+    "V2": 25.2,
+    "V4": null,
     "F1": null,
-    "F2": 93.0,
-    "F3": 89.9
+    "F2": 91.0,
+    "F3": 13.0
   },
   "dimensions": {
-    "momentum": 65.1,
-    "sentiment": 31.5,
-    "valuation": 63.9,
-    "volatility": 30.7,
-    "funding": 91.5
+    "momentum": 44.0,
+    "sentiment": 41.3,
+    "valuation": 48.7,
+    "volatility": null,
+    "funding": 52.0
   },
   "statuses": {
-    "F1": "normal",
+    "F1": "degraded",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -46,11 +46,11 @@
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 52.739765300723775,
+    "fgi": 41.22934062314803,
     "sentiment_tier": "中性",
-    "pe_pct": 0.9407821229050279,
-    "pb_pct": 0.8393258426966292,
-    "valuation_pct": 0.8900539828008286,
+    "pe_pct": 0.9106145251396648,
+    "pb_pct": 0.8391451068616423,
+    "valuation_pct": 0.8748798160006536,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
@@ -58,52 +58,47 @@
   "extreme_signals": {
     "high": [
       [
-        "M1",
-        "涨停板家数",
-        92.1
-      ],
-      [
-        "M2",
-        "散户意愿",
-        95.4
-      ],
-      [
         "F2",
         "基金股票仓位",
-        93.0
-      ],
-      [
-        "F3",
-        "主力资金板块偏好",
-        89.9
+        91.0
       ]
     ],
     "low": [
       [
         "M3",
         "偏离60日均线",
-        7.0
+        5.4
+      ],
+      [
+        "M4",
+        "创业板成交活跃度",
+        12.2
       ],
       [
         "S2",
         "股吧热度",
-        1.7
+        1.9
+      ],
+      [
+        "F3",
+        "主力资金板块偏好",
+        13.0
       ]
     ]
   },
   "zone_context": {
     "zone": "中性",
-    "n": 1496,
-    "total": 2580,
+    "n": 1497,
+    "total": 2581,
     "pct": 58.0,
     "horizons": {
       "5": {
-        "mean": 0.0010982604185319268,
-        "win_rate": 0.5340909090909091
+        "mean": 0.001089115464771021,
+        "win_rate": 0.5337341349365398
       },
       "20": {
-        "mean": 0.004420109180082324,
-        "win_rate": 0.5349932705248991
+        "mean": 0.004378600710642184,
+        "win_rate": 0.5346334902488231
       },
       "60": {
         "mean": 0.012732062111916536,
@@ -112,37 +107,37 @@
     }
   },
   "anchor": {
-    "closest_date": "2018-12-03",
-    "closest_fgi": 52.8,
-    "delta": 15.0,
-    "forward_20d_return": -7.1,
+    "closest_date": "2020-10-30",
+    "closest_fgi": 41.2,
+    "delta": -9.9,
+    "forward_20d_return": 5.7,
     "detail_table": [
       {
-        "date": "2025-04-22",
-        "fgi": 52.7,
-        "forward_20": 1.5
+        "date": "2020-10-30",
+        "fgi": 41.2,
+        "forward_20": 5.7
       },
       {
-        "date": "2024-05-21",
-        "fgi": 52.7,
-        "forward_20": -4.4
+        "date": "2019-07-17",
+        "fgi": 41.2,
+        "forward_20": -4.2
       },
       {
-        "date": "2018-12-03",
-        "fgi": 52.8,
-        "forward_20": -7.1
+        "date": "2018-08-10",
+        "fgi": 41.2,
+        "forward_20": -3.3
       },
       {
-        "date": "2022-04-29",
-        "fgi": 52.8,
-        "forward_20": 4.4
+        "date": "2018-11-28",
+        "fgi": 41.3,
+        "forward_20": -4.0
       },
       {
-        "date": "2019-09-25",
-        "fgi": 52.7,
-        "forward_20": -0.5
+        "date": "2021-11-05",
+        "fgi": 41.3,
+        "forward_20": 3.3
       }
     ]
   },
-  "generated_at": "2026-07-31T12:56:12"
+  "generated_at": "2026-08-03T13:26:32"
 }
