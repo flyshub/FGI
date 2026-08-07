@@ -8254,5 +8254,13 @@
     "anchor_fgi": 61.3,
     "anchor_delta": 2.5,
     "forward_20": -5.5
+  },
+  {
+    "date": "2026-08-07",
+    "fgi": 62.1,
+    "anchor_date": "2020-11-27",
+    "anchor_fgi": 62.1,
+    "anchor_delta": 5.2,
+    "forward_20": -0.3
   }
 ]
