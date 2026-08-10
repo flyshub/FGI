@@ -8257,10 +8257,10 @@
   },
   {
     "date": "2026-08-07",
-    "fgi": 62.1,
-    "anchor_date": "2020-11-27",
-    "anchor_fgi": 62.1,
-    "anchor_delta": 5.2,
-    "forward_20": -0.3
+    "fgi": 62.5,
+    "anchor_date": "2024-10-25",
+    "anchor_fgi": 62.5,
+    "anchor_delta": 9.6,
+    "forward_20": -1.0
   }
 ]

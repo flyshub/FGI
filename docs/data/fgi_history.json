@@ -18089,9 +18089,16 @@
   },
   {
     "date": "2026-08-07",
-    "FGI_final": 62.12,
-    "FGI_raw": 62.12,
-    "health_score": 93.3,
+    "FGI_final": 62.54,
+    "FGI_raw": 62.54,
+    "health_score": 100.0,
     "close": 3940.04
+  },
+  {
+    "date": "2026-08-10",
+    "FGI_final": 62.55,
+    "FGI_raw": 62.55,
+    "health_score": 100.0,
+    "close": 3966.59
   }
 ]
