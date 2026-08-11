@@ -2,10 +2,8 @@ name: FGI Daily Update
 
 on:
   schedule:
-    # 工作日 10:30 和 11:00 UTC（18:30 / 19:00 北京）各触发一次
-    # 双 cron 冗余：一次错过另一次也能兜底
-    - cron: '30 10 * * 1-5'
-    - cron: '0 11 * * 1-5'
+    # 工作日 18:00 北京时间（10:00 UTC）触发一次
+    - cron: '0 10 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
