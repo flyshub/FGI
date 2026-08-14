@@ -1,38 +1,38 @@
 {
-  "date": "2026-08-13",
-  "fgi_final": 51.07,
-  "fgi_raw": 51.07,
-  "health_score": 86.7,
+  "date": "2026-08-14",
+  "fgi_final": 54.65,
+  "fgi_raw": 54.65,
+  "health_score": 100.0,
   "zone": "中性",
-  "trend": "↓",
-  "delta": -7.75,
-  "prev_fgi": 58.82,
-  "percentile": 38.3,
-  "percentile_label": "位于历史中下区域（38%分位）",
+  "trend": "↑",
+  "delta": 3.7,
+  "prev_fgi": 50.95,
+  "percentile": 50.3,
+  "percentile_label": "位于历史中部（50%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 58.7,
-    "M2": 12.9,
-    "M3": 32.3,
-    "M4": 53.3,
-    "S2": 11.8,
-    "S3": 87.3,
-    "V1": 74.7,
-    "V2": 36.3,
-    "V4": null,
+    "M1": 63.9,
+    "M2": 44.9,
+    "M3": 33.4,
+    "M4": 20.4,
+    "S2": 12.0,
+    "S3": 61.2,
+    "V1": 74.0,
+    "V2": 44.1,
+    "V4": 70.8,
     "F1": null,
     "F2": 94.4,
-    "F3": 13.8
+    "F3": 48.9
   },
   "dimensions": {
-    "momentum": 39.3,
-    "sentiment": 49.6,
-    "valuation": 55.5,
-    "volatility": null,
-    "funding": 54.1
+    "momentum": 40.6,
+    "sentiment": 36.6,
+    "valuation": 59.0,
+    "volatility": 70.8,
+    "funding": 71.6
   },
   "statuses": {
-    "F1": "degraded",
+    "F1": "normal",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -43,25 +43,20 @@
     "S3": "normal",
     "V1": "normal",
     "V2": "normal",
-    "V4": "degraded"
+    "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 51.069896947692826,
+    "fgi": 54.65427687679251,
     "sentiment_tier": "中性",
-    "pe_pct": 0.9251396648044693,
-    "pb_pct": 0.8376844494892168,
-    "valuation_pct": 0.8814120571468431,
+    "pe_pct": 0.9195530726256983,
+    "pb_pct": 0.8375,
+    "valuation_pct": 0.8785265363128492,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
   },
   "extreme_signals": {
     "high": [
-      [
-        "S3",
-        "涨停封单量",
-        87.3
-      ],
       [
         "F2",
         "基金股票仓位",
@@ -70,26 +65,16 @@
     ],
     "low": [
       [
-        "M2",
-        "散户意愿",
-        12.9
-      ],
-      [
         "S2",
         "股吧热度",
-        11.8
-      ],
-      [
-        "F3",
-        "主力资金板块偏好",
-        13.8
+        12.0
       ]
     ]
   },
   "zone_context": {
     "zone": "中性",
     "n": 1502,
-    "total": 2589,
+    "total": 2590,
     "pct": 58.0,
     "horizons": {
       "5": {
@@ -101,43 +86,43 @@
         "win_rate": 0.5328418230563002
       },
       "60": {
-        "mean": 0.012732062111916536,
-        "win_rate": 0.5746268656716418
+        "mean": 0.012698471540626777,
+        "win_rate": 0.5742372881355933
       }
     }
   },
   "anchor": {
-    "closest_date": "2020-02-07",
-    "closest_fgi": 51.1,
-    "delta": -7.1,
-    "forward_20d_return": 5.5,
+    "closest_date": "2018-04-19",
+    "closest_fgi": 54.6,
+    "delta": 7.1,
+    "forward_20d_return": 3.1,
     "detail_table": [
       {
-        "date": "2020-02-07",
-        "fgi": 51.1,
-        "forward_20": 5.5
+        "date": "2017-05-31",
+        "fgi": 54.7,
+        "forward_20": 1.8
       },
       {
-        "date": "2016-04-29",
-        "fgi": 51.1,
-        "forward_20": -3.9
+        "date": "2020-12-16",
+        "fgi": 54.7,
+        "forward_20": 5.9
       },
       {
-        "date": "2017-04-24",
-        "fgi": 51.1,
-        "forward_20": -2.2
+        "date": "2019-12-23",
+        "fgi": 54.7,
+        "forward_20": 3.0
       },
       {
-        "date": "2018-08-27",
-        "fgi": 51.1,
-        "forward_20": 0.0
+        "date": "2018-04-19",
+        "fgi": 54.6,
+        "forward_20": 3.1
       },
       {
-        "date": "2016-05-06",
-        "fgi": 51.1,
-        "forward_20": 0.9
+        "date": "2020-06-24",
+        "fgi": 54.6,
+        "forward_20": 7.3
       }
     ]
   },
-  "generated_at": "2026-08-13T11:22:00"
+  "generated_at": "2026-08-14T11:07:52"
 }
