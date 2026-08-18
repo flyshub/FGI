@@ -8265,10 +8265,18 @@
   },
   {
     "date": "2026-08-17",
-    "fgi": 68.2,
-    "anchor_date": "2025-11-19",
-    "anchor_fgi": 68.2,
-    "anchor_delta": 8.6,
-    "forward_20": -1.9
+    "fgi": 68.8,
+    "anchor_date": "2022-01-10",
+    "anchor_fgi": 68.8,
+    "anchor_delta": 9.7,
+    "forward_20": -4.6
+  },
+  {
+    "date": "2026-08-18",
+    "fgi": 60.3,
+    "anchor_date": "2024-04-03",
+    "anchor_fgi": 60.3,
+    "anchor_delta": -2.2,
+    "forward_20": 1.9
   }
 ]
