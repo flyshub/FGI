@@ -1,38 +1,38 @@
 {
-  "date": "2026-08-27",
-  "fgi_final": 62.2,
-  "fgi_raw": 62.2,
+  "date": "2026-08-28",
+  "fgi_final": 54.61,
+  "fgi_raw": 54.61,
   "health_score": 93.3,
-  "zone": "贪婪",
-  "trend": "↑",
-  "delta": 5.74,
-  "prev_fgi": 56.46,
-  "percentile": 76.5,
-  "percentile_label": "高于历史上 76% 的日子（偏高）",
+  "zone": "中性",
+  "trend": "↓",
+  "delta": -8.29,
+  "prev_fgi": 62.91,
+  "percentile": 50.1,
+  "percentile_label": "位于历史中部（50%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 77.7,
-    "M2": 69.9,
-    "M3": 46.8,
-    "M4": 19.4,
-    "S2": 11.8,
-    "S3": 65.8,
+    "M1": 82.1,
+    "M2": 58.8,
+    "M3": 46.3,
+    "M4": 23.1,
+    "S2": 12.2,
+    "S3": 79.4,
     "V1": null,
-    "V2": 57.7,
-    "V4": 76.6,
+    "V2": 5.2,
+    "V4": 80.9,
     "F1": null,
     "F2": 98.0,
-    "F3": 94.0
+    "F3": 37.3
   },
   "dimensions": {
-    "momentum": 53.4,
-    "sentiment": 38.8,
-    "valuation": 57.7,
-    "volatility": 76.6,
-    "funding": 96.0
+    "momentum": 52.6,
+    "sentiment": 45.8,
+    "valuation": 5.2,
+    "volatility": 80.9,
+    "funding": 67.6
   },
   "statuses": {
-    "F1": "degraded",
+    "F1": "normal",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -41,16 +41,16 @@
     "M4": "normal",
     "S2": "normal",
     "S3": "normal",
-    "V1": "normal",
+    "V1": "degraded",
     "V2": "normal",
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 62.199787732896,
+    "fgi": 54.61066770669953,
     "sentiment_tier": "中性",
-    "pe_pct": 0.8592178770949721,
-    "pb_pct": 0.835820895522388,
-    "valuation_pct": 0.8475193863086801,
+    "pe_pct": 0.7497206703910615,
+    "pb_pct": 0.835632183908046,
+    "valuation_pct": 0.7926764271495537,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
@@ -61,73 +61,41 @@
         "F2",
         "基金股票仓位",
         98.0
-      ],
-      [
-        "F3",
-        "主力资金板块偏好",
-        94.0
       ]
     ],
     "low": [
       [
         "S2",
         "股吧热度",
-        11.8
+        12.2
+      ],
+      [
+        "V2",
+        "ΔERP Z-score",
+        5.2
       ]
     ]
   },
   "zone_context": {
-    "zone": "贪婪",
-    "n": 762,
-    "total": 2599,
-    "pct": 29.3,
+    "zone": "中性",
+    "n": 1508,
+    "total": 2600,
+    "pct": 58.0,
     "horizons": {
       "5": {
-        "mean": -0.000787202599521805,
-        "win_rate": 0.5065616797900262
+        "mean": 0.0011697269185574168,
+        "win_rate": 0.5351458885941645
       },
       "20": {
-        "mean": -0.0027497582133365213,
-        "win_rate": 0.4848084544253633
+        "mean": 0.004392558477396465,
+        "win_rate": 0.5350233488992662
       },
       "60": {
-        "mean": -0.005207561915577696,
-        "win_rate": 0.44966442953020136
+        "mean": 0.012592660898460577,
+        "win_rate": 0.5730717185385656
       }
     }
   },
-  "anchor": {
-    "closest_date": "2024-06-18",
-    "closest_fgi": 62.2,
-    "delta": 14.5,
-    "forward_20d_return": -1.8,
-    "detail_table": [
-      {
-        "date": "2018-01-19",
-        "fgi": 62.2,
-        "forward_20": -5.7
-      },
-      {
-        "date": "2024-06-18",
-        "fgi": 62.2,
-        "forward_20": -1.8
-      },
-      {
-        "date": "2026-05-26",
-        "fgi": 62.2,
-        "forward_20": -0.8
-      },
-      {
-        "date": "2019-10-11",
-        "fgi": 62.2,
-        "forward_20": -0.3
-      },
-      {
-        "date": "2017-11-17",
-        "fgi": 62.3,
-        "forward_20": -3.5
-      }
-    ]
-  },
-  "generated_at": "2026-08-27T20:17:16"
+  "anchor": null,
+  "generated_at": "2026-08-28T21:15:38"
 }

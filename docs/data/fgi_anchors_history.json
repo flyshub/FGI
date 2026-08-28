@@ -8289,10 +8289,10 @@
   },
   {
     "date": "2026-08-27",
-    "fgi": 62.2,
-    "anchor_date": "2024-06-18",
-    "anchor_fgi": 62.2,
-    "anchor_delta": 14.5,
-    "forward_20": -1.8
+    "fgi": 62.9,
+    "anchor_date": "2020-12-01",
+    "anchor_fgi": 62.9,
+    "anchor_delta": 13.9,
+    "forward_20": -2.1
   }
 ]
