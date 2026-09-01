@@ -8297,10 +8297,18 @@
   },
   {
     "date": "2026-08-31",
-    "fgi": 62.4,
-    "anchor_date": "2021-04-07",
-    "anchor_fgi": 62.5,
-    "anchor_delta": 4.0,
-    "forward_20": -1.5
+    "fgi": 62.8,
+    "anchor_date": "2023-07-13",
+    "anchor_fgi": 62.8,
+    "anchor_delta": 17.9,
+    "forward_20": 0.6
+  },
+  {
+    "date": "2026-09-01",
+    "fgi": 61.8,
+    "anchor_date": "2025-07-31",
+    "anchor_fgi": 61.8,
+    "anchor_delta": -9.7,
+    "forward_20": 7.6
   }
 ]
