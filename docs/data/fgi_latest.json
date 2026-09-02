@@ -1,38 +1,38 @@
 {
-  "date": "2026-09-01",
-  "fgi_final": 61.8,
-  "fgi_raw": 61.8,
-  "health_score": 93.3,
-  "zone": "贪婪",
+  "date": "2026-09-02",
+  "fgi_final": 49.68,
+  "fgi_raw": 49.68,
+  "health_score": 86.7,
+  "zone": "中性",
   "trend": "↓",
-  "delta": -1.0,
-  "prev_fgi": 62.8,
-  "percentile": 75.6,
-  "percentile_label": "高于历史上 76% 的日子（偏高）",
+  "delta": -12.13,
+  "prev_fgi": 61.8,
+  "percentile": 33.6,
+  "percentile_label": "位于历史中下区域（34%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 82.9,
-    "M2": 67.1,
-    "M3": 54.5,
-    "M4": 35.0,
-    "S2": 13.3,
-    "S3": 84.8,
+    "M1": 46.2,
+    "M2": 21.8,
+    "M3": 43.9,
+    "M4": 7.9,
+    "S2": 11.8,
+    "S3": 79.8,
     "V1": null,
-    "V2": 52.6,
-    "V4": 85.8,
+    "V2": 24.0,
+    "V4": 79.7,
     "F1": null,
     "F2": 98.0,
-    "F3": 31.0
+    "F3": 6.8
   },
   "dimensions": {
-    "momentum": 59.9,
-    "sentiment": 49.0,
-    "valuation": 52.6,
-    "volatility": 85.8,
-    "funding": 64.5
+    "momentum": 30.0,
+    "sentiment": 45.8,
+    "valuation": 24.0,
+    "volatility": 79.7,
+    "funding": 52.4
   },
   "statuses": {
-    "F1": "normal",
+    "F1": "degraded",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -46,22 +46,17 @@
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 61.804769269851,
+    "fgi": 49.67573899361449,
     "sentiment_tier": "中性",
-    "pe_pct": 0.7396648044692737,
-    "pb_pct": 0.8352534562211982,
-    "valuation_pct": 0.787459130345236,
+    "pe_pct": 0.7217877094972067,
+    "pb_pct": 0.8350634371395617,
+    "valuation_pct": 0.7784255733183842,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
   },
   "extreme_signals": {
     "high": [
-      [
-        "V4",
-        "期权隐含波动率",
-        85.8
-      ],
       [
         "F2",
         "基金股票仓位",
@@ -70,64 +65,74 @@
     ],
     "low": [
       [
+        "M4",
+        "创业板成交活跃度",
+        7.9
+      ],
+      [
         "S2",
         "股吧热度",
-        13.3
+        11.8
+      ],
+      [
+        "F3",
+        "主力资金板块偏好",
+        6.8
       ]
     ]
   },
   "zone_context": {
-    "zone": "贪婪",
-    "n": 762,
-    "total": 2602,
-    "pct": 29.3,
+    "zone": "中性",
+    "n": 1511,
+    "total": 2603,
+    "pct": 58.0,
     "horizons": {
       "5": {
-        "mean": -0.000787202599521805,
-        "win_rate": 0.5065616797900262
+        "mean": 0.001205455609396384,
+        "win_rate": 0.5360688285903376
       },
       "20": {
-        "mean": -0.0027497582133365213,
-        "win_rate": 0.4848084544253633
+        "mean": 0.004445065167792835,
+        "win_rate": 0.5356429047301798
       },
       "60": {
-        "mean": -0.005207561915577696,
-        "win_rate": 0.44966442953020136
+        "mean": 0.012572199261921343,
+        "win_rate": 0.572972972972973
       }
     }
   },
   "anchor": {
-    "closest_date": "2025-07-31",
-    "closest_fgi": 61.8,
-    "delta": -9.7,
-    "forward_20d_return": 7.6,
+    "closest_date": "2021-04-15",
+    "closest_fgi": 49.7,
+    "delta": -13.4,
+    "forward_20d_return": 3.8,
     "detail_table": [
       {
-        "date": "2024-10-23",
-        "fgi": 61.8,
-        "forward_20": 2.0
+        "date": "2019-11-18",
+        "fgi": 49.7,
+        "forward_20": 2.6
       },
       {
-        "date": "2016-06-15",
-        "fgi": 61.8,
-        "forward_20": 6.0
+        "date": "2021-04-15",
+        "fgi": 49.7,
+        "forward_20": 3.8
       },
       {
-        "date": "2021-03-26",
-        "fgi": 61.8,
-        "forward_20": 0.7
+        "date": "2021-01-06",
+        "fgi": 49.7,
+        "forward_20": -0.9
       },
       {
-        "date": "2025-07-31",
-        "fgi": 61.8,
-        "forward_20": 7.6
+        "date": "2021-11-01",
+        "fgi": 49.7,
+        "forward_20": 0.5
       },
       {
-        "date": "2024-11-11",
-        "fgi": 61.8,
-        "forward_20": -1.9
+        "date": "2025-05-16",
+        "fgi": 49.6,
+        "forward_20": 0.6
       }
     ]
   },
-  "generated_at": "2026-09-01T14:45:39"
+  "generated_at": "2026-09-02T14:17:47"
 }
