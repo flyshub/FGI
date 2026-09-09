@@ -1,38 +1,38 @@
 {
-  "date": "2026-09-08",
-  "fgi_final": 60.4,
-  "fgi_raw": 60.4,
-  "health_score": 86.7,
+  "date": "2026-09-09",
+  "fgi_final": 60.03,
+  "fgi_raw": 60.03,
+  "health_score": 93.3,
   "zone": "贪婪",
-  "trend": "↑",
-  "delta": 3.88,
-  "prev_fgi": 56.52,
-  "percentile": 71.3,
-  "percentile_label": "位于历史中上区域（71%分位）",
+  "trend": "→",
+  "delta": 0.3869159020352768,
+  "prev_fgi": 59.65,
+  "percentile": 70.4,
+  "percentile_label": "位于历史中上区域（70%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 73.8,
-    "M2": 67.7,
-    "M3": 45.6,
-    "M4": 12.5,
-    "S2": 12.6,
-    "S3": 83.7,
+    "M1": 41.1,
+    "M2": null,
+    "M3": 49.3,
+    "M4": 8.3,
+    "S2": 12.5,
+    "S3": 67.9,
     "V1": null,
-    "V2": 46.2,
-    "V4": 81.8,
+    "V2": 62.4,
+    "V4": 82.7,
     "F1": null,
     "F2": 97.6,
-    "F3": 65.8
+    "F3": 69.7
   },
   "dimensions": {
-    "momentum": 49.9,
-    "sentiment": 48.2,
-    "valuation": 46.2,
-    "volatility": 81.8,
-    "funding": 81.7
+    "momentum": 32.9,
+    "sentiment": 40.2,
+    "valuation": 62.4,
+    "volatility": 82.7,
+    "funding": 83.6
   },
   "statuses": {
-    "F1": "degraded",
+    "F1": "normal",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -46,11 +46,11 @@
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 60.404758670551885,
+    "fgi": 60.03313287282545,
     "sentiment_tier": "中性",
-    "pe_pct": 0.7150837988826816,
-    "pb_pct": 0.8342989571263036,
-    "valuation_pct": 0.7746913780044926,
+    "pe_pct": 0.71731843575419,
+    "pb_pct": 0.834106728538283,
+    "valuation_pct": 0.7757125821462365,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
@@ -67,19 +67,19 @@
       [
         "M4",
         "创业板成交活跃度",
-        12.5
+        8.3
       ],
       [
         "S2",
         "股吧热度",
-        12.6
+        12.5
       ]
     ]
   },
   "zone_context": {
     "zone": "贪婪",
     "n": 765,
-    "total": 2607,
+    "total": 2608,
     "pct": 29.3,
     "horizons": {
       "5": {
@@ -91,11 +91,11 @@
         "win_rate": 0.4842105263157895
       },
       "60": {
-        "mean": -0.0052932147244355585,
-        "win_rate": 0.44786096256684493
+        "mean": -0.005331952875995525,
+        "win_rate": 0.4472630173564753
       }
     }
   },
   "anchor": null,
-  "generated_at": "2026-09-08T14:20:47"
+  "generated_at": "2026-09-09T14:23:47"
 }
