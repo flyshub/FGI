@@ -3,14 +3,13 @@
 
 import sys
 import types
-from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
 import fgi.collector.akshare_source as aks
 from fgi.collector.akshare_source import AKShareSource
-from fgi.collector.base import DataSourceResult, DataSourceStatus
+from fgi.collector.base import DataSourceStatus
 
 
 @pytest.fixture
