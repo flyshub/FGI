@@ -225,9 +225,7 @@ class TestFetchQvix:
 
 def _pe_monthly_df():
     """模拟 ak.stock_index_pe_lg(symbol='沪深300') 返回格式：月末PE。"""
-    dates = pd.to_datetime(
-        ["2024-06-28", "2024-07-31", "2024-08-30", "2024-09-30", "2024-10-31"]
-    )
+    dates = pd.to_datetime(["2024-06-28", "2024-07-31", "2024-08-30", "2024-09-30", "2024-10-31"])
     return pd.DataFrame(
         {
             "日期": dates,
@@ -305,9 +303,7 @@ class TestFetchPEDataInterpolation:
         result = src.fetch_pe_data("2024-08-01", "2024-08-31")
         assert result.status == DataSourceStatus.HEALTHY
         # 2024-08-01 ~ 2024-08-31 的交易日数
-        expected_count = len(
-            pd.bdate_range("2024-08-01", "2024-08-31")
-        )
+        expected_count = len(pd.bdate_range("2024-08-01", "2024-08-31"))
         assert len(result.data) == expected_count
 
     def test_no_index_data_fallback_to_monthly(self, fake_ak, fast_retry):

@@ -345,17 +345,13 @@ class AKShareSource(DataSource):
             ].copy()
 
             # Index data also needs lookback for month-end close alignment
-            idx_result = self.fetch_index_daily(
-                "sh000300", lookback_date, end_date
-            )
+            idx_result = self.fetch_index_daily("sh000300", lookback_date, end_date)
             if (
                 idx_result.status == DataSourceStatus.HEALTHY
                 and idx_result.data is not None
                 and not idx_result.data.empty
             ):
-                idx_df = idx_result.data[["date", "close"]].rename(
-                    columns={"close": "index_close"}
-                )
+                idx_df = idx_result.data[["date", "close"]].rename(columns={"close": "index_close"})
                 # Build month-end lookup: date → (pe_value, index_close at month-end)
                 me = pe_lookback[["date", "滚动市盈率"]].copy()
                 me = me.rename(columns={"滚动市盈率": "me_pe"})
@@ -382,19 +378,14 @@ class AKShareSource(DataSource):
                         / merged.loc[valid, "me_index_close"]
                     )
                     daily_pe = merged[["date", "滚动市盈率"]].copy()
-                    daily_pe["滚动市盈率"] = pd.to_numeric(
-                        daily_pe["滚动市盈率"], errors="coerce"
-                    )
+                    daily_pe["滚动市盈率"] = pd.to_numeric(daily_pe["滚动市盈率"], errors="coerce")
                     daily_pe = daily_pe.dropna(subset=["滚动市盈率"])
                     # Filter to requested date range
                     daily_pe = daily_pe[
-                        (daily_pe["date"] >= start_date)
-                        & (daily_pe["date"] <= end_date)
+                        (daily_pe["date"] >= start_date) & (daily_pe["date"] <= end_date)
                     ]
                     if not daily_pe.empty:
-                        return DataSourceResult(
-                            daily_pe, DataSourceStatus.HEALTHY, "akshare"
-                        )
+                        return DataSourceResult(daily_pe, DataSourceStatus.HEALTHY, "akshare")
 
             # Fallback: return original monthly data
             return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
