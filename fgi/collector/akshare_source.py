@@ -302,21 +302,101 @@ class AKShareSource(DataSource):
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))
 
     def fetch_pe_data(self, start_date: str, end_date: str) -> DataSourceResult:
+        """Fetch 沪深300 PE-TTM (daily interpolated from monthly source).
+
+        The upstream ``stock_index_pe_lg`` returns month-end data (~66 points / 5
+        years).  ``rolling_percentile`` requires ≥ 252 data points, so raw monthly
+        data produces NaN percentiles.  This method interpolates daily PE values:
+
+            daily_pe = month_end_pe × (daily_index_close / month_end_index_close)
+
+        using daily 沪深300 close prices from ``stock_zh_index_daily``.
+
+        If the index data is unavailable, falls back to the original monthly data.
+        """
         try:
             ak = self._get_client()
-            df = self._cached(
+            df_full = self._cached(
                 ("pe", "沪深300"), lambda: _retry(lambda: ak.stock_index_pe_lg(symbol="沪深300"))
             )
-            if df is None or df.empty:
+            if df_full is None or df_full.empty:
                 return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", "No PE data")
-            df = df.rename(columns={"日期": "date"})
-            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
-            mask = (df["date"] >= start_date) & (df["date"] <= end_date)
-            df = df.loc[mask].copy()
+            df_full = df_full.rename(columns={"日期": "date"})
+            df_full["date"] = pd.to_datetime(df_full["date"]).dt.strftime("%Y-%m-%d")
+
+            # Filter output range
+            mask = (df_full["date"] >= start_date) & (df_full["date"] <= end_date)
+            df = df_full.loc[mask].copy()
             if df.empty:
                 return DataSourceResult(
                     None, DataSourceStatus.FAILED, "akshare", "No PE data in range"
                 )
+
+            # --- Daily interpolation via 沪深300 index close ---
+            # Fetch PE + index data with 60-day lookback so merge_asof has a
+            # prior month-end anchor for dates before the first in-range PE record.
+            from datetime import datetime, timedelta
+
+            lookback_date = (
+                datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=60)
+            ).strftime("%Y-%m-%d")
+            pe_lookback = df_full[
+                (df_full["date"] >= lookback_date) & (df_full["date"] <= end_date)
+            ].copy()
+
+            # Index data also needs lookback for month-end close alignment
+            idx_result = self.fetch_index_daily(
+                "sh000300", lookback_date, end_date
+            )
+            if (
+                idx_result.status == DataSourceStatus.HEALTHY
+                and idx_result.data is not None
+                and not idx_result.data.empty
+            ):
+                idx_df = idx_result.data[["date", "close"]].rename(
+                    columns={"close": "index_close"}
+                )
+                # Build month-end lookup: date → (pe_value, index_close at month-end)
+                me = pe_lookback[["date", "滚动市盈率"]].copy()
+                me = me.rename(columns={"滚动市盈率": "me_pe"})
+                me = pd.merge(me, idx_df, on="date", how="left")
+                me["index_close"] = me["index_close"].ffill()
+                me = me.dropna(subset=["index_close"])
+
+                if not me.empty:
+                    daily = idx_df.copy()
+                    daily["_dt"] = pd.to_datetime(daily["date"])
+                    me["_dt"] = pd.to_datetime(me["date"])
+                    merged = pd.merge_asof(
+                        daily.sort_values("_dt"),
+                        me[["_dt", "me_pe", "index_close"]].rename(
+                            columns={"index_close": "me_index_close"}
+                        ),
+                        on="_dt",
+                        direction="backward",
+                    )
+                    valid = merged["me_pe"].notna() & merged["me_index_close"].notna()
+                    merged.loc[valid, "滚动市盈率"] = (
+                        merged.loc[valid, "me_pe"]
+                        * merged.loc[valid, "index_close"]
+                        / merged.loc[valid, "me_index_close"]
+                    )
+                    daily_pe = merged[["date", "滚动市盈率"]].copy()
+                    daily_pe["滚动市盈率"] = pd.to_numeric(
+                        daily_pe["滚动市盈率"], errors="coerce"
+                    )
+                    daily_pe = daily_pe.dropna(subset=["滚动市盈率"])
+                    # Filter to requested date range
+                    daily_pe = daily_pe[
+                        (daily_pe["date"] >= start_date)
+                        & (daily_pe["date"] <= end_date)
+                    ]
+                    if not daily_pe.empty:
+                        return DataSourceResult(
+                            daily_pe, DataSourceStatus.HEALTHY, "akshare"
+                        )
+
+            # Fallback: return original monthly data
             return DataSourceResult(df, DataSourceStatus.HEALTHY, "akshare")
         except Exception as e:
             return DataSourceResult(None, DataSourceStatus.FAILED, "akshare", str(e))

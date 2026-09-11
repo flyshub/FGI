@@ -1,15 +1,16 @@
-"""AKShareSource 单元测试：实例级缓存行为 + fetch_cyb_daily 换手率。
+"""AKShareSource 单元测试：实例级缓存行为 + fetch_cyb_daily 换手率 + fetch_pe_data 日频插值。
 通过 sys.modules 注入假 akshare，不依赖真实包与网络。"""
 
 import sys
 import types
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
 import fgi.collector.akshare_source as aks
 from fgi.collector.akshare_source import AKShareSource
-from fgi.collector.base import DataSourceStatus
+from fgi.collector.base import DataSourceResult, DataSourceStatus
 
 
 @pytest.fixture
@@ -216,3 +217,123 @@ class TestFetchQvix:
         assert r2.status == DataSourceStatus.HEALTHY
         # 一次拉取全量后切片
         assert len(calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# fetch_pe_data 日频插值测试
+# ---------------------------------------------------------------------------
+
+
+def _pe_monthly_df():
+    """模拟 ak.stock_index_pe_lg(symbol='沪深300') 返回格式：月末PE。"""
+    dates = pd.to_datetime(
+        ["2024-06-28", "2024-07-31", "2024-08-30", "2024-09-30", "2024-10-31"]
+    )
+    return pd.DataFrame(
+        {
+            "日期": dates,
+            "滚动市盈率": [12.5, 13.0, 12.8, 13.2, 12.9],
+        }
+    )
+
+
+def _index_daily_df():
+    """模拟 ak.stock_zh_index_daily(symbol='sh000300') 返回格式：日频 OHLCV。"""
+    # 2024-07-01 ~ 2024-10-31 (覆盖 4 个月末 PE 锚点)
+    dates = pd.bdate_range("2024-07-01", "2024-10-31")
+    # 模拟价格渐变：7/1=4500 → 10/31=4400
+    n = len(dates)
+    close = [4500.0 + i * (4400.0 - 4500.0) / (n - 1) for i in range(n)]
+    return pd.DataFrame(
+        {
+            "date": dates,
+            "open": close,
+            "high": [c + 10 for c in close],
+            "low": [c - 10 for c in close],
+            "close": close,
+            "volume": [1e9] * n,
+        }
+    )
+
+
+class TestFetchPEDataInterpolation:
+    """V1 日频插值：月末PE锚点精度 + 非月末插值公式 + 边界/降级。"""
+
+    def test_monthend_anchor_matches_original(self, fake_ak, fast_retry):
+        """月末PE锚点值应与原始月频数据一致。"""
+        fake_ak.stock_index_pe_lg = lambda symbol: _pe_monthly_df()
+        fake_ak.stock_zh_index_daily = lambda symbol: _index_daily_df()
+        src = AKShareSource()
+        result = src.fetch_pe_data("2024-07-01", "2024-10-31")
+        assert result.status == DataSourceStatus.HEALTHY
+        df = result.data
+        # 月末日期应精确匹配原始 PE
+        jul31 = df[df["date"] == "2024-07-31"]["滚动市盈率"].iloc[0]
+        aug30 = df[df["date"] == "2024-08-30"]["滚动市盈率"].iloc[0]
+        sep30 = df[df["date"] == "2024-09-30"]["滚动市盈率"].iloc[0]
+        oct31 = df[df["date"] == "2024-10-31"]["滚动市盈率"].iloc[0]
+        assert abs(jul31 - 13.0) < 0.01
+        assert abs(aug30 - 12.8) < 0.01
+        assert abs(sep30 - 13.2) < 0.01
+        assert abs(oct31 - 12.9) < 0.01
+
+    def test_interpolation_formula(self, fake_ak, fast_retry):
+        """非月末交易日应符合公式：daily_pe = me_pe × (daily_close / me_close)。"""
+        fake_ak.stock_index_pe_lg = lambda symbol: _pe_monthly_df()
+        fake_ak.stock_zh_index_daily = lambda symbol: _index_daily_df()
+        src = AKShareSource()
+        result = src.fetch_pe_data("2024-07-01", "2024-10-31")
+        df = result.data
+        idx_df = _index_daily_df()
+        idx_df["date"] = pd.to_datetime(idx_df["date"]).dt.strftime("%Y-%m-%d")
+
+        # 验证 2024-08-05（非月末）的插值
+        row = df[df["date"] == "2024-08-05"]
+        assert len(row) == 1
+        daily_pe = row["滚动市盈率"].iloc[0]
+        # 最近月末锚点：2024-07-31 (PE=13.0)
+        me_pe = 13.0
+        daily_close = idx_df[idx_df["date"] == "2024-08-05"]["close"].iloc[0]
+        me_close = idx_df[idx_df["date"] == "2024-07-31"]["close"].iloc[0]
+        expected = me_pe * daily_close / me_close
+        assert abs(daily_pe - expected) < 0.01
+
+    def test_daily_count_matches_trading_days(self, fake_ak, fast_retry):
+        """输出行数应等于请求范围内的交易日数。"""
+        fake_ak.stock_index_pe_lg = lambda symbol: _pe_monthly_df()
+        fake_ak.stock_zh_index_daily = lambda symbol: _index_daily_df()
+        src = AKShareSource()
+        result = src.fetch_pe_data("2024-08-01", "2024-08-31")
+        assert result.status == DataSourceStatus.HEALTHY
+        # 2024-08-01 ~ 2024-08-31 的交易日数
+        expected_count = len(
+            pd.bdate_range("2024-08-01", "2024-08-31")
+        )
+        assert len(result.data) == expected_count
+
+    def test_no_index_data_fallback_to_monthly(self, fake_ak, fast_retry):
+        """fetch_index_daily 失败时应降级返回月频数据。"""
+        fake_ak.stock_index_pe_lg = lambda symbol: _pe_monthly_df()
+        # stock_zh_index_daily 返回空 → index 失败
+        fake_ak.stock_zh_index_daily = lambda symbol: pd.DataFrame()
+        src = AKShareSource()
+        result = src.fetch_pe_data("2024-07-01", "2024-10-31")
+        assert result.status == DataSourceStatus.HEALTHY
+        # 降级返回月频，行数 = 4 (7/31, 8/30, 9/30, 10/31)
+        assert len(result.data) == 4
+
+    def test_no_pe_in_range_failed(self, fake_ak, fast_retry):
+        """请求范围内无PE数据时应返回 FAILED。"""
+        fake_ak.stock_index_pe_lg = lambda symbol: _pe_monthly_df()
+        fake_ak.stock_zh_index_daily = lambda symbol: _index_daily_df()
+        src = AKShareSource()
+        result = src.fetch_pe_data("2023-01-01", "2023-01-31")
+        assert result.status == DataSourceStatus.FAILED
+
+    def test_empty_pe_source_failed(self, fake_ak, fast_retry):
+        """PE 源数据为空时应返回 FAILED。"""
+        fake_ak.stock_index_pe_lg = lambda symbol: pd.DataFrame()
+        fake_ak.stock_zh_index_daily = lambda symbol: _index_daily_df()
+        src = AKShareSource()
+        result = src.fetch_pe_data("2024-07-01", "2024-10-31")
+        assert result.status == DataSourceStatus.FAILED
