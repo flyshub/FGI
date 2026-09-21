@@ -8321,10 +8321,18 @@
   },
   {
     "date": "2026-09-18",
-    "fgi": 65.0,
-    "anchor_date": "2017-09-20",
-    "anchor_fgi": 65.0,
-    "anchor_delta": 5.9,
-    "forward_20": 0.9
+    "fgi": 66.2,
+    "anchor_date": "2024-02-27",
+    "anchor_fgi": 66.2,
+    "anchor_delta": 18.1,
+    "forward_20": 0.5
+  },
+  {
+    "date": "2026-09-21",
+    "fgi": 68.7,
+    "anchor_date": "2021-08-18",
+    "anchor_fgi": 68.7,
+    "anchor_delta": 23.4,
+    "forward_20": 4.9
   }
 ]
