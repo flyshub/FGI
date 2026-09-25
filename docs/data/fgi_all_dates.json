@@ -310747,7 +310747,7 @@
       "funding": 48.7
     },
     "statuses": {
-      "F1": "degraded",
+      "F1": "missing",
       "F2": "normal",
       "F3": "normal",
       "M1": "normal",
