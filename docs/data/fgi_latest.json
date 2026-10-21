@@ -1,38 +1,38 @@
 {
-  "date": "2026-10-20",
-  "fgi_final": 53.55,
-  "fgi_raw": 53.55,
-  "health_score": 93.3,
+  "date": "2026-10-21",
+  "fgi_final": 48.41,
+  "fgi_raw": 48.41,
+  "health_score": 100.0,
   "zone": "中性",
   "trend": "↑",
-  "delta": 1.76,
-  "prev_fgi": 51.79,
-  "percentile": 46.4,
-  "percentile_label": "位于历史中部（46%分位）",
+  "delta": 2.34,
+  "prev_fgi": 46.07,
+  "percentile": 30.1,
+  "percentile_label": "位于历史中下区域（30%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 50.0,
-    "M2": 77.0,
-    "M3": 13.8,
-    "M4": 20.2,
-    "S2": 0.9,
-    "S3": 54.8,
-    "V1": 34.8,
-    "V2": 90.5,
-    "V4": null,
+    "M1": 43.7,
+    "M2": 33.3,
+    "M3": 11.6,
+    "M4": 23.4,
+    "S2": 1.7,
+    "S3": 47.6,
+    "V1": 29.9,
+    "V2": 88.1,
+    "V4": 77.5,
     "F1": null,
     "F2": 98.8,
-    "F3": 57.2
+    "F3": 18.0
   },
   "dimensions": {
-    "momentum": 40.3,
-    "sentiment": 27.8,
-    "valuation": 62.7,
-    "volatility": null,
-    "funding": 78.0
+    "momentum": 28.0,
+    "sentiment": 24.7,
+    "valuation": 59.0,
+    "volatility": 77.5,
+    "funding": 58.4
   },
   "statuses": {
-    "F1": "degraded",
+    "F1": "normal",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -46,11 +46,11 @@
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 53.54622999731095,
+    "fgi": 48.40991315229777,
     "sentiment_tier": "中性",
-    "pe_pct": 0.6391061452513966,
-    "pb_pct": 0.8295589988081049,
-    "valuation_pct": 0.7343325720297508,
+    "pe_pct": 0.623463687150838,
+    "pb_pct": 0.8293556085918854,
+    "valuation_pct": 0.7264096478713618,
     "valuation_tier": "合理",
     "quadrant": "中性",
     "advice": "情绪与估值均居中，无明确信号"
@@ -60,7 +60,7 @@
       [
         "V2",
         "ΔERP Z-score",
-        90.5
+        88.1
       ],
       [
         "F2",
@@ -72,19 +72,19 @@
       [
         "M3",
         "偏离60日均线",
-        13.8
+        11.6
       ],
       [
         "S2",
         "股吧热度",
-        0.9
+        1.7
       ]
     ]
   },
   "zone_context": {
     "zone": "中性",
     "n": 1531,
-    "total": 2631,
+    "total": 2632,
     "pct": 58.2,
     "horizons": {
       "5": {
@@ -92,15 +92,47 @@
         "win_rate": 0.5323318092749837
       },
       "20": {
-        "mean": 0.004189535339265223,
-        "win_rate": 0.5342105263157895
+        "mean": 0.004161047276991155,
+        "win_rate": 0.5338593030900723
       },
       "60": {
-        "mean": 0.012107556433752012,
-        "win_rate": 0.5679839249832552
+        "mean": 0.01207323900091621,
+        "win_rate": 0.5676037483266398
       }
     }
   },
-  "anchor": null,
-  "generated_at": "2026-10-20T14:55:18"
+  "anchor": {
+    "closest_date": "2018-10-19",
+    "closest_fgi": 48.4,
+    "delta": 19.8,
+    "forward_20d_return": 5.0,
+    "detail_table": [
+      {
+        "date": "2016-09-14",
+        "fgi": 48.4,
+        "forward_20": 2.9
+      },
+      {
+        "date": "2018-10-19",
+        "fgi": 48.4,
+        "forward_20": 5.0
+      },
+      {
+        "date": "2023-11-02",
+        "fgi": 48.4,
+        "forward_20": 0.7
+      },
+      {
+        "date": "2020-09-21",
+        "fgi": 48.4,
+        "forward_20": -1.9
+      },
+      {
+        "date": "2025-10-14",
+        "fgi": 48.4,
+        "forward_20": 3.6
+      }
+    ]
+  },
+  "generated_at": "2026-10-21T15:05:08"
 }
