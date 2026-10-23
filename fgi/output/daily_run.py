@@ -75,6 +75,11 @@ def main():
     parser.add_argument(
         "--first-pass", action="store_true", help="Silent run: calculate but skip push"
     )
+    parser.add_argument(
+        "--force-push",
+        action="store_true",
+        help="Skip anomaly check and push (use after manual review, spec line 262)",
+    )
     args = parser.parse_args()
 
     target_date = args.date or datetime.now().strftime("%Y-%m-%d")
@@ -101,13 +106,17 @@ def main():
 
         # 首次运行（--first-pass）只算不推送，用于 workflow 中先干跑再回填后正式推送
         # 默认（无 --first-pass 或第二次跑）正常推送
+        # --force-push：人工复核通过后跳过异常检测直接推送（spec line 262 的人工放行通道）
         first_pass = args.first_pass or os.environ.get("FGI_FIRST_PASS") == "1"
         if not first_pass:
-            try:
-                anomaly_detected = Alert(db_path=db.path).check_and_alert(target_date, result)
-            except Exception as e:
-                print(f"Anomaly check skipped: {e}")
+            if args.force_push:
                 anomaly_detected = False
+            else:
+                try:
+                    anomaly_detected = Alert(db_path=db.path).check_and_alert(target_date, result)
+                except Exception as e:
+                    print(f"Anomaly check skipped: {e}")
+                    anomaly_detected = False
 
             if anomaly_detected:
                 print(
