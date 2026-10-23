@@ -23,10 +23,11 @@ class Alert:
 
     def check_and_alert(self, date: str, fgi_result: dict[str, Any]) -> bool:
         """异常检测为真时记 warning 并推送（PushPlus / Webhook），不打断写入。返回是否异常。"""
-        if not self._is_anomaly(date, fgi_result):
+        is_anomaly, prev_fgi, delta, threshold = self._analyze(date, fgi_result)
+        if not is_anomaly:
             return False
         logger.warning(f"FGI anomaly detected on {date}: {fgi_result.get('fgi_final')}")
-        message = self._build_alert_message(date, fgi_result)
+        message = self._build_alert_message(date, fgi_result, prev_fgi, delta, threshold)
         if self.webhook_url:
             self._send_webhook(message)
         try:
@@ -37,8 +38,14 @@ class Alert:
             logger.error(f"PushPlus alert skipped: {e}")
         return True
 
-    def _is_anomaly(self, date: str, fgi_result: dict[str, Any]) -> bool:
-        """spec line 263: |ΔFGI| over rolling 5y 99-percentile = anomaly → suppress push."""
+    def _analyze(
+        self, date: str, fgi_result: dict[str, Any]
+    ) -> tuple[bool, float | None, float | None, float | None]:
+        """spec line 263: |ΔFGI| over rolling 5y 99-percentile = anomaly → suppress push.
+
+        返回 (是否异常, 前日 FGI, |ΔFGI|, 阈值)；检测自身失败时保守视为异常，
+        上下文数值为 None（消息中省略复核行）。
+        """
         try:
             db_path = self.db_path or DB_PATH
             with Database(db_path) as db:
@@ -53,24 +60,37 @@ class Alert:
                 )
                 today_fgi = fgi_result.get("fgi_final")
                 if not fgi_changes.empty and today_fgi is not None:
-                    prev_fgi = hist["FGI_final"].dropna().iloc[-1]
-                    threshold = fgi_changes.quantile(self.anomaly_percentile / 100)
-                    if abs(today_fgi - prev_fgi) > threshold:
-                        return True
+                    prev_fgi = float(hist["FGI_final"].dropna().iloc[-1])
+                    threshold = float(fgi_changes.quantile(self.anomaly_percentile / 100))
+                    delta = float(today_fgi) - prev_fgi  # 带符号，便于复核判断方向
+                    if abs(delta) > threshold:
+                        return True, prev_fgi, delta, threshold
 
-            return False
+            return False, None, None, None
         except Exception:
             # 异常检测自身失败 → 保守原则：视为已检测到异常，暂停推送并通过
             # webhook/PushPlus 通知运维（spec L343: 暂停自动发布）
-            return True
+            logger.exception("Anomaly detection failed, treating as anomaly")
+            return True, None, None, None
 
-    def _build_alert_message(self, date: str, fgi_result: dict[str, Any]) -> str:
+    def _build_alert_message(
+        self,
+        date: str,
+        fgi_result: dict[str, Any],
+        prev_fgi: float | None,
+        delta: float | None,
+        threshold: float | None,
+    ) -> str:
         fgi_final = fgi_result.get("fgi_final", 0)
         health_score = fgi_result.get("health_score", 0)
 
         message = f"FGI anomaly alert for {date}\n"
         message += "|ΔFGI| exceeded the rolling 5y 99-percentile.\n"
         message += f"FGI Final: {fgi_final:.2f}\n"
+        if prev_fgi is not None and delta is not None and threshold is not None:
+            message += f"Prev FGI: {prev_fgi:.2f}\n"
+            message += f"ΔFGI: {delta:+.2f}\n"
+            message += f"Threshold (99th pct): {threshold:.2f}\n"
         message += f"Health Score: {health_score:.2f}\n"
         message += "\nPush suppressed, manual review required (spec line 262)."
 

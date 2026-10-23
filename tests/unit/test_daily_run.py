@@ -108,3 +108,14 @@ class TestAnomalyGating:
         daily_run.main()
         assert "pushed" not in calls
         assert "manual review required" in capsys.readouterr().out
+
+    def test_force_push_bypasses_anomaly_check(self, monkeypatch, capsys):
+        """--force-push：人工复核通过后跳过异常检测直接推送。"""
+        calls = {}
+        self._patch_run_path(monkeypatch, anomaly_detected=True, calls=calls)
+        monkeypatch.setattr(
+            "sys.argv",
+            ["daily_run", "--date", "2024-01-02", "--force-push"],
+        )
+        daily_run.main()
+        assert calls.get("pushed") is True
