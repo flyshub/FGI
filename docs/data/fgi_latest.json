@@ -1,38 +1,38 @@
 {
-  "date": "2026-11-09",
-  "fgi_final": 52.27,
-  "fgi_raw": 52.27,
-  "health_score": 93.3,
-  "zone": "中性",
-  "trend": "→",
-  "delta": null,
-  "prev_fgi": null,
-  "percentile": 42.2,
-  "percentile_label": "位于历史中部（42%分位）",
+  "date": "2026-11-10",
+  "fgi_final": 60.68,
+  "fgi_raw": 60.68,
+  "health_score": 100.0,
+  "zone": "贪婪",
+  "trend": "↑",
+  "delta": 11.14,
+  "prev_fgi": 49.55,
+  "percentile": 72.5,
+  "percentile_label": "位于历史中上区域（72%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 50.4,
-    "M2": 41.7,
-    "M3": 9.8,
-    "M4": 43.7,
-    "S2": 4.2,
-    "S3": 16.5,
-    "V1": 47.5,
-    "V2": 88.3,
-    "V4": null,
+    "M1": 88.8,
+    "M2": 88.6,
+    "M3": 11.3,
+    "M4": 56.4,
+    "S2": 6.2,
+    "S3": 43.6,
+    "V1": 45.7,
+    "V2": 84.2,
+    "V4": 90.6,
     "F1": null,
     "F2": 99.6,
-    "F3": 68.2
+    "F3": 54.7
   },
   "dimensions": {
-    "momentum": 36.4,
-    "sentiment": 10.4,
-    "valuation": 67.9,
-    "volatility": null,
-    "funding": 83.9
+    "momentum": 61.3,
+    "sentiment": 24.9,
+    "valuation": 64.9,
+    "volatility": 90.6,
+    "funding": 77.2
   },
   "statuses": {
-    "F1": "degraded",
+    "F1": "normal",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -46,11 +46,11 @@
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 52.268250946591834,
+    "fgi": 60.68457864068969,
     "sentiment_tier": "中性",
-    "pe_pct": 0.7027932960893855,
-    "pb_pct": 0.8266666666666667,
-    "valuation_pct": 0.7647299813780261,
+    "pe_pct": 0.6949720670391062,
+    "pb_pct": 0.8264563106796117,
+    "valuation_pct": 0.7607141888593589,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
@@ -58,9 +58,19 @@
   "extreme_signals": {
     "high": [
       [
-        "V2",
-        "ΔERP Z-score",
-        88.3
+        "M1",
+        "涨停板家数",
+        88.8
+      ],
+      [
+        "M2",
+        "散户意愿",
+        88.6
+      ],
+      [
+        "V4",
+        "期权隐含波动率",
+        90.6
       ],
       [
         "F2",
@@ -72,67 +82,67 @@
       [
         "M3",
         "偏离60日均线",
-        9.8
+        11.3
       ],
       [
         "S2",
         "股吧热度",
-        4.2
+        6.2
       ]
     ]
   },
   "zone_context": {
-    "zone": "中性",
-    "n": 1541,
-    "total": 2645,
-    "pct": 58.3,
+    "zone": "贪婪",
+    "n": 770,
+    "total": 2646,
+    "pct": 29.1,
     "horizons": {
       "5": {
-        "mean": 0.000999878696531609,
-        "win_rate": 0.5308241401687216
+        "mean": -0.0008792236870824411,
+        "win_rate": 0.5038961038961038
       },
       "20": {
-        "mean": 0.0038275213961694466,
-        "win_rate": 0.530718954248366
+        "mean": -0.003220124195447811,
+        "win_rate": 0.47854356306892065
       },
       "60": {
-        "mean": 0.011738387168583123,
-        "win_rate": 0.5645805592543276
+        "mean": -0.006011328844607235,
+        "win_rate": 0.4407894736842105
       }
     }
   },
   "anchor": {
-    "closest_date": "2020-04-22",
-    "closest_fgi": 52.2,
-    "delta": 13.2,
-    "forward_20d_return": -0.9,
+    "closest_date": "2023-05-18",
+    "closest_fgi": 60.7,
+    "delta": 6.9,
+    "forward_20d_return": -1.3,
     "detail_table": [
       {
-        "date": "2025-08-27",
-        "fgi": 52.3,
-        "forward_20": 1.4
+        "date": "2024-12-02",
+        "fgi": 60.7,
+        "forward_20": 1.3
       },
       {
-        "date": "2024-11-01",
-        "fgi": 52.3,
-        "forward_20": 1.7
+        "date": "2020-02-21",
+        "fgi": 60.7,
+        "forward_20": -9.7
       },
       {
-        "date": "2021-08-19",
-        "fgi": 52.2,
-        "forward_20": 4.1
+        "date": "2023-11-22",
+        "fgi": 60.7,
+        "forward_20": -4.6
       },
       {
-        "date": "2020-06-15",
-        "fgi": 52.3,
-        "forward_20": 16.3
+        "date": "2023-05-18",
+        "fgi": 60.7,
+        "forward_20": -1.3
       },
       {
-        "date": "2020-04-22",
-        "fgi": 52.2,
-        "forward_20": -0.9
+        "date": "2020-05-26",
+        "fgi": 60.7,
+        "forward_20": 4.4
       }
     ]
   },
-  "generated_at": "2026-11-09T20:36:33"
+  "generated_at": "2026-11-10T17:43:14"
 }
