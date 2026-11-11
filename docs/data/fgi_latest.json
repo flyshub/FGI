@@ -1,38 +1,38 @@
 {
-  "date": "2026-11-10",
-  "fgi_final": 60.68,
-  "fgi_raw": 60.68,
-  "health_score": 100.0,
+  "date": "2026-11-11",
+  "fgi_final": 64.48,
+  "fgi_raw": 64.48,
+  "health_score": 93.3,
   "zone": "贪婪",
   "trend": "↑",
-  "delta": 11.14,
-  "prev_fgi": 49.55,
-  "percentile": 72.5,
-  "percentile_label": "位于历史中上区域（72%分位）",
+  "delta": 3.8,
+  "prev_fgi": 60.68,
+  "percentile": 82.2,
+  "percentile_label": "高于历史上 82% 的日子（偏高）",
   "extreme_note": "",
   "scores": {
-    "M1": 88.8,
-    "M2": 88.6,
-    "M3": 11.3,
-    "M4": 56.4,
-    "S2": 6.2,
-    "S3": 43.6,
-    "V1": 45.7,
-    "V2": 84.2,
-    "V4": 90.6,
+    "M1": 84.5,
+    "M2": 72.9,
+    "M3": 14.7,
+    "M4": 69.1,
+    "S2": 7.9,
+    "S3": 68.8,
+    "V1": 45.8,
+    "V2": 82.4,
+    "V4": 97.0,
     "F1": null,
     "F2": 99.6,
-    "F3": 54.7
+    "F3": 75.4
   },
   "dimensions": {
-    "momentum": 61.3,
-    "sentiment": 24.9,
-    "valuation": 64.9,
-    "volatility": 90.6,
-    "funding": 77.2
+    "momentum": 60.3,
+    "sentiment": 38.4,
+    "valuation": 64.1,
+    "volatility": 97.0,
+    "funding": 87.5
   },
   "statuses": {
-    "F1": "normal",
+    "F1": "degraded",
     "F2": "normal",
     "F3": "normal",
     "M1": "normal",
@@ -46,11 +46,11 @@
     "V4": "normal"
   },
   "decision_matrix": {
-    "fgi": 60.68457864068969,
+    "fgi": 64.4845285117385,
     "sentiment_tier": "中性",
-    "pe_pct": 0.6949720670391062,
-    "pb_pct": 0.8264563106796117,
-    "valuation_pct": 0.7607141888593589,
+    "pe_pct": 0.6905027932960894,
+    "pb_pct": 0.8262454434993924,
+    "valuation_pct": 0.7583741183977409,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
@@ -58,19 +58,9 @@
   "extreme_signals": {
     "high": [
       [
-        "M1",
-        "涨停板家数",
-        88.8
-      ],
-      [
-        "M2",
-        "散户意愿",
-        88.6
-      ],
-      [
         "V4",
         "期权隐含波动率",
-        90.6
+        97.0
       ],
       [
         "F2",
@@ -82,24 +72,24 @@
       [
         "M3",
         "偏离60日均线",
-        11.3
+        14.7
       ],
       [
         "S2",
         "股吧热度",
-        6.2
+        7.9
       ]
     ]
   },
   "zone_context": {
     "zone": "贪婪",
-    "n": 770,
-    "total": 2646,
+    "n": 771,
+    "total": 2647,
     "pct": 29.1,
     "horizons": {
       "5": {
-        "mean": -0.0008792236870824411,
-        "win_rate": 0.5038961038961038
+        "mean": -0.0008800291049796765,
+        "win_rate": 0.503242542153048
       },
       "20": {
         "mean": -0.003220124195447811,
@@ -111,38 +101,6 @@
       }
     }
   },
-  "anchor": {
-    "closest_date": "2023-05-18",
-    "closest_fgi": 60.7,
-    "delta": 6.9,
-    "forward_20d_return": -1.3,
-    "detail_table": [
-      {
-        "date": "2024-12-02",
-        "fgi": 60.7,
-        "forward_20": 1.3
-      },
-      {
-        "date": "2020-02-21",
-        "fgi": 60.7,
-        "forward_20": -9.7
-      },
-      {
-        "date": "2023-11-22",
-        "fgi": 60.7,
-        "forward_20": -4.6
-      },
-      {
-        "date": "2023-05-18",
-        "fgi": 60.7,
-        "forward_20": -1.3
-      },
-      {
-        "date": "2020-05-26",
-        "fgi": 60.7,
-        "forward_20": 4.4
-      }
-    ]
-  },
-  "generated_at": "2026-11-10T17:43:14"
+  "anchor": null,
+  "generated_at": "2026-11-11T17:50:34"
 }
