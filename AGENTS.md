@@ -121,3 +121,16 @@
 
 - 不要在简单任务上滥用 `wayfinder`、`improve-codebase-architecture`
 - 不要跳过 `grill-with-docs` 直接上 `implement`（除非需求已极其清晰）
+
+---
+
+## 本仓库的数据管道不变式（改代码前必读）
+
+这些是实现层面已经付出的代价换来的约束，改动前请先确认不会破坏它们。
+
+1. **`data/fgi.db` 不在 git 里**。它是唯一的历史真相（2015 年起的分数、2005 年起的原始数据，上游窗口只覆盖最近几百天，无法重建）。CI 每次运行从 Release `data-latest` 的 `fgi.db` 资产恢复基线，成功后才覆盖回传；本地开发同样需要先下载（见 README「获取数据库基线」）。**不要** `git add data/fgi.db`。
+2. **失败必须可见，不许 fail-open**。`daily_run` 在指标崩溃数 ≥ `ERROR_SUPPRESS_THRESHOLD`（3）时抑制推送并 `exit 1`；推送失败 `exit 1`；异常检测自身崩溃按「检测到异常」处理；交易日历不可用时抛错而不是猜工作日。任何新增的 `except` 分支都要保证失败不会被降级成「看起来正常」。
+3. **workflow 的写回步骤在 `check_result` 之后**。`daily_run` 失败时 DB 与 web 数据都不写回，只留 artifact 与 issue。新增写回动作请沿用同一条件。
+4. **依赖只有一个来源：`pyproject.toml`**。`requirements.txt` 只是 `-e .[dev]`。`akshare` 定版（`==`），因为 11 个端点随时可能改字段名；升级要本地真拉一次再提交。
+5. **Python 最低 3.10**，CI 跑 3.10 + 3.12 两个版本。mypy 按 3.12 检查（第三方 stub 用了 3.12 语法），3.10 兼容性由 matrix 实测保证。
+6. **版本号唯一真值**是 `pyproject.toml`；站点页脚的 `app_version` 由导出脚本从包元数据注入，不要在前端或文档里另写一份。
