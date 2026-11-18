@@ -18,7 +18,7 @@
   --card-bg: #ffffff;
   --text: #1a1a2e;
   --text-secondary: #555;
-  --text-muted: #888;
+  --text-muted: #6b7280;   /* 白底对比度 4.9:1，满足 WCAG AA */
   --border: #e0e0e0;
   --accent: #1976d2;
   --header-bg: #1a1a2e;
@@ -167,12 +167,12 @@ header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.5px; }
 /* 12. Footer */
 footer {
   text-align: center; padding: 20px 12px 12px;
-  font-size: 0.75rem; color: var(--text-muted);
+  font-size: 0.8125rem; color: var(--text-muted);
 }
 .footer-links { margin-top: 4px; }
 
 /* 13. Footnote */
-.footnote { font-size: 0.7rem; color: var(--text-muted); margin-top: 8px; }
+.footnote { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
 
 /* 14. Responsive */
 @media (max-width: 767px) {
@@ -183,7 +183,7 @@ footer {
   .chart-row .section { margin-bottom: 16px; }
   .chart { height: 240px; }
   .chart-large { height: 300px; }
-  .matrix-grid { font-size: 0.7rem; grid-template-columns: 70px repeat(3, 1fr); }
+  .matrix-grid { font-size: 0.75rem; grid-template-columns: 70px repeat(3, 1fr); }
   .matrix-cell { padding: 6px 4px; min-height: 36px; }
   header#header { flex-direction: column; text-align: center; }
 }
@@ -191,4 +191,15 @@ footer {
 @media (min-width: 768px) and (max-width: 1023px) {
   .chart-row { flex-direction: column; }
   .chart-row .section { margin-bottom: 16px; }
+}
+
+/* 15. Date switch hint (non-trading day feedback) */
+.date-hint {
+  display: block; margin-top: 8px; font-size: 0.8125rem; color: #92400e;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+.date-hint button {
+  margin-left: 6px; padding: 2px 8px; font-size: 0.8125rem; cursor: pointer;
+  border: 1px solid #d97706; background: #fff; color: #92400e; border-radius: 4px;
 }

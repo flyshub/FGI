@@ -29,8 +29,10 @@
         <label for="date-picker" style="font-weight:600;white-space:nowrap">📅 日期</label>
         <input type="date" id="date-picker" />
         <button id="date-go-btn">查看</button>
-        <span id="current-date-label" style="font-size:0.85rem;color:#888;margin-left:8px"></span>
+        <span id="current-date-label" style="font-size:0.8125rem;color:var(--text-muted);margin-left:8px"></span>
       </div>
+      <!-- 选中非交易日时的明确反馈（此前点「查看」毫无反应） -->
+      <span id="date-hint" class="date-hint" style="display:none"></span>
     </section>
 
     <!-- FGI Dashboard -->
@@ -77,6 +79,7 @@
     <!-- Full History Line Chart -->
     <section id="history-section" class="section card full-width">
       <h2>📊 FGI 历史走势</h2>
+      <p class="footnote">虚线为分区阈值 20 / 40 / 60 / 80；默认显示近 3 年，可拖动下方滑块缩放</p>
       <div id="history-chart" class="chart-large"></div>
     </section>
 
@@ -136,6 +139,7 @@
 
   <footer>
     <p>数据来源：A股恐惧贪婪指数 (FGI) · 基于 12 项指标、5 大维度 · 仅供研究参考，不构成投资建议</p>
+    <p id="footer-meta"></p>
     <p class="footer-links"><a href="https://github.com/flyshub/FGI" target="_blank">GitHub</a></p>
   </footer>
 

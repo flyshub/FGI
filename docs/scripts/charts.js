@@ -11,6 +11,18 @@ function _disposeIfExists(id) {
   }
 }
 
+// FGI 分区阈值（与 main.js 的 FGI_ZONES 一致）
+const FGI_THRESHOLDS = [20, 40, 60, 80];
+
+// 阈值参考线：curve 上跨区间的位置比分数本身更有解读价值
+function _thresholdMarkLines() {
+  return FGI_THRESHOLDS.map(v => ({
+    yAxis: v,
+    label: { formatter: String(v), position: 'end', color: '#9ca3af', fontSize: 10 },
+    lineStyle: { color: '#e5e7eb', type: 'dashed', width: 1 },
+  }));
+}
+
 // ── FGI + 上证综指 History Chart (initialized once) ──
 function initHistoryChart(history) {
   const dom = document.getElementById('history-chart');
@@ -47,22 +59,22 @@ function initHistoryChart(history) {
     grid: { left: 45, right: 55, top: 10, bottom: 55 },
     xAxis: {
       type: 'category', data: dates, boundaryGap: false,
-      axisLabel: { fontSize: 10, interval: 'auto', rotate: 0 },
+      axisLabel: { fontSize: 11, interval: 'auto', rotate: 0, color: '#6b7280' },
     },
     yAxis: [
       {
         type: 'value', min: 0, max: 100,
         splitLine: { lineStyle: { type: 'dashed', color: '#e0e0e0' } },
-        axisLabel: { color: '#888' },
-        name: 'FGI', nameTextStyle: { color: '#888', fontSize: 10 },
+        axisLabel: { color: '#6b7280', fontSize: 11 },
+        name: 'FGI', nameTextStyle: { color: '#6b7280', fontSize: 11 },
       },
       {
         type: 'value',
         min: Math.floor(closeMin / 500) * 500,
         max: Math.ceil(closeMax / 500) * 500,
         splitLine: { show: false },
-        axisLabel: { color: '#555' },
-        name: '上证综指', nameTextStyle: { color: '#555', fontSize: 10 },
+        axisLabel: { color: '#6b7280', fontSize: 11 },
+        name: '上证综指', nameTextStyle: { color: '#6b7280', fontSize: 11 },
       },
     ],
     dataZoom: [
@@ -87,6 +99,12 @@ function initHistoryChart(history) {
             { offset: 0, color: 'rgba(100,100,100,0.15)' },
             { offset: 1, color: 'rgba(100,100,100,0.02)' },
           ])
+        },
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          label: { position: 'end' },
+          data: _thresholdMarkLines(),
         },
         markPoint: {
           data: history
@@ -142,7 +160,11 @@ function _updateHistoryMarkLine(dateStr) {
             silent: true,
             symbol: 'none',
             animation: false,
-            data: [{
+            // setOption 会整体替换 markLine.data，所以阈值线必须一起带上，
+            // 否则选中日期后 20/40/60/80 参考线消失。
+            data: [
+              ..._thresholdMarkLines(),
+              {
               xAxis: idx,
               label: {
                 formatter: `⬅ ${dateStr}`,
@@ -152,7 +174,8 @@ function _updateHistoryMarkLine(dateStr) {
                 fontWeight: 'bold',
               },
               lineStyle: { color: '#ff9800', type: 'dashed', width: 2 },
-            }],
+              },
+            ],
           },
         },
       ],
@@ -169,17 +192,46 @@ function initRadarChart(dimensions) {
   registerChart('radar', chart);
 
   const indicatorNames = { momentum: '动量', sentiment: '情绪', valuation: '估值', volatility: '波动率', funding: '资金' };
-  const indicator = Object.values(indicatorNames).map(n => ({ name: n, max: 100 }));
-  const data = dimensions ? Object.keys(indicatorNames).map(k => dimensions[k] || 0) : [0,0,0,0,0];
+  const keys = Object.keys(indicatorNames);
+  const indicator = keys.map(k => ({ name: indicatorNames[k], max: 100 }));
+  // 缺失维度必须保持 null：`|| 0` 会把「无数据」画成 0 分，看起来像「极度恐惧」，
+  // 这是直接的数据失真（docs/audits/full-review-2026-11-18.md P0-6）。
+  const data = keys.map(k => {
+    const v = dimensions ? dimensions[k] : null;
+    return v == null ? null : v;
+  });
+  const missing = keys.filter((k, i) => data[i] == null).map(k => indicatorNames[k]);
 
   chart.setOption({
-    tooltip: { trigger: 'item' },
-    radar: { indicator, center: ['50%', '50%'], radius: '65%' },
+    tooltip: {
+      trigger: 'item',
+      formatter: () => keys.map((k, i) =>
+        `${indicatorNames[k]}: ${data[i] == null ? '暂无数据' : data[i].toFixed(1)}`
+      ).join('<br/>'),
+    },
+    radar: {
+      indicator,
+      center: ['50%', '50%'],
+      radius: '65%',
+      axisName: { color: '#6b7280', fontSize: 11 },
+    },
     series: [{
       type: 'radar',
-      data: [{ value: data, name: '当前', areaStyle: { color: 'rgba(25, 118, 210, 0.2)' }, lineStyle: { color: '#1976d2', width: 2 }, itemStyle: { color: '#1976d2' } }],
+      data: [{ value: data, name: '当前', areaStyle: { color: 'rgba(25, 118, 210, 0.2)' }, lineStyle: { color: '#1976d2', width: 2 }, itemStyle: { color: '#1976d2' }, symbolSize: 5 }],
     }],
   });
+
+  // 明确写出缺哪几维，不依赖渲染器对 null 的处理方式
+  if (missing.length) {
+    chart.setOption({
+      graphic: [{
+        type: 'text',
+        left: 'center',
+        bottom: 0,
+        style: { text: `无数据：${missing.join('、')}`, fill: '#6b7280', fontSize: 11 },
+      }],
+    });
+  }
 }
 
 // ── Indicator Bars (re-renderable) ──
@@ -223,7 +275,7 @@ function initIndicatorChart(scores, statuses, extremeSignals) {
     xAxis: {
       type: 'category',
       data: indOrder.map(k => names[k] || k),
-      axisLabel: { fontSize: 9, interval: 0, rotate: 30 },
+      axisLabel: { fontSize: 11, interval: 0, rotate: 30, color: '#6b7280' },
     },
     yAxis: { type: 'value', min: 0, max: 100, splitLine: { lineStyle: { type: 'dashed', color: '#e0e0e0' } } },
     series: [{
@@ -280,7 +332,7 @@ function initDistributionChart(history, currentFgi, dateStr) {
     grid: { left: 45, right: 10, top: 5, bottom: 30 },
     xAxis: {
       type: 'category', data: labels,
-      axisLabel: { fontSize: 8, interval: 1, rotate: 45 },
+      axisLabel: { fontSize: 11, interval: 1, rotate: 45, color: '#6b7280' },
     },
     yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e0e0e0' } } },
     series: [{
@@ -356,7 +408,7 @@ function initTrendChart(indicatorsHistory) {
     chart.setOption({
       tooltip: { trigger: 'axis', formatter: p => `<strong>${p[0].axisValue}</strong><br/>${p[0].seriesName}: <strong>${p[0].value.toFixed(1)}</strong>` },
       grid: { left: 45, right: 15, top: 5, bottom: 40 },
-      xAxis: { type: 'category', data: dataPoints.map(d => d.date), boundaryGap: false, axisLabel: { fontSize: 9, interval: 'auto' } },
+      xAxis: { type: 'category', data: dataPoints.map(d => d.date), boundaryGap: false, axisLabel: { fontSize: 11, interval: 'auto', color: '#6b7280' } },
       yAxis: { type: 'value', min: 0, max: 100, splitLine: { lineStyle: { type: 'dashed', color: '#e0e0e0' } } },
       dataZoom: [
         { type: 'inside', start: 60, end: 100 },

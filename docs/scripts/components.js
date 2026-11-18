@@ -29,13 +29,57 @@ function setupDatePicker(defaultDate) {
 
   function doSwitch() {
     const dateStr = picker.value;
-    if (dateStr && state.allDatesIndex[dateStr]) {
+    if (!dateStr) return;
+    if (state.allDatesIndex[dateStr]) {
+      clearDateHint();
       switchToDate(dateStr);
+      return;
     }
+    // 非交易日 / 无数据日：此前这里什么都不做，用户以为页面坏了
+    showDateHint(dateStr);
   }
 
   picker.addEventListener('change', doSwitch);
   goBtn.addEventListener('click', doSwitch);
+}
+
+// ── 非交易日提示 ──
+function nearestAvailableDate(dateStr) {
+  const dates = state.allDates.map(d => d.date);
+  let found = null;
+  for (const d of dates) {
+    if (d <= dateStr) found = d;
+    else break;
+  }
+  return found || (dates.length ? dates[0] : null);
+}
+
+function clearDateHint() {
+  const el = document.getElementById('date-hint');
+  if (!el) return;
+  el.style.display = 'none';
+  el.innerHTML = '';
+}
+
+function showDateHint(dateStr) {
+  const el = document.getElementById('date-hint');
+  if (!el) return;
+  const nearest = nearestAvailableDate(dateStr);
+  if (!nearest) {
+    el.textContent = `${dateStr} 无交易数据`;
+    el.style.display = 'block';
+    return;
+  }
+  el.innerHTML = `${escapeHtml(dateStr)} 无交易数据（周末、节假日或数据尚未生成），最近可用 ${escapeHtml(nearest)}`;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '跳到该日';
+  btn.addEventListener('click', () => {
+    clearDateHint();
+    switchToDate(nearest);
+  });
+  el.appendChild(btn);
+  el.style.display = 'block';
 }
 
 // ── Dashboard ──
@@ -52,7 +96,9 @@ function renderDashboard(data) {
 
   const trendEl = document.getElementById('stat-trend');
   trendEl.textContent = data.trend === '→' ? '持平' : `${data.trend} ${data.delta != null ? Math.abs(data.delta).toFixed(1) : '--'}`;
-  trendEl.style.color = data.trend === '↑' ? '#d32f2f' : data.trend === '↓' ? '#2e7d32' : '#9e9e9e';
+  // 涨跌不借用红绿：同页的红绿已经表示「恐惧/贪婪」，再表涨跌会让两种语义互相污染。
+  trendEl.style.color = '#4b5563';
+  trendEl.title = '较上一交易日的变化';
 
   const hs = data.health_score;
   const healthFill = document.getElementById('health-fill');
@@ -91,7 +137,7 @@ function renderDecisionMatrix(data) {
   const curSent = dm.sentiment_tier;
   const curVal = dm.valuation_tier;
 
-  let html = `<div class="matrix-cell matrix-header">情绪\\估值<sup>沪深300</sup></div>`;
+  let html = `<div class="matrix-cell matrix-header">情绪 / 估值<sup>沪深300</sup></div>`;
   html += cols.map(v => `<div class="matrix-cell matrix-header">${v}</div>`).join('');
 
   rows.forEach(s => {
@@ -108,7 +154,7 @@ function renderDecisionMatrix(data) {
   const info = document.getElementById('matrix-info');
   info.innerHTML = `
     <p>象限：<strong>${escapeHtml(dm.quadrant)}</strong>（${escapeHtml(dm.sentiment_tier)} · ${escapeHtml(dm.valuation_tier)}）</p>
-    <p style="color:#888;font-size:0.85rem">${escapeHtml(dm.advice)}</p>
+    <p style="color:var(--text-muted);font-size:0.8125rem">${escapeHtml(dm.advice)}</p>
   `;
 }
 
@@ -199,18 +245,18 @@ function renderExtremeSignals(data) {
   const el = document.getElementById('extreme-signals');
   const ext = data.extreme_signals;
   if (!ext || (!ext.high.length && !ext.low.length)) {
-    el.innerHTML = '<span style="color:#888;font-size:0.85rem">无极端信号</span>';
+    el.innerHTML = '<span style="color:var(--text-muted);font-size:0.8125rem">无极端信号</span>';
     return;
   }
   let html = '';
   if (ext.high.length) {
     html += ext.high.map(([, label, score]) =>
-      `<span class="extreme-tag high">🔴 ${escapeHtml(label)} ${escapeHtml(score)}</span>`
+      `<span class="extreme-tag high" title="贪婪端极值">${escapeHtml(label)} ${escapeHtml(score)}</span>`
     ).join(' ');
   }
   if (ext.low.length) {
     html += ext.low.map(([, label, score]) =>
-      `<span class="extreme-tag low">🟢 ${escapeHtml(label)} ${escapeHtml(score)}</span>`
+      `<span class="extreme-tag low" title="恐惧端极值">${escapeHtml(label)} ${escapeHtml(score)}</span>`
     ).join(' ');
   }
   el.innerHTML = html;
@@ -218,7 +264,16 @@ function renderExtremeSignals(data) {
 
 // ── Signal Report ──
 function renderSignalReport(sr) {
-  if (!sr || sr.error) {
+  if (!sr) {
+    // 区分「报告还没生成」和「报告出错」：隐藏区块会让读者以为没这块内容
+    document.getElementById('signal-report-section').style.display = '';
+    document.getElementById('signal-report-ic').innerHTML =
+      '<p class="footnote">信号报告暂未生成（下次数据更新后会出现）。</p>';
+    document.getElementById('signal-report-layer').innerHTML = '';
+    document.getElementById('signal-report-dca').innerHTML = '';
+    return;
+  }
+  if (sr.error) {
     document.getElementById('signal-report-section').style.display = 'none';
     return;
   }
@@ -241,7 +296,7 @@ function renderSignalReport(sr) {
         </tbody>
       </table>
       ${d.rolling && d.rolling.length ? `
-      <p style="margin-top:8px;font-size:0.85rem;color:#888">滚动 IC（每半年，3年回顾窗，最近5个）</p>
+      <p style="margin-top:8px;font-size:0.8125rem;color:var(--text-muted)">滚动 IC（每半年，3年回顾窗，最近5个）</p>
       <table class="signal-table">
         <thead><tr><th>日期</th><th>IC</th><th>IR</th><th>胜率</th></tr></thead>
         <tbody>${d.rolling.slice(-5).map(r => `
