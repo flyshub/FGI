@@ -14,17 +14,22 @@
 ## 快速开始
 
 ```bash
-# 1. 安装依赖
-pip install -r requirements.txt
+# 1. 安装依赖（依赖声明只在 pyproject.toml 维护）
+pip install -e ".[dev]"
 
-# 2. 配置推送（可选）
+# 2. 获取数据库基线（data/fgi.db 不再提交到仓库，约 14MB）
+mkdir -p data && gh release download data-latest --pattern fgi.db --dir data --clobber
+
+# 3. 配置推送（可选）
 export FGI_PUSHPLUS_TOKEN=your_token_here      # 主推送
 export FGI_PUSHPLUS_FRIENDS=tokenA,tokenB       # 好友令牌（逗号分隔，可选）
 
-# 3. 运行
+# 4. 运行
 python -m fgi.output.daily_run          # 最近交易日
 python -m fgi.output.daily_run --date 2026-07-24  # 指定日期
 ```
+
+**为什么要下数据库**：`data/fgi.db` 含 2015 年至今的每日分数与 2005 年至今的原始数据，且**不可重建**——上游只提供有限窗口（腾讯约 640 天、akshare 涨停池约 30 天、北向资金 2024-08 后停更）。本地跑 `daily_run`、离线模式（`FGI_OFFLINE=1`）、回测都需要它。CI 在每次运行开始时从同一个 Release 资产恢复基线，成功跑完后覆盖回传。
 
 ## 指数构成
 
@@ -108,13 +113,15 @@ SQLite（`data/fgi.db`），三张核心表：
 
 ## 数据源配置
 
-通过环境变量控制数据源可用性。默认全部开启：
+通过环境变量控制数据源可用性。默认全部开启（值为 `true` / `false`）：
 
 ```bash
-FGI_ZZSHARE=0 python -m fgi.output.daily_run    # 关闭 zzshare
-FGI_MOOTDX=0 python -m fgi.output.daily_run     # 关闭 mootdx
-FGI_TENCENT=0 python -m fgi.output.daily_run    # 关闭腾讯
+FGI_AKSHARE_ENABLED=false python -m fgi.output.daily_run   # 关闭 akshare（主源）
+FGI_MOOTDX_ENABLED=false python -m fgi.output.daily_run    # 关闭 mootdx 兜底
+FGI_TENCENT_ENABLED=false python -m fgi.output.daily_run   # 关闭腾讯兜底
 ```
+
+zzshare 没有开关：以 `import zzshare` 的成败决定是否注册（M2、S2、S3 依赖它）。
 
 支持离线重建模式（`FGI_OFFLINE=1`）：从数据库直接加载，无需网络。仅用于历史重算，不可用于生产推送。
 
@@ -131,7 +138,7 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 
 项目通过 GitHub Actions 每个交易日自动计算 FGI、推送 PushPlus、回写数据库、更新 Web 前端。
 
-- **触发**：交易日 19:00（北京时间）+ 手动 `workflow_dispatch`
+- **触发**：交易日 18:00（北京时间）+ 手动 `workflow_dispatch`
 - **配置**：在 Settings → Secrets → Actions 添加以下 Secret（注意不带 `FGI_` 前缀——workflow 会映射为对应的环境变量）：
   - `PUSHPLUS_TOKEN` — 主推送地址（对应环境变量 `FGI_PUSHPLUS_TOKEN`）
   - `PUSHPLUS_FRIENDS` — 好友令牌（逗号分隔，可选；对应环境变量 `FGI_PUSHPLUS_FRIENDS`）
@@ -166,7 +173,7 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 
 ### 数据更新
 
-与每日 FGI 计算在同一个 GitHub Actions workflow 中顺序执行——计算完成后自动导出 JSON → 提交 → Pages 部署。用户无感知，每日 19:00 后几分钟内页面自动刷新。
+与每日 FGI 计算在同一个 GitHub Actions workflow 中顺序执行——计算完成后自动导出 JSON → 提交 → Pages 部署。用户无感知，每日 18:00 后几分钟内页面自动刷新。
 
 ### 本地预览
 

@@ -4,11 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fgi"
-version = "3.6.0"
+version = "3.9.0"
 description = "A-Share Fear & Greed Index"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "akshare>=1.12.0",
+    # akshare 定版：代码依赖 11 个端点（指数/两融/涨停池/QVIX/PE/PB/仓位/资金流…），
+    # 上游任一字段改名都会让无人值守的每日管道静默降级，所以不吃浮动版本。
+    # 升级流程：改这一行 → 本地真拉一次 → 提交。1.18.75 与 uv.lock 一致。
+    "akshare==1.18.75",
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "requests>=2.31.0",
@@ -16,6 +19,9 @@ dependencies = [
     "scipy>=1.11.0",
     "matplotlib>=3.7.0",
     "pandas-market-calendars>=4.3.0",
+    "python-dotenv>=1.0.0",
+    "levistock>=0.1.7",
+    "zzshare>=0.4.8",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +46,8 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.mypy]
+# 按 3.12 检查：numpy 等第三方 stub 使用 3.12 的 `type` 语句，把 target 降到 3.10
+# 会让 mypy 直接解析失败。3.10 兼容性由 CI 的 3.10 matrix job 实测保证，不靠 mypy 推断。
 python_version = "3.12"
 warn_return_any = false
 warn_unused_configs = true
@@ -49,7 +57,7 @@ disable_error_code = ["var-annotated", "misc", "operator", "valid-type", "arg-ty
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "T20"]

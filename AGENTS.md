@@ -90,7 +90,7 @@
 
 ## Agent Skills（Agent 技能）
 
-本项目配置了以下技能，按需调用：
+下表只列**已在本机 `~/.config/opencode/skills/` 中实际安装**且与本仓库相关的技能（2026-11-18 核对）。未安装的技能不要写进来——按名字调用会直接失败。
 
 | 技能 | 用途 | 触发条件 |
 |------|------|----------|
@@ -98,37 +98,26 @@
 | `grill-me` | 方案/设计压力测试 | 方案确定前、架构决策前 |
 | `triage` | Issue 分流、验证、生成 Agent 简报 | 收到新 Issue、PR 时 |
 | `implement` | 基于 Spec/Ticket 实现 | 有明确 Spec 或 Ticket 时 |
-| `code-review` | Standards + Spec 双轴审查 | PR 提交、分支合并前 |
-| `verification-planning` | 制定验证计划 | 实现非平凡功能/修复前 |
-| `deepwork` | 多阶段高风险编码编排 | 大型、高风险、多依赖任务 |
+| `to-spec` | 把讨论收敛成可建的计划 | 多会话任务开工前 |
 | `wayfinder` | 超长任务拆解为决策票据 | 跨会话、超大范围工作 |
-| `to-tickets` | 计划/对话拆解为可追踪 Ticket | 计划确定后、实现前 |
-| `request-refactor-plan` | 重构计划面谈 + 生成 GitHub Issue | 计划重构时 |
 | `improve-codebase-architecture` | 扫描深化机会 + 压力测试 | 想改善架构时 |
-| `design-an-interface` | 并行生成多套接口方案对比 | 设计 API/模块接口时 |
-| `simplify` | 行为不变前提下简化代码 | 代码过度复杂、需降低认知负荷时 |
 | `diagnosing-bugs` | 硬 Bug/性能回归诊断循环 | 报告异常、抛错、变慢时 |
-| `reflect` | 复盘提炼可复用技能/配置 | 周期性复盘、工作流优化时 |
-| `setup-pre-commit` | 配置 Husky + lint-staged + 类型检查 + 测试 | 首次配置 pre-commit 时 |
-| `setup-ts-deep-modules` | 配置 dependency-cruiser 强制深模块 | TS 仓库需强制封装时 |
-| `worktrees` | Git worktree 隔离并行/高风险作业 | 复杂/高风险/并行任务时 |
-| `clonedeps` | 克隆核心依赖源码供本地阅读 | 需深入理解 SDK/框架内部时 |
-| `context7-mcp` / `documentation-lookup` | 查官方文档、API 参考、示例 | 涉及库/框架用法、版本差异时 |
-| `exa-web-search` | 通用网页搜索 | 需最新资讯、非官方文档时 |
-| `gh-grep` | GitHub 实战代码搜索 | 需看真实用法、最佳实践时 |
-| `codebase-memory-mcp` | 代码知识图谱检索/追踪 | 需跨文件理解调用关系、数据流时 |
-| `ubiquitous-language` | 提取/维护领域通用语言词表 | 概念对齐、建立术语表时 |
+| `research` | 委托后台 Agent 查一手资料 | 需要外部事实时 |
+| `prototype` | 一次性代码回答设计问题 | 设计问题纸上定不下来时 |
+| `setup-pre-commit` | 配置 pre-commit hook | 首次配置时 |
 | `domain-modeling` | 记录架构决策、维护领域模型 | 需落地 ADR、澄清领域边界时 |
+| `codebase-design` | 深模块词汇（module/seam/depth） | 设计模块形状时 |
+| `handoff` | 把会话压成文件，跨上下文接力 | 换新会话时 |
+| `skill-router` | 按任务找最合适的技能 | 不确定用哪个技能时 |
 
 ### 调用约定
 
 - **技能名即工具名**：直接用 `skill` 工具加载，如 `skill(name="grill-with-docs")`
-- **文档产出**：`grill-with-docs`、`domain-modeling` 产出的 ADR/词表落在 `docs/adr/`、`docs/glossary.md`
-- **Issue Tracker**：GitHub Issues（已配置 `docs/agents/issue-tracker.md`、`docs/agents/triage-labels.md`）
-- **Domain Docs**：遵循 `docs/agents/domain.md` 约定（读 CONTEXT.md、ADR、词表）
+- **文档产出**：ADR 落在 `docs/adr/`（当前有 0003、0004）；术语表尚未建立，需要时再建 `docs/glossary.md`
+- **Issue Tracker**：GitHub Issues（约定见 `docs/agents/issue-tracker.md`、`docs/agents/triage-labels.md`）
+- **Domain Docs**：遵循 `docs/agents/domain.md` 约定
 
 ### 禁用/不推荐
 
-- 不要在简单任务上滥用 `deepwork`、`wayfinder`、`improve-codebase-architecture`
+- 不要在简单任务上滥用 `wayfinder`、`improve-codebase-architecture`
 - 不要跳过 `grill-with-docs` 直接上 `implement`（除非需求已极其清晰）
-- 不要用 `code-review` 替代人工审查（它是辅助，不是替代）

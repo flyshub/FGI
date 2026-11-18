@@ -284,8 +284,19 @@ def export_latest(db: Database, date_str: str | None = None, stats: dict | None 
         "zone_context": zone_ctx,
         "anchor": anchor,
         "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "app_version": _app_version(),
     }
     return result
+
+
+def _app_version() -> str:
+    """页脚显示的版本号。从已安装的包元数据读取，避免与 pyproject.toml 形成第二处真值。"""
+    try:
+        from importlib.metadata import version
+
+        return version("fgi")
+    except Exception:
+        return "unknown"
 
 
 def _attach_close_prices(db: Database, df: pd.DataFrame) -> pd.DataFrame:

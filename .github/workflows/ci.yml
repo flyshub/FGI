@@ -45,11 +45,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: [lint, typecheck, guard]
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 是最低支持版本（requires-python），用来证明声明与实际一致
+        python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: "pip"
           cache-dependency-path: |
             requirements.txt
