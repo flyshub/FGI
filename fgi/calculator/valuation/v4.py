@@ -50,7 +50,12 @@ class V4Calculator:
 
         # DB-first：从 raw_data 读历史，缺失时从源拉取并持久化
         db_data = self._db.get_raw_data("v4_qvix", start_date, end_date)
-        today_in_db = not db_data.empty and date in db_data["date"].values
+        # today_in_db 必须同时满足 date 存在 AND value 非 NULL（且 QVIX 为正）。
+        if not db_data.empty and date in db_data["date"].values:
+            today_val = db_data[db_data["date"] == date]["value"].iloc[0]
+            today_in_db = pd.notna(today_val) and today_val > 0
+        else:
+            today_in_db = False
         fetched_freshly = False
         if not today_in_db:
             result = self.fetch_data(start_date, end_date)

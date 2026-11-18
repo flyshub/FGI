@@ -211,6 +211,18 @@ class FGICalculator:
 
         health = self.calculate_health(indicator_results, date)
 
+        # 失败可见性：把「几个指标真的算出来了」带到调用方，
+        # 避免一个指标崩溃后 FGI 照常输出、无人察觉（见 docs/audits/full-review-2026-11-18.md P0-3）。
+        status_counts = {"normal": 0, "degraded": 0, "missing": 0, "error": 0}
+        for r in indicator_results.values():
+            status = r.get("status", "missing")
+            if status in ("degraded", "substituted"):
+                status_counts["degraded"] += 1
+            elif status in status_counts:
+                status_counts[status] += 1
+            else:
+                status_counts["missing"] += 1
+
         scores = {
             "FGI_raw": raw_fgi,
             "FGI_final": fgi_final,
@@ -229,4 +241,8 @@ class FGICalculator:
             "fgi_final": fgi_final,
             "health_score": health,
             "indicator_results": indicator_results,
+            "error_count": status_counts["error"],
+            "degraded_count": status_counts["degraded"],
+            "missing_count": status_counts["missing"],
+            "ok_count": status_counts["normal"],
         }

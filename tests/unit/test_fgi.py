@@ -235,3 +235,27 @@ class TestFGICalculator:
         scores = db.get_scores("2024-01-10", "2024-01-10")
         assert len(scores) == 1
         assert scores.iloc[0]["FGI_final"] == result["fgi_final"]
+
+    def test_run_reports_status_counts(self, calculator):
+        """P0-3：12 个指标的成败必须被计数，让调用方能发现「只算出来 9 个」。"""
+        result = calculator.run("2024-01-10")
+        counts = ("error_count", "degraded_count", "missing_count", "ok_count")
+        for key in counts:
+            assert key in result, key
+            assert result[key] >= 0
+        assert sum(result[k] for k in counts) == len(result["indicator_results"]) == 12
+
+    def test_run_counts_indicator_crashes(self, calculator):
+        """指标抛异常时计入 error_count，而不是静默少一维。"""
+        broken = ["M1", "M2", "M3"]
+        for name in broken:
+            calc = calculator._calculators[name]
+
+            def boom(*a, **k):
+                raise RuntimeError("upstream down")
+
+            calc.run = boom  # type: ignore[method-assign]
+
+        result = calculator.run("2024-01-10")
+        assert result["error_count"] == len(broken)
+        assert result["error_count"] + result["ok_count"] <= 12

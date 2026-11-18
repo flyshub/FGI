@@ -77,6 +77,8 @@ class F2Calculator:
         # F2 是周频数据：today_in_db 不检查 today 是否存在，
         # 而是检查最近 7 天内是否有有效 raw 值（覆盖本周发布日）。
         # 若 7 天内无数据，触发 fetch；否则直接 forward-fill（spec 设计）。
+        # 因此不做当日非空守卫：最近 7 天内已有 value.notna() 的有效值，
+        # 当日无新值属于正常周频节奏，不应触发重取。
         if not db_data.empty:
             recent_mask = (
                 (
