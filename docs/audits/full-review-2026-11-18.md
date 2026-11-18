@@ -261,3 +261,40 @@ git gc --prune=now --aggressive       # 回收 16.34MB garbage + 松散对象
 | 6 | P3 前端 | 独立 |
 
 「先补观测、再收紧行为」是批次 4 的原则：P0-3 的抑制阈值建议先只标注、观察两周再启用。
+
+---
+
+# 执行记录（2026-11-18 当日落地）
+
+四个决策已定：DB 出库到 Release 资产 / Python 3.10 / akshare `==1.18.75` / pyproject 为版本唯一真值。
+
+## 已完成
+
+| 项 | 落地方式 | 验证 |
+|---|---|---|
+| P0-1 | 失败判定前置；失败时 DB 与 web 数据都不写回，只留 artifact 与 issue | `workflow_dispatch` 全流程 success；`Create issue on failure` 按预期 skipped |
+| P0-2 | `is_trading_day` 日历不可用改为抛错；推送前打印 stale 指标 | `test_calendar_unavailable_raises`、`test_stale_indicators_are_reported` |
+| P0-3 | `run()` 返回 error/degraded/missing/ok 计数；`ERROR_SUPPRESS_THRESHOLD=3` 时抑制推送并 `exit 1` | `test_error_threshold_suppresses_push` 等 5 个用例 |
+| P0-4 | v4 短路前加 `notna && > 0` 守卫（与 m1/m4/s3 一致）；f2 注释说明周频豁免理由 | `test_v4.py` |
+| P0-5 | 推送失败 `exit 1`；异常检测崩溃按 fail-closed 处理 | `test_push_failure_exits_nonzero` |
+| P0-6 | 雷达图保留 null 并显式列出缺哪几维 | 代码；需浏览器复核 |
+| P1-1 | `git filter-repo` 移除 `data/fgi.db` 与 10MB jsonl；`.git` 249MB → **10MB**；两个 dependabot 分支因携带旧 DB blob 已删除（PR #134/#137 关闭，其版本意图已并入 pyproject） | `git count-objects -vH` = 10.12 MiB |
+| P1-2 | `requires-python >=3.10`；CI matrix 3.10 + 3.12 | CI `test (3.10)` success |
+| P1-3 | akshare 定版 1.18.75；依赖单一来源 pyproject；requirements.txt = `-e .[dev]` | 全流程 daily_update 安装成功 |
+| P1-5 | README 环境变量改为 `*_ENABLED`，时间 18:00，补 DB 获取步骤 | grep 无死变量 |
+| P1-6 | pyproject 3.9.0；导出脚本写 `app_version`；页脚显示 `v3.9.0 · 数据日期` | 线上 `fgi_latest.json` = `3.9.0` / `2026-11-18` |
+| P1-7 | AGENTS.md 技能表按实际安装情况重写 | `ls ~/.config/opencode/skills/` 核对 |
+| P3-2~5 | 非交易日提示、红绿语义统一、阈值参考线、对比度与字号、页脚 | `node --check` + 需浏览器复核 |
+
+## 未做（保留在 P1/P2/P3 清单里）
+
+- **P1-4 mypy 逐类解禁**：需要先给 `storage/database.py` 等补注解，是独立一轮工作，不宜与行为改动混在一起。
+- **P1-8/P1-9 测试补齐**：pushplus 直测、全源失败端到端、维度 NaN 参数化，见原条目。
+- **P2 全部 7 项**：按约定每项先 grill 再动手。
+- **P3-1 之外的剩余细项**：日期控件位置（首屏优先级）、趋势口径标注位置。
+
+## 运维注意
+
+- 本地开发现在需要先取 DB：`gh release download data-latest --pattern fgi.db --dir data --clobber`。
+- GitHub 侧仓库体积（`repos.size`）在 force-push 后由 GitHub 异步回收，短时间内仍显示 60MB 左右，属正常。
+- 备份：`~/FGI-backup/FGI-*.bundle`（44MB）+ `fgi-*.db`（14MB），确认新流程稳定后可删。
