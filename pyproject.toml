@@ -20,8 +20,8 @@ dependencies = [
     "matplotlib>=3.7.0",
     "pandas-market-calendars>=4.3.0",
     "python-dotenv>=1.0.0",
-    "levistock>=0.1.7",
-    "zzshare>=0.4.8",
+    "levistock>=0.1.8",
+    "zzshare>=0.4.12",
 ]
 
 [project.optional-dependencies]
