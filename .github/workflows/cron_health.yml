@@ -27,7 +27,27 @@ jobs:
 
             const successRuns = runs.data.workflow_runs.filter(r => r.conclusion === 'success');
             if (successRuns.length === 0) {
+              const title = '🔔 FGI 定时任务可能已停止';
               const recentUrl = `${context.serverUrl}/${context.repo.full_name}/actions`;
+              // 去重：已有的同类 open issue 不再重复创建（此前每轮扫描都新建一个）
+              const existing = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'automation',
+                per_page: 100,
+              });
+              const dup = existing.data.find(i => i.title === title);
+              if (dup) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: dup.number,
+                  body: `仍未检测到成功运行（${new Date().toISOString()}）。`,
+                });
+                core.notice(`Issue #${dup.number} already open, comment added.`);
+                return;
+              }
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
