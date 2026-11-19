@@ -160,6 +160,14 @@ def send_fgi_report(
     movers = _get_most_changed_indicators(db, indicator_results, date_str, INDICATOR_NAMES)
     signal_card = _get_zone_context_card(db, fgi_raw)
 
+    # 数据日期与今天不一致时，必须在卡片最上方说明——否则读者会把旧数据当今日
+    today = datetime.now().strftime("%Y-%m-%d")
+    stale_banner = ""
+    if date_str != today:
+        stale_banner = (
+            f"> ⚠️ **数据日期 {date_str}**，不是今天（{today}）。行情源尚未更新或当日未生成。\n\n"
+        )
+
     # Pure rendering
     content = build_fgi_markdown(
         fgi_raw,
@@ -173,6 +181,7 @@ def send_fgi_report(
         decision_matrix=decision_matrix,
         signal_card=signal_card,
     )
+    content = stale_banner + content
     content += f"\n\n---\n`{date_str} {ts}`"
 
     # HTTP transport

@@ -113,8 +113,8 @@ class TestFGICalculator:
         assert m2_status["status"] == "degraded"
         assert m2_status["source"] == "forward_fill"
 
-    def test_forward_fill_elapsed_1_is_normal(self, calculator, db):
-        """elapsed=1 是 T+1 数据延迟的正常行为，应标记 normal。"""
+    def test_forward_fill_elapsed_1_is_forward_fill(self, calculator, db):
+        """elapsed=1 是 T+1 延迟，但数据仍是沿用的旧值——不能标成 normal。"""
         db.upsert_score("2024-01-09", {"M2": 66.0})
         db.upsert_score("2024-01-10", {"M1": 51.0})
         db.commit()
@@ -122,11 +122,11 @@ class TestFGICalculator:
         # 01-09 → 01-10 = elapsed=1 (正常 T+1 延迟)
         calculator._apply_forward_fill(results, "2024-01-10")
         assert results["M2"]["score"] == 66.0
-        assert results["M2"]["status"] == "normal"
-        # normal 状态写 daily_status
+        assert results["M2"]["status"] == "forward_fill"
         status = db.get_status("2024-01-10")
         m2_status = status[status["indicator"] == "m2"].iloc[0]
-        assert m2_status["status"] == "normal"
+        assert m2_status["status"] == "forward_fill"
+        assert m2_status["source"] == "forward_fill"
 
     def test_forward_fill_beyond_10_trading_days_stays_missing(self, calculator, db):
         db.upsert_score("2024-01-01", {"M2": 70.0})
@@ -180,13 +180,11 @@ class TestFGICalculator:
             db.upsert_score(d, {"M1": 50.0})  # 模拟当日其他指标正常，产生交易日行
         db.commit()
 
-        # 第 1 个缺失交易日：T+1 延迟 → normal
+        # 第 1 个缺失交易日：T+1 延迟 → forward_fill（沿用旧值，不是当日实测）
         results = {"M2": {"score": None, "status": "missing"}}
         calculator._apply_forward_fill(results, missing_days[0])
-        assert results["M2"]["score"] == 70.0, (
-            f"day 1 ({missing_days[0]}) should be filled as normal"
-        )
-        assert results["M2"]["status"] == "normal"
+        assert results["M2"]["score"] == 70.0, f"day 1 ({missing_days[0]}) should be filled"
+        assert results["M2"]["status"] == "forward_fill"
 
         # 第 2~10 个缺失交易日：degraded
         for i, d in enumerate(missing_days[1:10], start=2):
@@ -309,11 +307,12 @@ class TestStaleUpstream:
 
         result = down_calculator.run("2024-01-10")
 
-        # 昨日值能用，但每个指标都要说明自己来自哪天
+        # 昨日值能用，但每个指标都要说明自己来自哪天，且状态不是 normal
         assert result["fgi_final"] is not None
-        assert result["degraded_count"] == 0
+        assert result["degraded_count"] == 12
         for name, r in result["indicator_results"].items():
             assert r["source_date"] == "2024-01-09", name
+            assert r["status"] == "forward_fill", name
 
     def test_two_days_stale_degrades_health(self, down_calculator, db):
         self._seed(db, "2024-01-08")

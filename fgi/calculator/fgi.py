@@ -130,7 +130,8 @@ class FGICalculator:
 
     def _apply_forward_fill(self, indicator_results: dict, date: str):
         """指标当日无得分时，用最近 MISSING_DAY_LIMIT 个交易日内
-        最后有效得分填充。elapsed=1 时（T+1 延迟）标记 'normal'（数据尚未发布），
+        最后有效得分填充。elapsed=1 时（T+1 延迟）标记 'forward_fill'——
+        这是沿用的旧值，不是当日实测，不能与 'normal' 混为一谈；
         elapsed>=2 且 <=MISSING_DAY_LIMIT 时标记 'degraded'（数据源故障或长期缺失）。
 
         注意：填充值只写入内存中的 indicator_results 供当日 FGI 聚合使用，
@@ -160,7 +161,7 @@ class FGICalculator:
                 continue
             result["score"] = last_score
             result["source_date"] = self._resolve_source_date(name, last_date, date)
-            result["status"] = "normal" if elapsed == 1 else "degraded"
+            result["status"] = "forward_fill" if elapsed == 1 else "degraded"
             self._status.record(
                 name.lower(),
                 result["status"],
@@ -224,7 +225,7 @@ class FGICalculator:
         status_counts = {"normal": 0, "degraded": 0, "missing": 0, "error": 0}
         for r in indicator_results.values():
             status = r.get("status", "missing")
-            if status in ("degraded", "substituted"):
+            if status in ("degraded", "substituted", "forward_fill"):
                 status_counts["degraded"] += 1
             elif status in status_counts:
                 status_counts[status] += 1

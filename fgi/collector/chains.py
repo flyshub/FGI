@@ -49,6 +49,7 @@ def configure_manager(
         extra_fallbacks: 额外兜底来源（如 ["mootdx", "tencent"]），
             只有真正实现了该链方法的源才会被追加
     """
+    offenders: list[str] = []
     for indicator, sources in DEFAULT_CHAINS.items():
         method = CHAIN_METHODS.get(indicator)
         chain: list[str] = []
@@ -58,12 +59,9 @@ def configure_manager(
             if not manager.has_source(name):
                 continue
             if not _can_serve(manager, name, method):
-                logger.warning(
-                    "chain %s: source %r does not implement %s — removed from config",
-                    indicator,
-                    name,
-                    method,
-                )
+                # 首选源写错是配置错误，不是可恢复状态：报错让它不可写，
+                # 而不是打一条容易被淹没的 warning 然后静默剔除。
+                offenders.append(f"{indicator} ← {name} (no {method})")
                 continue
             chain.append(name)
 
@@ -76,3 +74,8 @@ def configure_manager(
 
         if chain:
             manager.configure_chain(indicator, chain)
+
+    if offenders:
+        raise ValueError(
+            "DEFAULT_CHAINS 声明了不存在的组合（源未实现该链的方法）：" + "; ".join(offenders)
+        )

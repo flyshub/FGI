@@ -286,6 +286,16 @@ git gc --prune=now --aggressive       # 回收 16.34MB garbage + 松散对象
 | P1-7 | AGENTS.md 技能表按实际安装情况重写 | `ls ~/.config/opencode/skills/` 核对 |
 | P3-2~5 | 非交易日提示、红绿语义统一、阈值参考线、对比度与字号、页脚 | `node --check` + 需浏览器复核 |
 
+## 2026-11-19 补充（code-review 的 Spec 轴发现）
+
+| 项 | 修正 |
+|---|---|
+| P0-2 方案 2（此前漏做） | forward-fill 的 elapsed=1 不再标 `normal`，改为 `forward_fill`；health_score 按「非 normal、非 impaired」计（每指标约 -3.3）。`golden_replay` 复核：FGI 分数 455 天完全未变，仅 14 处状态迁移 + 12 天 health 下降 |
+| P0-2 方案 3 | 推送卡片顶部在「数据日期 ≠ 今天」时给出 ⚠️ 提示 |
+| P2-5 | 首选源不能服务该链时改为 `ValueError`（此前是 warning 后静默剔除）；兜底源仍静默跳过 |
+
+仍缺：P2-2 的写入侧——calculator 落 raw_data 时仍写字面量 raw_key（`f1.py:100-101`，且 `*_percentile` 未进 registry），改名需同步两处。
+
 ## 未做（保留在 P1/P2/P3 清单里）
 
 - **P1-4 mypy 逐类解禁**：需要先给 `storage/database.py` 等补注解，是独立一轮工作，不宜与行为改动混在一起。

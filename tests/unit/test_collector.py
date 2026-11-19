@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager, FallbackChain
@@ -212,34 +213,43 @@ class TestConfigureManager:
         indexed = [name for name, c in manager._chains.items() if len(c._sources) > 1]
         assert sorted(indexed) == ["f3_index", "m3_index"]
 
-    def test_warns_when_primary_source_cannot_serve(self, caplog):
+    def test_raises_when_primary_source_cannot_serve(self):
+        """首选源写错是配置错误：报错，而不是 warning 后静默剔除。"""
         from fgi.collector.chains import configure_manager
 
-        manager = DataSourceManager()
-        manager.register_source("akshare", MockSource("akshare"))
-
         class NoZt(DataSource):
+            """能服务 m2/s2，但不实现涨停统计。"""
+
             def fetch_daily(self, symbol, start_date, end_date):
                 return DataSourceResult(None, DataSourceStatus.FAILED, "nozt")
 
             def fetch_index_daily(self, symbol, start_date, end_date):
                 return self.fetch_daily(symbol, start_date, end_date)
 
+            def fetch_open_sentiment(self, start_date, end_date):
+                return self.fetch_daily("", start_date, end_date)
+
+            def fetch_market_hot_sentiment(self, start_date, end_date):
+                return self.fetch_daily("", start_date, end_date)
+
             def health_check(self):
                 return DataSourceStatus.HEALTHY
 
+        manager = DataSourceManager()
+        manager.register_source("akshare", MockSource("akshare"))
         manager.register_source("zzshare", NoZt())
-        # 人为把 zzshare 写进 m1 链（历史上的死配置）
+
         import fgi.collector.chains as chains_module
 
         original = chains_module.DEFAULT_CHAINS["m1_zt_stats"]
         chains_module.DEFAULT_CHAINS["m1_zt_stats"] = ["zzshare", "akshare"]
         try:
-            with caplog.at_level("WARNING"):
+            with pytest.raises(ValueError) as exc:
                 configure_manager(manager)
         finally:
             chains_module.DEFAULT_CHAINS["m1_zt_stats"] = original
 
-        assert any(
-            "m1_zt_stats" in r.getMessage() and "zzshare" in r.getMessage() for r in caplog.records
-        )
+        message = str(exc.value)
+        assert "m1_zt_stats" in message
+        assert "zzshare" in message
+        assert "fetch_zt_daily_summary" in message
