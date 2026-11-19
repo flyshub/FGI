@@ -25,10 +25,10 @@ from fgi.output.renderer import (
 )
 from fgi.output.signal_report import (
     SignalReportEngine,
-    _find_closest_prior_fgi,
-    _get_forward_return,
     assign_zone,
     compute_rank_ic,
+    find_closest_prior_fgi,
+    get_forward_return,
     layer_backtest_10,
     simulate_dca,
 )
@@ -162,11 +162,11 @@ def _compute_anchor(db: Database, fgi: float, date_str: str) -> dict | None:
             if purity < 0.15:
                 return None
 
-        closest = _find_closest_prior_fgi(db, fgi, date_str)
+        closest = find_closest_prior_fgi(db, fgi, date_str)
         if closest is None:
             return None
         closest_date, closest_fgi, closest_prev = closest
-        forward_ret = _get_forward_return(db, closest_date, horizon=20)
+        forward_ret = get_forward_return(db, closest_date, horizon=20)
 
         # Top-5 detail table: find other close historical values
         detail_table = []
@@ -176,7 +176,7 @@ def _compute_anchor(db: Database, fgi: float, date_str: str) -> dict | None:
             top5 = hist.sort_values("_diff").head(5)
             for _, cr in top5.iterrows():
                 d = str(cr["date"])
-                r = _get_forward_return(db, d, horizon=20)
+                r = get_forward_return(db, d, horizon=20)
                 if r is not None:
                     detail_table.append(
                         {
@@ -533,10 +533,10 @@ def export_anchors_history(db: Database) -> list[dict]:
         fgi = float(r["FGI_final"])
         if 40 <= fgi <= 60:
             continue  # skip neutral zone
-        closest = _find_closest_prior_fgi(db, fgi, date_str)
+        closest = find_closest_prior_fgi(db, fgi, date_str)
         if closest is None:
             continue
-        fr = _get_forward_return(db, closest[0], horizon=20)
+        fr = get_forward_return(db, closest[0], horizon=20)
         result.append(
             {
                 "date": date_str,

@@ -17,10 +17,10 @@
 
 ## 决策
 
-**扩展 `signal_report.py` 承载全部回测功能（IC 分析、策略模拟、分层回测），废弃 `backtest.py`。**
+**扩展 `signal_report` 承载全部回测功能（IC 分析、策略模拟、分层回测），废弃 `backtest.py`。**
 
 具体措施：
-1. 在 `signal_report.py` 中新增 Rank IC 分析、策略模拟（DCA、极端择时）、分层回测
+1. 在 `signal_report` 中新增 Rank IC 分析、策略模拟（DCA、极端择时）、分层回测（**2026-11-18 更新**：已拆为 `fgi/output/signal_report/` 包，分 analysis / render / backtest / card 四个模块，导入路径不变）
 2. `backtest.py` 顶部加 `NotImplementedError` 标记废弃（**2026-11-19 更新**：
    该模块已整体删除——一个 import 即抛错的空壳只会让 `import fgi.output.backtest`
    看起来像 bug；`signal_report` 现在是回测的唯一入口）

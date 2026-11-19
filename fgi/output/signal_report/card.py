@@ -10,7 +10,7 @@ from fgi.output.signal_report.render import _fmt_pct
 from fgi.storage.database import Database
 
 
-def _find_closest_prior_fgi(db: Database, fgi_value: float, current_date: str) -> tuple | None:
+def find_closest_prior_fgi(db: Database, fgi_value: float, current_date: str) -> tuple | None:
     """从 scores_daily 中查找与当前 FGI 最接近的历史日期（排除当日）。
 
     匹配时考虑方向一致性：不仅要 FGI 值接近，涨跌方向也须一致。
@@ -57,7 +57,7 @@ def _find_closest_prior_fgi(db: Database, fgi_value: float, current_date: str) -
         return None
 
 
-def _get_forward_return(db: Database, date: str, horizon: int = 20) -> float | None:
+def get_forward_return(db: Database, date: str, horizon: int = 20) -> float | None:
     """计算指定日期 horizon 个交易日后的上证综指涨跌幅。"""
     try:
         close_df = db.get_raw_data("f3_proxy_close", date, "2099-12-31")
@@ -150,11 +150,11 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                         net_c = abs(trend_series[-1] - trend_series[0])
                         purity = net_c / total_v if total_v > 0 else 0
                         if purity >= 0.3:
-                            closest = _find_closest_prior_fgi(db, fgi, best_date)
+                            closest = find_closest_prior_fgi(db, fgi, best_date)
                             if closest is not None:
                                 closest_date, closest_fgi, closest_prev = closest
                                 direction_arrow = "📈" if closest_fgi >= closest_prev else "📉"
-                                forward_ret = _get_forward_return(db, closest_date, horizon=20)
+                                forward_ret = get_forward_return(db, closest_date, horizon=20)
                                 if forward_ret is not None:
                                     after_arrow = "📈" if forward_ret > 0 else "📉"
                                     anchor_line = (
@@ -168,7 +168,7 @@ def render_zone_context_card(fgi: float | None, db) -> str:
                                         detail_rows = []
                                         for _, cr in top5.iterrows():
                                             d = str(cr["date"])
-                                            r = _get_forward_return(db, d, horizon=20)
+                                            r = get_forward_return(db, d, horizon=20)
                                             if r is not None:
                                                 is_closest = d == closest_date
                                                 arrow = "📈" if r > 0 else "📉"

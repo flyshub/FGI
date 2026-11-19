@@ -25,14 +25,14 @@ from fgi.output.signal_report.backtest import (
     simulate_dca,
 )
 from fgi.output.signal_report.card import (
-    _find_closest_prior_fgi,
-    _get_forward_return,
+    find_closest_prior_fgi,
+    get_forward_return,
     render_zone_context_card,
 )
 from fgi.output.signal_report.render import (
-    _render_dca_section,
-    _render_ic_section,
-    _render_layer_section,
+    render_dca_section,
+    render_ic_section,
+    render_layer_section,
     render_markdown,
 )
 
@@ -42,12 +42,12 @@ __all__ = [
     "ZONES",
     "SignalReportEngine",
     # 以下三个下划线函数被 scripts/generate_signal_report.py 直接使用
-    "_render_dca_section",
-    "_render_ic_section",
-    "_render_layer_section",
+    "render_dca_section",
+    "render_ic_section",
+    "render_layer_section",
     # 以下两个下划线函数被 fgi/output/web_export.py 直接使用
-    "_find_closest_prior_fgi",
-    "_get_forward_return",
+    "find_closest_prior_fgi",
+    "get_forward_return",
     "assign_zone",
     "compute_forward_returns",
     "compute_rank_ic",

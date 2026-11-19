@@ -38,7 +38,12 @@ def save_score(
     score: float,
     raw: dict[str, float] | None = None,
 ) -> None:
-    """落 raw_data 与 scores_daily。raw 里的键名必须是 registry 里声明过的。"""
+    """落 raw_data 与 scores_daily。
+
+    raw 的键必须来自 `registry.raw_keys(<indicator>)`——由
+    test_registry.py::test_calculator_sources_contain_no_raw_key_literals 守住，
+    不要在调用点写字面量。
+    """
     for raw_key, value in (raw or {}).items():
         db.upsert_raw_data(date, raw_key, float(value))
     db.upsert_score(date, {key.upper(): score})

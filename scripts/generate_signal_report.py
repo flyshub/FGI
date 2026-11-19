@@ -17,12 +17,12 @@ import pandas as pd
 
 from fgi.output.signal_report import (
     SignalReportEngine,
-    _render_dca_section,
-    _render_ic_section,
-    _render_layer_section,
     compute_rank_ic,
     compute_rolling_ic_window,
     layer_backtest_10,
+    render_dca_section,
+    render_ic_section,
+    render_layer_section,
     render_markdown,
     simulate_dca,
 )
@@ -62,7 +62,7 @@ def main() -> None:
         report_sections.append("")
         report_sections.append("---")
         report_sections.append("")
-        report_sections.append(_render_ic_section(ic_full))
+        report_sections.append(render_ic_section(ic_full))
 
     # Rank IC split: in-sample vs out-of-sample
     ic_in = compute_rank_ic(df_in)
@@ -71,9 +71,9 @@ def main() -> None:
         ic_in["rolling"] = compute_rolling_ic_window(df_in)
         ic_out["rolling"] = compute_rolling_ic_window(df_out)
         report_sections.append("")
-        report_sections.append(_render_ic_section(ic_in, title="Rank IC 分析（样本内 2015-2022）"))
+        report_sections.append(render_ic_section(ic_in, title="Rank IC 分析（样本内 2015-2022）"))
         report_sections.append("")
-        report_sections.append(_render_ic_section(ic_out, title="Rank IC 分析（样本外 2023-2026）"))
+        report_sections.append(render_ic_section(ic_out, title="Rank IC 分析（样本外 2023-2026）"))
 
     # Backtest v2: 10-layer backtest
     print("  Computing 10-layer backtest...")
@@ -81,15 +81,15 @@ def main() -> None:
     report_sections.append("")
     report_sections.append("---")
     report_sections.append("")
-    report_sections.append(_render_layer_section(layer_result))
+    report_sections.append(render_layer_section(layer_result))
     # Layer split
     layer_in = layer_backtest_10(df_in)
     layer_out = layer_backtest_10(df_out)
     if layer_in and layer_out:
         report_sections.append("")
-        report_sections.append(_render_layer_section(layer_in))
+        report_sections.append(render_layer_section(layer_in))
         report_sections.append("")
-        report_sections.append(_render_layer_section(layer_out))
+        report_sections.append(render_layer_section(layer_out))
 
     # Backtest v2: DCA simulation
     print("  Computing DCA simulation...")
@@ -99,15 +99,15 @@ def main() -> None:
     report_sections.append("")
     report_sections.append("---")
     report_sections.append("")
-    report_sections.append(_render_dca_section(dca_full, title="逆情绪 DCA vs 等额定投（全样本）"))
+    report_sections.append(render_dca_section(dca_full, title="逆情绪 DCA vs 等额定投（全样本）"))
     if "error" not in dca_in and "error" not in dca_out:
         report_sections.append("")
         report_sections.append(
-            _render_dca_section(dca_in, title="逆情绪 DCA vs 等额定投（样本内 2015-2022）")
+            render_dca_section(dca_in, title="逆情绪 DCA vs 等额定投（样本内 2015-2022）")
         )
         report_sections.append("")
         report_sections.append(
-            _render_dca_section(dca_out, title="逆情绪 DCA vs 等额定投（样本外 2023-2026）")
+            render_dca_section(dca_out, title="逆情绪 DCA vs 等额定投（样本外 2023-2026）")
         )
 
     md = "\n".join(report_sections)

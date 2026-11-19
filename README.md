@@ -143,7 +143,7 @@ python scripts/recompute_v2.py        # 重算历史得分（可中断续算，�
   - `PUSHPLUS_FRIENDS` — 好友令牌（逗号分隔，可选；对应环境变量 `FGI_PUSHPLUS_FRIENDS`）
 - **流水线**：
   1. `python -m fgi.output.daily_run` — 计算 FGI + PushPlus 推送
-  2. `git commit data/fgi.db` — 数据库回写
+  2. `gh release upload data-latest data/fgi.db` — 数据库回传（**不进 git**，见不变式 1）
   3. `python -m fgi.output.web_export --full` — 导出 6 个 JSON 文件
   4. `git commit docs/data/` — Web 数据回写 → GitHub Pages 自动部署
 - **产物**：每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact

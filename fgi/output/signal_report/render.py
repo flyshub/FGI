@@ -208,7 +208,7 @@ def render_markdown(result: dict) -> str:
     return "\n".join(parts)
 
 
-def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
+def render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
     """Render Rank IC analysis section."""
     lines = [
         f"### 📊 {title}",
@@ -245,7 +245,7 @@ def _render_ic_section(ic_result: dict, title: str = "Rank IC 分析") -> str:
     return "\n".join(lines)
 
 
-def _render_layer_section(layer_result: dict, title: str = "10 档分层回测") -> str:
+def render_layer_section(layer_result: dict, title: str = "10 档分层回测") -> str:
     """Render 10-layer backtest section."""
     lines = [
         f"### 📊 {title}",
@@ -273,7 +273,7 @@ def _render_layer_section(layer_result: dict, title: str = "10 档分层回测")
     return "\n".join(lines)
 
 
-def _render_dca_section(dca_result: dict, title: str = "逆情绪 DCA vs 等额定投") -> str:
+def render_dca_section(dca_result: dict, title: str = "逆情绪 DCA vs 等额定投") -> str:
     """Render DCA simulation section."""
     lines = [
         f"### 💰 {title}",
