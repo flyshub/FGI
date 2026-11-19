@@ -1,6 +1,7 @@
 import copy
 import logging
 from datetime import datetime, timedelta
+from typing import Any
 
 import pandas as pd
 
@@ -53,7 +54,8 @@ class FGICalculator:
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
         self._db = db
-        self._calculators = {
+        # 12 个指标类是独立实现（无共同基类），这里只能按 Any 存
+        self._calculators: dict[str, Any] = {
             "M1": M1Calculator(data_manager, db),
             "M2": M2Calculator(data_manager, db),
             "M3": M3Calculator(data_manager, db),

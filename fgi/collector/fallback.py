@@ -1,6 +1,14 @@
+from __future__ import annotations
+
 import logging
 import os
 import time
+from typing import TYPE_CHECKING
+
+import pandas as pd
+
+if TYPE_CHECKING:
+    from fgi.storage.database import Database
 
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
 
@@ -133,12 +141,12 @@ class DataSourceManager:
     def __init__(self):
         self._chains: dict[str, FallbackChain] = {}
         self._sources: dict[str, DataSource] = {}
-        self._db = None  # 可选：注入 Database 用于 offline 重构
+        self._db: Database | None = None  # 可选：注入 Database 用于 offline 重构
 
     def register_source(self, name: str, source: DataSource):
         self._sources[name] = source
 
-    def set_db(self, db) -> None:
+    def set_db(self, db: Database) -> None:
         """注入 Database 实例，用于 FGI_OFFLINE 模式下从 raw_data 重构 DataFrame。"""
         self._db = db
 
@@ -169,7 +177,7 @@ class DataSourceManager:
                 df = df.rename(columns={"value": field_names[0]})
             else:
                 # 多字段：按 date 对齐拼接
-                merged = None
+                merged: pd.DataFrame | None = None
                 for key, name in zip(raw_keys, field_names, strict=False):
                     sub = self._db.get_raw_data(key, start_date, end_date)
                     sub = sub.rename(columns={"value": name})

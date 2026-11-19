@@ -4,7 +4,7 @@ from typing import Any
 from fgi.config.settings import DB_PATH
 from fgi.storage.database import Database
 
-VERSION_CONFIG = {
+VERSION_CONFIG: dict[str, Any] = {
     "legacy_enabled": os.getenv("FGI_LEGACY_ENABLED", "true").lower() == "true",
     "current_enabled": os.getenv("FGI_CURRENT_ENABLED", "true").lower() == "true",
     "parallel_months": int(os.getenv("FGI_PARALLEL_MONTHS", "3")),

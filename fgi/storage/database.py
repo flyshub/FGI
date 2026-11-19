@@ -7,6 +7,7 @@ accessible as db.scores / db.raw_data / db.status properties.
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from fgi.config.settings import DB_PATH
@@ -18,7 +19,7 @@ class Database:
     # 的外部访问将被 dev 守卫 (scripts/check_no_external_conn.sh) 拒绝。
     def __init__(self, db_path: Path | None = None):
         self._path = db_path or DB_PATH
-        self._connection = None
+        self._connection: sqlite3.Connection | None = None
         self._scores = None
         self._raw_data = None
         self._status = None
@@ -138,8 +139,6 @@ class Database:
     # ── Connection lifecycle ──────────────────────────────────
 
     def connect(self):
-        import sqlite3
-
         self._connection = sqlite3.connect(str(self._path))
         self._connection.execute("PRAGMA journal_mode=WAL")
         return self

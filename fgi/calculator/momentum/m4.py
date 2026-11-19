@@ -42,6 +42,8 @@ class M4Calculator:
         return percentile * 100
 
     def _persist_source_data(self, result: DataSourceResult):
+        if result.data is None:
+            return
         for _, row in result.data.iterrows():
             d = row["date"]
             d = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)

@@ -53,7 +53,16 @@ warn_return_any = false
 warn_unused_configs = true
 ignore_missing_imports = true
 no_implicit_optional = false
-disable_error_code = ["var-annotated", "misc", "operator", "valid-type", "arg-type", "union-attr", "attr-defined"]
+# 未标注函数体过去被整体跳过，于是 arg-type / union-attr / attr-defined 形同虚设。
+# 打开后这三类错误重新具备拦截力（2026-11-18 评审 P1-4）。
+check_untyped_defs = true
+disable_error_code = ["var-annotated", "misc", "operator", "valid-type"]
+
+[[tool.mypy.overrides]]
+# 测试里大量 mock/fixture 是动态形状，强制检查函数体只会产出噪声（Optional 收窄、
+# 动态属性），不反映生产风险。生产代码（fgi.*）仍是全量检查。
+module = ["tests.*"]
+check_untyped_defs = false
 
 [tool.ruff]
 line-length = 100
