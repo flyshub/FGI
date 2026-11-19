@@ -130,8 +130,7 @@ zzshare 没有开关：以 `import zzshare` 的成败决定是否注册（M2、S
 ```bash
 python -m fgi.output.backfill         # 全指标历史回填
 python fgi/output/zt_backfill.py      # 仅涨停数据
-python scripts/recompute_scores.py    # 重算历史得分
-python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重算）
+python scripts/recompute_v2.py        # 重算历史得分（可中断续算，向量化）
 ```
 
 ## GitHub Actions
@@ -145,7 +144,7 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 - **流水线**：
   1. `python -m fgi.output.daily_run` — 计算 FGI + PushPlus 推送
   2. `git commit data/fgi.db` — 数据库回写
-  3. `python scripts/export_fgi_web_data.py --full` — 导出 6 个 JSON 文件
+  3. `python -m fgi.output.web_export --full` — 导出 6 个 JSON 文件
   4. `git commit docs/data/` — Web 数据回写 → GitHub Pages 自动部署
 - **产物**：每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact
 
@@ -179,7 +178,7 @@ python scripts/recompute_v2.py        # 向量化加速版（推荐大范围重�
 
 ```bash
 # 1. 生成 JSON 数据
-python scripts/export_fgi_web_data.py --full
+python -m fgi.output.web_export --full
 
 # 2. 启动本地 HTTP 服务器
 cd docs && python -m http.server 8000
@@ -190,9 +189,9 @@ cd docs && python -m http.server 8000
 ### 导出脚本
 
 ```bash
-python scripts/export_fgi_web_data.py                  # 最新日期
-python scripts/export_fgi_web_data.py --date 2026-07-24  # 指定日期
-python scripts/export_fgi_web_data.py --full              # 全量所有文件
+python -m fgi.output.web_export                  # 最新日期
+python -m fgi.output.web_export --date 2026-07-24  # 指定日期
+python -m fgi.output.web_export --full              # 全量所有文件
 ```
 
 输出文件：

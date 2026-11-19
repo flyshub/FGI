@@ -81,7 +81,7 @@ jobs:
         continue-on-error: true
         env:
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
-        run: python scripts/backfill_late_data.py --days 5
+        run: python -m fgi.output.backfill_late --days 5
 
       - name: Re-run FGI for today with corrected data (with push)
         id: run_fgi_final
@@ -119,7 +119,7 @@ jobs:
         if: steps.check.outputs.skip != 'true' && steps.check_result.outputs.failed != 'true'
         env:
           PYTHONPATH: .
-        run: python scripts/export_fgi_web_data.py --full
+        run: python -m fgi.output.web_export --full
 
       - name: Commit web data
         if: steps.check.outputs.skip != 'true' && steps.check_result.outputs.failed != 'true'

@@ -8,8 +8,8 @@ Strategy:
 4. Re-export web data.
 
 Usage:
-    python scripts/backfill_late_data.py              # default: look back 3 trading days
-    python scripts/backfill_late_data.py --days 5      # look back 5 trading days
+    python -m fgi.output.backfill_late            # default: look back 3 trading days
+    python -m fgi.output.backfill_late --days 5    # look back 5 trading days
 """
 
 from __future__ import annotations
@@ -20,8 +20,6 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fgi.calculator.fgi import FGICalculator
 from fgi.collector.factory import setup_data_manager
@@ -156,12 +154,12 @@ def main():
     # Step 4: Export web data
     logger.info("Re-exporting web data...")
     os.chdir(Path(__file__).resolve().parent.parent)
-    from scripts.export_fgi_web_data import main as export_main
+    from fgi.output.web_export import main as export_main
 
     try:
         # trick: set sys.argv for export
         old_argv = sys.argv
-        sys.argv = ["export_fgi_web_data.py", "--full"]
+        sys.argv = ["fgi.output.web_export", "--full"]
         export_main()
         sys.argv = old_argv
     except Exception as e:

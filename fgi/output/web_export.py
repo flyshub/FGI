@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
 """Export FGI database data to JSON files for the static web frontend.
 
 Usage:
-    python scripts/export_fgi_web_data.py                  # latest date only
-    python scripts/export_fgi_web_data.py --date 2026-07-24  # specific date
-    python scripts/export_fgi_web_data.py --full              # all files
-    python scripts/export_fgi_web_data.py --output-dir docs/data
+    python -m fgi.output.web_export                  # latest date only
+    python -m fgi.output.web_export --date 2026-07-24  # specific date
+    python -m fgi.output.web_export --full              # all files
+    python -m fgi.output.web_export --output-dir docs/data
 """
 
 from __future__ import annotations
@@ -200,12 +199,20 @@ def _compute_anchor(db: Database, fgi: float, date_str: str) -> dict | None:
         return None
 
 
+def _rounded_prev_fgi(prev: dict | None) -> float | None:
+    """前一日 FGI（保留两位）；缺值或缺失键都返回 None。"""
+    if not prev:
+        return None
+    value = prev.get("FGI_final")
+    return round(value, 2) if value is not None else None
+
+
 def _get_dimension_scores(scores: dict) -> dict:
     """Compute 5 dimension averages from indicator scores."""
     result = {}
     for dim, indicators in DIMENSION_INDICATORS.items():
         vals = [
-            scores.get(n)
+            float(scores[n])
             for n in indicators
             if scores.get(n) is not None and not pd.isna(scores.get(n))
         ]
@@ -270,7 +277,7 @@ def export_latest(db: Database, date_str: str | None = None, stats: dict | None 
         "zone": zone,
         "trend": arrow,
         "delta": delta,
-        "prev_fgi": round(prev.get("FGI_final"), 2) if prev else None,
+        "prev_fgi": _rounded_prev_fgi(prev),
         "percentile": round(pct, 1),
         "percentile_label": pct_label,
         "extreme_note": extreme_note,
@@ -464,9 +471,10 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
         zone = assign_zone(fgi_final)
         dm = compute_decision_matrix(db, date_str, fgi_final)
         extreme = _get_extreme_signals(scores)
-        indicator_scores = {
-            k: (float(scores.get(k)) if pd.notna(scores.get(k)) else None) for k in INDICATOR_NAMES
-        }
+        indicator_scores = {}
+        for k in INDICATOR_NAMES:
+            v = scores.get(k)
+            indicator_scores[k] = float(v) if v is not None and pd.notna(v) else None
         indicator_scores_clean = {}
         for k, v in indicator_scores.items():
             indicator_scores_clean[k] = round(v, 1) if v is not None else None
@@ -496,7 +504,7 @@ def export_all_dates(db: Database, stats: dict | None = None) -> list[dict]:
                 "zone": zone,
                 "trend": arrow,
                 "delta": delta,
-                "prev_fgi": round(prev.get("FGI_final"), 2) if prev else None,
+                "prev_fgi": _rounded_prev_fgi(prev),
                 "percentile": round(pct, 1),
                 "percentile_label": pct_label,
                 "extreme_note": extreme_note,
