@@ -139,6 +139,15 @@ def main():
                 f"Stale data: {len(stale)} indicators filled from earlier dates: {', '.join(stale)}"
             )
 
+        # 没有任何一个维度形成 FGI（可用维度 < 2）时，没有任何东西可发布。
+        # 这不是「低分」，是「没算出来」，必须让 workflow 判定失败（P1-9）。
+        if result.get("fgi_final") is None:
+            print(
+                "No FGI produced (fewer than 2 dimensions available) — refusing to publish.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
         # 失败可见性优先于推送：多个指标崩溃时 FGI 已经失真，非零退出让
         # workflow 的失败判定生效（不写回数据 + 开 issue）。
         if error_count >= ERROR_SUPPRESS_THRESHOLD:

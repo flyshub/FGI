@@ -177,6 +177,21 @@ class TestFailureVisibility:
         assert exc.value.code == 1
         assert "pushed" not in calls
 
+    def test_no_fgi_suppresses_push(self, monkeypatch, capsys):
+        """全源故障时 fgi_final 为 None：没有任何东西可发布，必须非零退出。"""
+        calls = {}
+        TestAnomalyGating()._patch_run_path(
+            monkeypatch,
+            anomaly_detected=False,
+            calls=calls,
+            result_overrides={"fgi_final": None, "fgi_raw": None},
+        )
+        with pytest.raises(SystemExit) as exc:
+            daily_run.main()
+        assert exc.value.code == 1
+        assert "pushed" not in calls
+        assert "No FGI produced" in capsys.readouterr().err
+
     def test_push_failure_exits_nonzero(self, monkeypatch, capsys):
         calls = {}
         TestAnomalyGating()._patch_run_path(

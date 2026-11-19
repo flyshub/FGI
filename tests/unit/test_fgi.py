@@ -259,3 +259,127 @@ class TestFGICalculator:
         result = calculator.run("2024-01-10")
         assert result["error_count"] == len(broken)
         assert result["error_count"] + result["ok_count"] <= 12
+
+
+ALL_INDICATORS = ["M1", "M2", "M3", "M4", "S2", "S3", "V1", "V2", "V4", "F1", "F2", "F3"]
+
+
+@pytest.fixture
+def down_calculator(db):
+    """所有链只挂一个健康状态为 False 的源：模拟上游全部不可用。"""
+    from fgi.collector.chains import DEFAULT_CHAINS
+
+    manager = DataSourceManager()
+    manager.register_source("mock", MockSource("mock", healthy=False))
+    for chain in DEFAULT_CHAINS:
+        manager.configure_chain(chain, ["mock"])
+    return FGICalculator(manager, db)
+
+
+class TestTotalOutage:
+    """P1-9：所有数据源同时挂掉时，必须产出「没算出来」，而不是一个看起来正常的分数。"""
+
+    def test_no_fgi_when_every_source_is_down(self, down_calculator, db):
+        result = down_calculator.run("2024-01-10")
+
+        assert result["fgi_final"] is None
+        assert result["fgi_raw"] is None
+        assert result["ok_count"] == 0
+        assert result["health_score"] <= 20
+
+        # 状态必须落库，事后能查出「这天为什么没数」
+        statuses = db.get_status("2024-01-10")
+        assert not statuses.empty
+        assert set(statuses["status"]) <= {"missing", "error"}
+
+    def test_outage_does_not_raise(self, down_calculator):
+        """全源故障属于预期内的失败模式，不能抛异常中断整条管道。"""
+        down_calculator.run("2024-01-10")
+
+
+class TestStaleUpstream:
+    """P1-9：上游停更时靠 forward-fill 出数，但必须留下可追溯的痕迹。"""
+
+    def _seed(self, db, date, value=55.0):
+        db.upsert_score(date, dict.fromkeys(ALL_INDICATORS, value))
+        db.commit()
+
+    def test_one_day_stale_is_flagged_by_source_date(self, down_calculator, db):
+        self._seed(db, "2024-01-09")
+
+        result = down_calculator.run("2024-01-10")
+
+        # 昨日值能用，但每个指标都要说明自己来自哪天
+        assert result["fgi_final"] is not None
+        assert result["degraded_count"] == 0
+        for name, r in result["indicator_results"].items():
+            assert r["source_date"] == "2024-01-09", name
+
+    def test_two_days_stale_degrades_health(self, down_calculator, db):
+        self._seed(db, "2024-01-08")
+        # 01-09 是交易日但没有指标数据 → 01-10 的 elapsed = 2
+        db.upsert_score("2024-01-09", {"FGI_raw": 50.0})
+        db.commit()
+
+        result = down_calculator.run("2024-01-10")
+
+        assert result["fgi_final"] is not None
+        assert result["degraded_count"] == 12
+        assert result["health_score"] < 100
+
+
+class TestNumericEdgeCases:
+    """P1-9：NaN 必须被当作缺失，不能被聚合成一个假分数。"""
+
+    def test_nan_indicator_scores_are_missing(self, calculator):
+        results = {k: {"score": float("nan"), "status": "missing"} for k in ALL_INDICATORS}
+        for dim in ("momentum", "sentiment", "valuation", "volatility", "funding"):
+            assert calculator.calculate_dimension_score(results, dim) is None
+        assert calculator.calculate_health(results) <= 20
+
+    def test_nan_score_is_never_aggregated_even_if_status_says_normal(self, calculator):
+        """score 与 status 冲突时以 score 为准：NaN 不得被聚合成一个假分数。
+
+        health_score 仍按 status 聚合（各 calculator 负责「NaN ⇒ 非 normal」，
+        见 TestTotalOutage / 各指标单测），这里只锁 score 侧。
+        """
+        results = {k: {"score": float("nan"), "status": "normal"} for k in ALL_INDICATORS}
+        for dim in ("momentum", "sentiment", "valuation", "volatility", "funding"):
+            assert calculator.calculate_dimension_score(results, dim) is None
+
+    def test_nan_dimension_dropped_and_weights_renormalized(self):
+        from fgi.common.utils import calculate_fgi
+
+        dims = {
+            "momentum": float("nan"),
+            "sentiment": 60.0,
+            "valuation": 60.0,
+            "volatility": 60.0,
+            "funding": 60.0,
+        }
+        assert calculate_fgi(dims) == pytest.approx(60.0)
+
+    def test_two_dimensions_is_the_floor(self):
+        from fgi.common.utils import calculate_fgi
+
+        assert (
+            calculate_fgi(
+                {
+                    "momentum": 80.0,
+                    "sentiment": None,
+                    "valuation": None,
+                    "volatility": None,
+                    "funding": None,
+                }
+            )
+            is None
+        )
+        assert calculate_fgi(
+            {
+                "momentum": 80.0,
+                "sentiment": 40.0,
+                "valuation": None,
+                "volatility": None,
+                "funding": None,
+            }
+        ) == pytest.approx(60.0)
