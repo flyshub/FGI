@@ -36,7 +36,6 @@ from fgi.calculator.fgi import FGICalculator
 from fgi.collector.factory import setup_data_manager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.common.utils import calculate_health_score
-from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
 HEARTBEAT_FILE = Path("/tmp/fgi_recompute_heartbeat.txt")
@@ -126,7 +125,6 @@ def main(
         for i, d in enumerate(dates):
             try:
                 r = calc.run(d)
-                record_indicator_status(db, d, r.get("indicator_results", {}))
                 fgi = r.get("fgi_final")
                 if isinstance(fgi, int | float):
                     ok += 1

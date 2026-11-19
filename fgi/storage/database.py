@@ -121,11 +121,8 @@ class Database:
     def count_scores_below(self, fgi):
         return self.scores.count_scores_below(fgi)
 
-    def upsert_status(self, date, indicator, status, source="", error=""):
+    def upsert_status(self, date, indicator, status, source=None, error=""):
         return self.status.upsert_status(date, indicator, status, source, error)
-
-    def upsert_status_keep_source(self, date, indicator, status, error=""):
-        return self.status.upsert_status_keep_source(date, indicator, status, error)
 
     def get_status(self, date):
         return self.status.get_status(date)

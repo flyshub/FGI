@@ -14,7 +14,6 @@ from fgi.config.settings import DB_PATH
 from fgi.output.alert import Alert
 from fgi.output.decision_matrix import compute_decision_matrix
 from fgi.output.pushplus import send_fgi_report
-from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
@@ -72,8 +71,6 @@ def main():
 
         calculator = FGICalculator(data_manager, db)
         result = calculator.run(target_date)
-
-        record_indicator_status(db, target_date, result.get("indicator_results", {}))
 
         error_count = result.get("error_count", 0)
         degraded_count = result.get("degraded_count", 0)

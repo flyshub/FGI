@@ -101,21 +101,34 @@ class TestTradingCalendarIntegration:
         assert backfill_module.resolve_trading_days("2024-01-01", "2024-01-05") == ["2024-01-02"]
 
 
-class TestComputeFgiDailyStatus:
-    def test_writes_daily_status(self, db):
+class TestComputeFgiDaily:
+    """状态落库已移到 FGICalculator（daily_status 单一 writer），
+    这里只验证逐日循环的计数与容错。"""
+
+    def test_counts_days_and_survives_failures(self, db):
+        class Calculator:
+            def __init__(self):
+                self.seen = []
+
+            def run(self, date):
+                self.seen.append(date)
+                if date == "2024-01-03":
+                    raise RuntimeError("upstream down")
+                return {"date": date, "fgi_final": 50.0, "indicator_results": {}}
+
+        calculator = Calculator()
+        success, failed = compute_fgi_daily(
+            calculator, db, ["2024-01-02", "2024-01-03", "2024-01-04"]
+        )
+
+        assert calculator.seen == ["2024-01-02", "2024-01-03", "2024-01-04"]
+        assert success == 2
+        assert failed == 1
+
+    def test_none_fgi_counts_as_success(self, db):
         class Calculator:
             def run(self, date):
-                return {
-                    "date": date,
-                    "fgi_final": 50.0,
-                    "indicator_results": {
-                        "m3": {"score": 55.0, "status": "normal", "source": "akshare"},
-                        "f2": {"score": None, "status": "missing", "error": "No data"},
-                    },
-                }
+                return {"date": date, "fgi_final": None, "indicator_results": {}}
 
-        compute_fgi_daily(Calculator(), db, ["2024-01-02"])
-        status = db.get_status("2024-01-02")
-        by_indicator = dict(zip(status["indicator"], status["status"], strict=False))
-        assert by_indicator["m3"] == "normal"
-        assert by_indicator["f2"] == "missing"
+        success, failed = compute_fgi_daily(Calculator(), db, ["2024-01-02"])
+        assert (success, failed) == (1, 0)

@@ -6,7 +6,6 @@ from fgi.collector.fallback import DataSourceManager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.config.settings import LOOKBACK_START
 from fgi.indicators.registry import raw_key_for_field
-from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
 
@@ -198,7 +197,6 @@ def compute_fgi_daily(calculator, db, dates: list[str]):
     for i, date in enumerate(dates):
         try:
             result = calculator.run(date)
-            record_indicator_status(db, date, result.get("indicator_results", {}))
             fgi = result.get("fgi_final", None)
             if isinstance(fgi, int | float):
                 print(f"[{i + 1}/{total}] {date}: FGI={fgi:.1f}")

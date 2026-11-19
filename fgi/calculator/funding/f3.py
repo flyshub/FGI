@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
@@ -10,9 +11,15 @@ from fgi.storage.database import Database
 
 
 class F3Calculator:
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def _fetch_index(self, start_date: str, end_date: str) -> DataSourceResult:
@@ -25,6 +32,7 @@ class F3Calculator:
         )
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + 60
 
@@ -34,7 +42,7 @@ class F3Calculator:
 
         result = self._fetch_index(start_date, date)
         if result.status != DataSourceStatus.HEALTHY or result.data is None or result.data.empty:
-            self._db.upsert_status(date, "f3", "missing", result.source, result.error or "No data")
+            self._status.record("f3", "missing", result.source, result.error or "No data")
             return {"f3": None, "status": "missing"}
 
         df = result.data.copy()
@@ -49,12 +57,12 @@ class F3Calculator:
 
         today = df[df["date"] == pd.Timestamp(date)]
         if today.empty:
-            self._db.upsert_status(date, "f3", "missing", "proxy", "No data for date")
+            self._status.record("f3", "missing", "proxy", "No data for date")
             return {"f3": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "f3", "missing", "proxy", "Insufficient data")
+            self._status.record("f3", "missing", "proxy", "Insufficient data")
             return {"f3": None, "status": "missing"}
 
         score = percentile * 100
@@ -73,6 +81,6 @@ class F3Calculator:
         self._db.upsert_raw_data(date, "f3_percentile", percentile)
         self._db.upsert_score(date, {"F3": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._db.upsert_status(date, "f3", "normal", "proxy", f"fetched_at={ts}")
+        self._status.record("f3", "normal", "proxy", f"fetched_at={ts}")
 
         return {"f3": score, "status": "normal", "percentile": percentile}

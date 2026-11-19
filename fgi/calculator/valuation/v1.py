@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
@@ -13,9 +14,15 @@ from fgi.storage.database import Database
 class V1Calculator:
     """V3.8: 沪深300风险溢价 (ERP) = 1/PE - 10年国债收益率"""
 
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_pe_data(self, start_date: str, end_date: str) -> DataSourceResult:
@@ -43,6 +50,7 @@ class V1Calculator:
         return (1.0 - percentile) * 100
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + 60
 
@@ -52,12 +60,12 @@ class V1Calculator:
 
         pe_result = self.fetch_pe_data(start_date, end_date)
         if pe_result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "v1", "missing", pe_result.source, pe_result.error)
+            self._status.record("v1", "missing", pe_result.source, pe_result.error)
             return {"v1": None, "status": "missing"}
 
         bond_result = self.fetch_bond_yield(start_date, end_date)
         if bond_result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "v1", "missing", bond_result.source, bond_result.error)
+            self._status.record("v1", "missing", bond_result.source, bond_result.error)
             return {"v1": None, "status": "missing"}
 
         assert pe_result.data is not None and bond_result.data is not None  # mypy: HEALTHY guard
@@ -98,12 +106,12 @@ class V1Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._db.upsert_status(date, "v1", "missing", "akshare", "No data for date")
+            self._status.record("v1", "missing", "akshare", "No data for date")
             return {"v1": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "v1", "missing", "akshare", "Insufficient data")
+            self._status.record("v1", "missing", "akshare", "Insufficient data")
             return {"v1": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
@@ -111,6 +119,6 @@ class V1Calculator:
         self._db.upsert_raw_data(date, "v1_percentile", percentile)
         self._db.upsert_score(date, {"V1": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._db.upsert_status(date, "v1", "normal", "akshare", f"fetched_at={ts}")
+        self._status.record("v1", "normal", "akshare", f"fetched_at={ts}")
 
         return {"v1": score, "status": "normal", "percentile": percentile}

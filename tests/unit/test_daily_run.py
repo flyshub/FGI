@@ -59,7 +59,7 @@ class TestAnomalyGating:
         result_overrides: dict | None = None,
         push_result: bool = True,
     ):
-        """Patch calculator.run / Alert.check_and_alert / send_fgi_report / record_indicator_status."""
+        """Patch calculator.run / Alert.check_and_alert / send_fgi_report."""
         monkeypatch.setattr(daily_run, "is_trading_day", lambda d: True)
         monkeypatch.setattr(daily_run, "setup_data_manager", lambda: object())
 
@@ -98,7 +98,6 @@ class TestAnomalyGating:
                 {"run": staticmethod(lambda d: dict(base_result))},
             ),
         )
-        monkeypatch.setattr(daily_run, "record_indicator_status", lambda *a, **k: None)
         monkeypatch.setattr(
             "fgi.output.alert.Alert.check_and_alert", lambda self, d, r: anomaly_detected
         )

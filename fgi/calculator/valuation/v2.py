@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import zscore
 from fgi.storage.database import Database
@@ -11,9 +12,15 @@ from fgi.storage.database import Database
 class V2Calculator:
     """V3.8: ΔERP Z-score (250-day window, negative sigmoid). Derived from V1 ERP."""
 
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = 250
 
     def calculate_derp_zscore(self, erp_series: pd.Series) -> pd.Series:
@@ -26,6 +33,7 @@ class V2Calculator:
         return score
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + 60
 
@@ -35,7 +43,7 @@ class V2Calculator:
 
         raw = self._db.get_raw_data("v1_erp", start_date, end_date)
         if raw.empty:
-            self._db.upsert_status(date, "v2", "missing", "database", "No ERP data available")
+            self._status.record("v2", "missing", "database", "No ERP data available")
             return {"v2": None, "status": "missing"}
 
         erp_df = pd.DataFrame(
@@ -50,18 +58,18 @@ class V2Calculator:
 
         today = erp_df[erp_df["date"] == date]
         if today.empty:
-            self._db.upsert_status(date, "v2", "missing", "database", "No data for date")
+            self._status.record("v2", "missing", "database", "No data for date")
             return {"v2": None, "status": "missing"}
 
         score = today["score"].iloc[0]
         if pd.isna(score):
-            self._db.upsert_status(date, "v2", "missing", "database", "Insufficient data")
+            self._status.record("v2", "missing", "database", "Insufficient data")
             return {"v2": None, "status": "missing"}
 
         self._db.upsert_raw_data(date, "v2_score", float(score))
         self._db.upsert_raw_data(date, "v2_sigmoid_fraction", float(score) / 100.0)
         self._db.upsert_score(date, {"V2": float(score)})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._db.upsert_status(date, "v2", "normal", "database", f"calculated_at={ts}")
+        self._status.record("v2", "normal", "database", f"calculated_at={ts}")
 
         return {"v2": float(score), "status": "normal"}

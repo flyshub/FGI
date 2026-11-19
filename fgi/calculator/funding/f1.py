@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
@@ -12,9 +13,15 @@ from fgi.storage.database import Database
 class F1Calculator:
     """V3.8.3: 融资余额占比 = 沪深合计融资余额 / 全A总市值 (月度前向填充)."""
 
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_margin_data(self, start_date: str, end_date: str) -> DataSourceResult:
@@ -48,6 +55,7 @@ class F1Calculator:
         return percentile * 100
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + 60
 
@@ -57,12 +65,12 @@ class F1Calculator:
 
         margin_result = self.fetch_margin_data(start_date, end_date)
         if margin_result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "f1", "missing", margin_result.source, margin_result.error)
+            self._status.record("f1", "missing", margin_result.source, margin_result.error)
             return {"f1": None, "status": "missing"}
 
         cap_result = self.fetch_market_cap(start_date, end_date)
         if cap_result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "f1", "missing", cap_result.source, cap_result.error)
+            self._status.record("f1", "missing", cap_result.source, cap_result.error)
             return {"f1": None, "status": "missing"}
 
         df = self.calculate_margin_ratio(margin_result.data, cap_result.data)
@@ -76,12 +84,12 @@ class F1Calculator:
         today = df[df["date"] == date]
         # T+1 延迟统一由 _apply_forward_fill 处理（不在 calculator 层 fallback）
         if today.empty:
-            self._db.upsert_status(date, "f1", "missing", "akshare", "No data for date")
+            self._status.record("f1", "missing", "akshare", "No data for date")
             return {"f1": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "f1", "missing", "akshare", "Insufficient data")
+            self._status.record("f1", "missing", "akshare", "Insufficient data")
             return {"f1": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
@@ -93,6 +101,6 @@ class F1Calculator:
         self._db.upsert_raw_data(date, "f1_percentile", percentile)
         self._db.upsert_score(date, {"F1": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._db.upsert_status(date, "f1", "normal", "akshare", f"fetched_at={ts}")
+        self._status.record("f1", "normal", "akshare", f"fetched_at={ts}")
 
         return {"f1": score, "status": "normal", "percentile": percentile}

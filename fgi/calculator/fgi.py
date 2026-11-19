@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import (
     adjust_fgi_with_mad_pct,
@@ -55,20 +56,22 @@ class FGICalculator:
     def __init__(self, data_manager: DataSourceManager, db: Database):
         self._data_manager = data_manager
         self._db = db
+        # daily_status 的唯一写入路径：指标登记、驱动方落库
+        self._status = StatusRecorder(db, buffered=True)
         # 12 个指标类是独立实现（无共同基类），这里只能按 Any 存
         self._calculators: dict[str, Any] = {
-            "M1": M1Calculator(data_manager, db),
-            "M2": M2Calculator(data_manager, db),
-            "M3": M3Calculator(data_manager, db),
-            "M4": M4Calculator(data_manager, db),
-            "S2": S2Calculator(data_manager, db),
-            "S3": S3Calculator(data_manager, db),
-            "V1": V1Calculator(data_manager, db),
-            "V2": V2Calculator(data_manager, db),
-            "V4": V4Calculator(data_manager, db),
-            "F1": F1Calculator(data_manager, db),
-            "F2": F2Calculator(data_manager, db),
-            "F3": F3Calculator(data_manager, db),
+            "M1": M1Calculator(data_manager, db, self._status),
+            "M2": M2Calculator(data_manager, db, self._status),
+            "M3": M3Calculator(data_manager, db, self._status),
+            "M4": M4Calculator(data_manager, db, self._status),
+            "S2": S2Calculator(data_manager, db, self._status),
+            "S3": S3Calculator(data_manager, db, self._status),
+            "V1": V1Calculator(data_manager, db, self._status),
+            "V2": V2Calculator(data_manager, db, self._status),
+            "V4": V4Calculator(data_manager, db, self._status),
+            "F1": F1Calculator(data_manager, db, self._status),
+            "F2": F2Calculator(data_manager, db, self._status),
+            "F3": F3Calculator(data_manager, db, self._status),
         }
 
     def run_all_indicators(self, date: str) -> dict:
@@ -90,6 +93,8 @@ class FGICalculator:
                     "source_date": None,
                     "error": str(e),
                 }
+                # 崩溃也要留痕：状态由驱动方统一落库
+                self._status.record(name.lower(), "error", None, str(e))
         return results
 
     def calculate_dimension_score(
@@ -156,14 +161,14 @@ class FGICalculator:
             result["score"] = last_score
             result["source_date"] = self._resolve_source_date(name, last_date, date)
             result["status"] = "normal" if elapsed == 1 else "degraded"
-            self._db.upsert_status(
-                date,
+            self._status.record(
                 name.lower(),
                 result["status"],
                 "forward_fill",
                 f"filled from {last_date} (elapsed={elapsed})",
             )
-        self._db.commit()
+        # 填充结果对当日是最终状态，先落库（run() 末尾还会再 flush 一次，幂等）
+        self._status.flush(date)
 
     def _resolve_source_date(self, indicator: str, last_score_date: str, target_date: str) -> str:
         """traces one hop back from the last score date to the actual raw-data date."""
@@ -236,6 +241,8 @@ class FGICalculator:
 
         self._db.upsert_score(date, scores)
         self._db.commit()
+        # 本轮所有状态登记在此一次性落库（daily_status 唯一 writer）
+        self._status.flush(date)
 
         return {
             "date": date,

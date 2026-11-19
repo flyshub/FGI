@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
@@ -12,9 +13,15 @@ from fgi.storage.database import Database
 
 
 class F2Calculator:
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         # 周频仓位 ffill 到日频后按日频窗口做滚动百分位
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
@@ -63,6 +70,7 @@ class F2Calculator:
         return None
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + 60
 
@@ -108,7 +116,7 @@ class F2Calculator:
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date, date)
             if df is None:
-                self._db.upsert_status(date, "f2", "missing", "database", "No data collected")
+                self._status.record("f2", "missing", "database", "No data collected")
                 return {"f2": None, "status": "missing"}
         else:
             df = pd.DataFrame(
@@ -128,13 +136,13 @@ class F2Calculator:
         # Forward-fill: find latest available date <= target date (weekly data may not have exact date)
         available = df[df["date"] <= date]
         if available.empty:
-            self._db.upsert_status(date, "f2", "missing", "database", "No data for date")
+            self._status.record("f2", "missing", "database", "No data for date")
             return {"f2": None, "status": "missing"}
 
         today = available.iloc[[-1]]  # Latest available row
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "f2", "missing", "database", "Insufficient data")
+            self._status.record("f2", "missing", "database", "Insufficient data")
             return {"f2": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
@@ -160,13 +168,13 @@ class F2Calculator:
             source_note = f"fetched_at={ts}"
             if is_degraded:
                 source_note += f"; ffill from {today['date'].iloc[0]} (staleness={staleness_days}d)"
-            self._db.upsert_status(date, "f2", status, "database", source_note)
+            self._status.record("f2", status, "database", source_note)
         else:
             source_note = (
                 f"ffill from {today['date'].iloc[0]} (staleness={staleness_days}d)"
                 if is_degraded
                 else "database"
             )
-            self._db.upsert_status_keep_source(date, "f2", status, source_note)
+            self._status.record("f2", status, None, source_note)
 
         return {"f2": score, "status": status, "percentile": percentile}

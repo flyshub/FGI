@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
@@ -20,9 +21,15 @@ class S2Calculator:
 
     ZSCORE_WINDOW = 60
 
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
@@ -51,6 +58,7 @@ class S2Calculator:
         return percentile * 100
 
     def run(self, date: str, lookback_days: int | None = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + self.ZSCORE_WINDOW + 60
 
@@ -60,12 +68,12 @@ class S2Calculator:
 
         result = self.fetch_data(start_date, end_date)
         if result.status != DataSourceStatus.HEALTHY:
-            self._db.upsert_status(date, "s2", "missing", result.source, result.error or "")
+            self._status.record("s2", "missing", result.source, result.error or "")
             return {"s2": None, "status": "missing"}
 
         df = result.data
         if df is None:
-            self._db.upsert_status(date, "s2", "missing", result.source, "No data")
+            self._status.record("s2", "missing", result.source, "No data")
             return {"s2": None, "status": "missing"}
 
         df = self.calculate_heat(df)
@@ -74,12 +82,12 @@ class S2Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._db.upsert_status(date, "s2", "missing", result.source, "No data for date")
+            self._status.record("s2", "missing", result.source, "No data for date")
             return {"s2": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "s2", "missing", result.source, "Insufficient data")
+            self._status.record("s2", "missing", result.source, "Insufficient data")
             return {"s2": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
@@ -89,6 +97,6 @@ class S2Calculator:
         self._db.upsert_raw_data(date, "s2_percentile", percentile)
         self._db.upsert_score(date, {"S2": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._db.upsert_status(date, "s2", "normal", result.source, f"fetched_at={ts}")
+        self._status.record("s2", "normal", result.source, f"fetched_at={ts}")
 
         return {"s2": score, "status": "normal", "percentile": percentile}

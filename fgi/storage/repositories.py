@@ -235,43 +235,28 @@ class StatusRepository:
         date: str,
         indicator: str,
         status: str,
-        source: str = "",
-        error: str = "",
+        source: str | None = None,
+        error: str | None = "",
     ) -> None:
-        indicator = indicator.lower()
-        self._handle.execute(
-            """
-            INSERT INTO daily_status (date, indicator, status, source, error)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (date, indicator) DO UPDATE SET
-                status = excluded.status,
-                source = excluded.source,
-                error = excluded.error
-        """,
-            (date, indicator, status, source, error or ""),
-        )
+        """写入当日指标状态——daily_status 的唯一写入入口。
 
-    def upsert_status_keep_source(
-        self,
-        date: str,
-        indicator: str,
-        status: str,
-        error: str = "",
-    ) -> None:
-        """Same as upsert_status but preserves existing source field (#51)."""
+        source=None 保留库里已有的来源（数据本来就在本地库里时用）；
+        传字符串则覆盖（含 ""）。
+        error=None 保留已有说明，传字符串则覆盖（含 ""）。
+        """
         indicator = indicator.lower()
         self._handle.execute(
             """
             INSERT INTO daily_status (date, indicator, status, source, error)
-            VALUES (?, ?, ?, COALESCE(
-                (SELECT source FROM daily_status WHERE date = ? AND indicator = ?), ''
-            ), ?)
+            VALUES (?, ?, ?, COALESCE(?, ''), COALESCE(?, ''))
             ON CONFLICT (date, indicator) DO UPDATE SET
                 status = excluded.status,
-                error = CASE WHEN excluded.error != '' THEN excluded.error
-                             ELSE daily_status.error END
+                source = CASE WHEN ? IS NULL THEN daily_status.source
+                              ELSE excluded.source END,
+                error = CASE WHEN ? IS NULL THEN daily_status.error
+                             ELSE excluded.error END
         """,
-            (date, indicator, status, date, indicator, error or ""),
+            (date, indicator, status, source, error, source, error),
         )
 
     # ── read ─────────────────────────────────────────────────

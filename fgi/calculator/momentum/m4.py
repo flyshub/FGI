@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
@@ -17,9 +18,15 @@ class M4Calculator:
 
     ZSCORE_WINDOW = 60
 
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
@@ -61,6 +68,7 @@ class M4Calculator:
         return float(df["value"].iloc[-1])
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + self.ZSCORE_WINDOW + 60
 
@@ -102,8 +110,7 @@ class M4Calculator:
                     historical = self._db.get_raw_data("m4_volume", start_date, date)
                     new_row = pd.DataFrame({"date": [date], "value": [fallback_val]})
                     db_data = pd.concat([historical, new_row], ignore_index=True)
-                    self._db.upsert_status(
-                        date,
+                    self._status.record(
                         "m4",
                         "degraded",
                         result.source or "fallback",
@@ -112,12 +119,8 @@ class M4Calculator:
                     self._db.commit()
                     is_degraded = True
                 else:
-                    self._db.upsert_status(
-                        date,
-                        "m4",
-                        "missing",
-                        result.source or "",
-                        result.error or "No data collected",
+                    self._status.record(
+                        "m4", "missing", result.source or "", result.error or "No data collected"
                     )
                     return {"m4": None, "status": "missing"}
             else:
@@ -136,12 +139,12 @@ class M4Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._db.upsert_status(date, "m4", "missing", "database", "No data for date")
+            self._status.record("m4", "missing", "database", "No data for date")
             return {"m4": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "m4", "missing", "database", "Insufficient data")
+            self._status.record("m4", "missing", "database", "Insufficient data")
             return {"m4": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
@@ -152,9 +155,9 @@ class M4Calculator:
         if not is_degraded:
             ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
             if fetched_freshly:
-                self._db.upsert_status(date, "m4", "normal", "database", f"fetched_at={ts}")
+                self._status.record("m4", "normal", "database", f"fetched_at={ts}")
             else:
-                self._db.upsert_status_keep_source(date, "m4", "normal")
+                self._status.record("m4", "normal", None, None)
 
         return {
             "m4": score,

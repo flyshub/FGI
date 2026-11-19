@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pandas as pd
 
+from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
@@ -18,9 +19,15 @@ class V4Calculator:
     归属波动率（volatility）维度。
     """
 
-    def __init__(self, data_manager: DataSourceManager, db: Database):
+    def __init__(
+        self,
+        data_manager: DataSourceManager,
+        db: Database,
+        status: StatusRecorder | None = None,
+    ):
         self._data_manager = data_manager
         self._db = db
+        self._status = status if status is not None else StatusRecorder(db)
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
@@ -40,6 +47,7 @@ class V4Calculator:
         return (1.0 - percentile) * 100
 
     def run(self, date: str, lookback_days: int = None) -> dict:
+        self._status.begin(date)
         if lookback_days is None:
             lookback_days = self._window + 60
 
@@ -69,7 +77,7 @@ class V4Calculator:
                 db_data = self._db.get_raw_data("v4_qvix", start_date, end_date)
 
         if db_data.empty:
-            self._db.upsert_status(date, "v4", "missing", "akshare", "No QVIX data")
+            self._status.record("v4", "missing", "akshare", "No QVIX data")
             return {"v4": None, "status": "missing"}
 
         df = pd.DataFrame({"date": db_data["date"], "close": db_data["value"]})
@@ -79,12 +87,12 @@ class V4Calculator:
 
         today = df[df["date"] == pd.Timestamp(date)]
         if today.empty:
-            self._db.upsert_status(date, "v4", "missing", "akshare", "No data for date")
+            self._status.record("v4", "missing", "akshare", "No data for date")
             return {"v4": None, "status": "missing"}
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._db.upsert_status(date, "v4", "missing", "akshare", "Insufficient data")
+            self._status.record("v4", "missing", "akshare", "Insufficient data")
             return {"v4": None, "status": "missing"}
 
         score = self.calculate_score(percentile)
@@ -93,6 +101,6 @@ class V4Calculator:
         self._db.upsert_score(date, {"V4": score})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         source = "akshare" if fetched_freshly else "database"
-        self._db.upsert_status(date, "v4", "normal", source, f"fetched_at={ts}")
+        self._status.record("v4", "normal", source, f"fetched_at={ts}")
 
         return {"v4": score, "status": "normal", "percentile": percentile}

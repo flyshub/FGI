@@ -25,7 +25,6 @@ from fgi.calculator.fgi import FGICalculator
 from fgi.collector.factory import setup_data_manager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.config.settings import DB_PATH
-from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
@@ -138,7 +137,6 @@ def main():
                 db.clear_table_range("daily_status", date_str, date_str)
 
                 result = calculator.run(date_str)
-                record_indicator_status(db, date_str, result.get("indicator_results", {}))
                 logger.info(
                     "  FGI %s: raw=%.1f final=%.1f health=%.0f",
                     date_str,
