@@ -2,8 +2,11 @@ name: FGI Daily Update
 
 on:
   schedule:
-    # 工作日 18:00 北京时间（10:00 UTC）触发一次
+    # 主跑：工作日 18:00 北京时间（10:00 UTC）
     - cron: '0 10 * * 1-5'
+    # 兜底：21:30 北京时间（13:30 UTC）。GitHub 免费 cron 经常延迟甚至整天不触发，
+    # 这一趟只在「当天还没算出来」时才真正执行，否则一步跳过。
+    - cron: '30 13 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
@@ -50,20 +53,32 @@ jobs:
             echo "target_date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if trading day
+      # 决定这一趟要不要真的算：
+      #   1. 周末直接跳过（精确交易日判断由 daily_run 内部完成）
+      #   2. 兜底 cron 只在当天还没有分数时执行，避免重复推送与重复提交
+      - name: Check whether to run
         id: check
         env:
           TARGET_DATE: ${{ steps.date.outputs.target_date }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
-          # 简单交易日判断：跳过周末（精确判断由 daily_run 内部完成）
+          set -euo pipefail
           DAY=$(date -d "$TARGET_DATE" +%u 2>/dev/null || date -j -u -f "%Y-%m-%d" "$TARGET_DATE" +%u 2>/dev/null)
-          if [ -z "$DAY" ]; then
-            echo "skip=false" >> $GITHUB_OUTPUT
-          elif [ "$DAY" -ge 6 ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
+
+          SKIP=false
+          if [ -n "$DAY" ] && [ "$DAY" -ge 6 ]; then
+            echo "Weekend — nothing to do."
+            SKIP=true
           fi
+
+          if [ "$SKIP" = "false" ] && [ "$EVENT_SCHEDULE" = "30 13 * * 1-5" ]; then
+            if python -m fgi.output.check_ran; then
+              echo "Fallback run: $TARGET_DATE already computed — skipping."
+              SKIP=true
+            fi
+          fi
+
+          echo "skip=$SKIP" >> $GITHUB_OUTPUT
 
       - name: Run FGI daily update (first pass, no push)
         id: run_fgi

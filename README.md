@@ -137,7 +137,7 @@ python scripts/recompute_v2.py        # 重算历史得分（可中断续算，�
 
 项目通过 GitHub Actions 每个交易日自动计算 FGI、推送 PushPlus、回写数据库、更新 Web 前端。
 
-- **触发**：交易日 18:00（北京时间）+ 手动 `workflow_dispatch`
+- **触发**：交易日 18:00（北京时间）+ 21:30 兜底（当天已算过则跳过）+ 手动 `workflow_dispatch`
 - **配置**：在 Settings → Secrets → Actions 添加以下 Secret（注意不带 `FGI_` 前缀——workflow 会映射为对应的环境变量）：
   - `PUSHPLUS_TOKEN` — 主推送地址（对应环境变量 `FGI_PUSHPLUS_TOKEN`）
   - `PUSHPLUS_FRIENDS` — 好友令牌（逗号分隔，可选；对应环境变量 `FGI_PUSHPLUS_FRIENDS`）
@@ -172,7 +172,7 @@ python scripts/recompute_v2.py        # 重算历史得分（可中断续算，�
 
 ### 数据更新
 
-与每日 FGI 计算在同一个 GitHub Actions workflow 中顺序执行——计算完成后自动导出 JSON → 提交 → Pages 部署。用户无感知，每日 18:00 后几分钟内页面自动刷新。
+与每日 FGI 计算在同一个 GitHub Actions workflow 中顺序执行——计算完成后自动导出 JSON → 提交 → Pages 部署。用户无感知，每日 18:00 后几分钟内页面自动刷新。GitHub 免费 cron 常延迟甚至漏跑，因此 21:30 还有一次兜底（`python -m fgi.output.check_ran` 判断当天是否已有分数，有则整趟跳过）。
 
 ### 本地预览
 
