@@ -1,7 +1,6 @@
-from datetime import datetime
-
 import pandas as pd
 
+from fgi.calculator.common import mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -77,8 +76,7 @@ class V4Calculator:
                 db_data = self._db.get_raw_data("v4_qvix", start_date, end_date)
 
         if db_data.empty:
-            self._status.record("v4", "missing", "akshare", "No QVIX data")
-            return {"v4": None, "status": "missing"}
+            return missing(self._status, "v4", "No QVIX data", "akshare")
 
         df = pd.DataFrame({"date": db_data["date"], "close": db_data["value"]})
         df["date"] = pd.to_datetime(df["date"])
@@ -87,20 +85,20 @@ class V4Calculator:
 
         today = df[df["date"] == pd.Timestamp(date)]
         if today.empty:
-            self._status.record("v4", "missing", "akshare", "No data for date")
-            return {"v4": None, "status": "missing"}
+            return missing(self._status, "v4", "No data for date", "akshare")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("v4", "missing", "akshare", "Insufficient data")
-            return {"v4": None, "status": "missing"}
+            return missing(self._status, "v4", "Insufficient data", "akshare")
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "v4_percentile", float(percentile))
-        self._db.upsert_score(date, {"V4": score})
-        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        source = "akshare" if fetched_freshly else "database"
-        self._status.record("v4", "normal", source, f"fetched_at={ts}")
+        save_score(self._db, date, "v4", score, {"v4_percentile": percentile})
+        mark_success(
+            self._status,
+            "v4",
+            "akshare" if fetched_freshly else "database",
+            fetched_freshly=True,
+        )
 
         return {"v4": score, "status": "normal", "percentile": percentile}

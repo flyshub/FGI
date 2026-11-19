@@ -1,7 +1,6 @@
-from datetime import datetime
-
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -44,13 +43,11 @@ class M2Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         result = self.fetch_data(start_date, end_date)
         if result.status != DataSourceStatus.HEALTHY:
-            self._status.record("m2", "missing", result.source or "", result.error or "")
-            return {"m2": None, "status": "missing"}
+            return missing(self._status, "m2", result.error or "", result.source or "")
 
         df = result.data
         df = self.calculate_sentiment_ratio(df)
@@ -58,21 +55,25 @@ class M2Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._status.record("m2", "missing", result.source or "", "No data for date")
-            return {"m2": None, "status": "missing"}
+            return missing(self._status, "m2", "No data for date", result.source or "")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("m2", "missing", result.source or "", "Insufficient data")
-            return {"m2": None, "status": "missing"}
+            return missing(self._status, "m2", "Insufficient data", result.source or "")
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "m2_up_num", float(today["up_num"].iloc[0]))
-        self._db.upsert_raw_data(date, "m2_down_num", float(today["down_num"].iloc[0]))
-        self._db.upsert_raw_data(date, "m2_percentile", percentile)
-        self._db.upsert_score(date, {"M2": score})
-        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._status.record("m2", "normal", result.source or "", f"fetched_at={ts}")
+        save_score(
+            self._db,
+            date,
+            "m2",
+            score,
+            {
+                "m2_up_num": today["up_num"].iloc[0],
+                "m2_down_num": today["down_num"].iloc[0],
+                "m2_percentile": percentile,
+            },
+        )
+        mark_success(self._status, "m2", result.source or "", fetched_freshly=True)
 
         return {"m2": score, "status": "normal", "percentile": percentile}

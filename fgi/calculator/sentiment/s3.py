@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -81,8 +80,7 @@ class S3Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         db_data = self._db.get_raw_data("s3_seal_fund", start_date, end_date)
 
@@ -113,8 +111,7 @@ class S3Calculator:
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date)
             if df is None:
-                self._status.record("s3", "missing", "database", "No data collected")
-                return {"s3": None, "status": "missing"}
+                return missing(self._status, "s3", "No data collected", "database")
         else:
             df = pd.DataFrame(
                 {
@@ -131,33 +128,29 @@ class S3Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._status.record("s3", "missing", "database", "No data for date")
-            return {"s3": None, "status": "missing"}
+            return missing(self._status, "s3", "No data for date", "database")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("s3", "missing", "database", "Insufficient data")
-            return {"s3": None, "status": "missing"}
+            return missing(self._status, "s3", "Insufficient data", "database")
 
         raw_value = today["zt_ratio"].iloc[0]
         if pd.isna(raw_value):
-            self._status.record("s3", "missing", "database", "Raw value is NaN")
-            return {"s3": None, "status": "missing"}
+            return missing(self._status, "s3", "Raw value is NaN", "database")
         if raw_value <= 1e-100:
             # S3 raw=0 (or denormalized float) is always a data-source outage,
             # never a genuine zero-limit-up day (audit: 0 such days in 8 years).
-            self._status.record("s3", "missing", "database", "Raw value is zero (data outage)")
-            return {"s3": None, "status": "missing"}
+            return missing(self._status, "s3", "Raw value is zero (data outage)", "database")
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "s3_zt_ratio", today["zt_ratio"].iloc[0])
-        self._db.upsert_raw_data(date, "s3_percentile", percentile)
-        self._db.upsert_score(date, {"S3": score})
-        if fetched_freshly:
-            ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            self._status.record("s3", "normal", "database", f"fetched_at={ts}")
-        else:
-            self._status.record("s3", "normal", None, None)
+        save_score(
+            self._db,
+            date,
+            "s3",
+            score,
+            {"s3_zt_ratio": today["zt_ratio"].iloc[0], "s3_percentile": percentile},
+        )
+        mark_success(self._status, "s3", "database", fetched_freshly)
 
         return {"s3": score, "status": "normal", "percentile": percentile}

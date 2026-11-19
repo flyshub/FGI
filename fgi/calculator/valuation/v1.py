@@ -1,8 +1,7 @@
-from datetime import datetime
-
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -55,18 +54,15 @@ class V1Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         pe_result = self.fetch_pe_data(start_date, end_date)
         if pe_result.status != DataSourceStatus.HEALTHY:
-            self._status.record("v1", "missing", pe_result.source, pe_result.error)
-            return {"v1": None, "status": "missing"}
+            return missing(self._status, "v1", pe_result.error, pe_result.source)
 
         bond_result = self.fetch_bond_yield(start_date, end_date)
         if bond_result.status != DataSourceStatus.HEALTHY:
-            self._status.record("v1", "missing", bond_result.source, bond_result.error)
-            return {"v1": None, "status": "missing"}
+            return missing(self._status, "v1", bond_result.error, bond_result.source)
 
         assert pe_result.data is not None and bond_result.data is not None  # mypy: HEALTHY guard
         df = self.calculate_erp(pe_result.data, bond_result.data)
@@ -106,19 +102,15 @@ class V1Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._status.record("v1", "missing", "akshare", "No data for date")
-            return {"v1": None, "status": "missing"}
+            return missing(self._status, "v1", "No data for date", "akshare")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("v1", "missing", "akshare", "Insufficient data")
-            return {"v1": None, "status": "missing"}
+            return missing(self._status, "v1", "Insufficient data", "akshare")
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "v1_percentile", percentile)
-        self._db.upsert_score(date, {"V1": score})
-        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._status.record("v1", "normal", "akshare", f"fetched_at={ts}")
+        save_score(self._db, date, "v1", score, {"v1_percentile": percentile})
+        mark_success(self._status, "v1", "akshare", fetched_freshly=True)
 
         return {"v1": score, "status": "normal", "percentile": percentile}

@@ -1,7 +1,6 @@
-from datetime import datetime
-
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -60,18 +59,15 @@ class F1Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         margin_result = self.fetch_margin_data(start_date, end_date)
         if margin_result.status != DataSourceStatus.HEALTHY:
-            self._status.record("f1", "missing", margin_result.source, margin_result.error)
-            return {"f1": None, "status": "missing"}
+            return missing(self._status, "f1", margin_result.error, margin_result.source)
 
         cap_result = self.fetch_market_cap(start_date, end_date)
         if cap_result.status != DataSourceStatus.HEALTHY:
-            self._status.record("f1", "missing", cap_result.source, cap_result.error)
-            return {"f1": None, "status": "missing"}
+            return missing(self._status, "f1", cap_result.error, cap_result.source)
 
         df = self.calculate_margin_ratio(margin_result.data, cap_result.data)
         for _, row in df.iterrows():
@@ -84,23 +80,27 @@ class F1Calculator:
         today = df[df["date"] == date]
         # T+1 延迟统一由 _apply_forward_fill 处理（不在 calculator 层 fallback）
         if today.empty:
-            self._status.record("f1", "missing", "akshare", "No data for date")
-            return {"f1": None, "status": "missing"}
+            return missing(self._status, "f1", "No data for date", "akshare")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("f1", "missing", "akshare", "Insufficient data")
-            return {"f1": None, "status": "missing"}
+            return missing(self._status, "f1", "Insufficient data", "akshare")
 
         score = self.calculate_score(percentile)
 
         # 写入原始数据（margin_balance/market_cap）支持 offline recompute 重构
         self._db.upsert_raw_data(date, "f1_margin_balance", today["margin_balance"].iloc[0])
-        self._db.upsert_raw_data(date, "f1_market_cap", today["market_cap"].iloc[0])
-        self._db.upsert_raw_data(date, "f1_margin_ratio", today["margin_ratio"].iloc[0])
-        self._db.upsert_raw_data(date, "f1_percentile", percentile)
-        self._db.upsert_score(date, {"F1": score})
-        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._status.record("f1", "normal", "akshare", f"fetched_at={ts}")
+        save_score(
+            self._db,
+            date,
+            "f1",
+            score,
+            {
+                "f1_market_cap": today["market_cap"].iloc[0],
+                "f1_margin_ratio": today["margin_ratio"].iloc[0],
+                "f1_percentile": percentile,
+            },
+        )
+        mark_success(self._status, "f1", "akshare", fetched_freshly=True)
 
         return {"f1": score, "status": "normal", "percentile": percentile}

@@ -1,8 +1,7 @@
-from datetime import datetime
-
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -73,8 +72,7 @@ class M4Calculator:
             lookback_days = self._window + self.ZSCORE_WINDOW + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
 
@@ -139,25 +137,23 @@ class M4Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._status.record("m4", "missing", "database", "No data for date")
-            return {"m4": None, "status": "missing"}
+            return missing(self._status, "m4", "No data for date", "database")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("m4", "missing", "database", "Insufficient data")
-            return {"m4": None, "status": "missing"}
+            return missing(self._status, "m4", "Insufficient data", "database")
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "m4_zscore", today["volume_zscore"].iloc[0])
-        self._db.upsert_raw_data(date, "m4_percentile", percentile)
-        self._db.upsert_score(date, {"M4": score})
+        save_score(
+            self._db,
+            date,
+            "m4",
+            score,
+            {"m4_zscore": today["volume_zscore"].iloc[0], "m4_percentile": percentile},
+        )
         if not is_degraded:
-            ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            if fetched_freshly:
-                self._status.record("m4", "normal", "database", f"fetched_at={ts}")
-            else:
-                self._status.record("m4", "normal", None, None)
+            mark_success(self._status, "m4", "database", fetched_freshly)
 
         return {
             "m4": score,

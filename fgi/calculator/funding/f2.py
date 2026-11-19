@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, missing
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -75,8 +76,7 @@ class F2Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         # First, try to get data from database
         db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
@@ -116,8 +116,7 @@ class F2Calculator:
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date, date)
             if df is None:
-                self._status.record("f2", "missing", "database", "No data collected")
-                return {"f2": None, "status": "missing"}
+                return missing(self._status, "f2", "No data collected", "database")
         else:
             df = pd.DataFrame(
                 {
@@ -136,14 +135,12 @@ class F2Calculator:
         # Forward-fill: find latest available date <= target date (weekly data may not have exact date)
         available = df[df["date"] <= date]
         if available.empty:
-            self._status.record("f2", "missing", "database", "No data for date")
-            return {"f2": None, "status": "missing"}
+            return missing(self._status, "f2", "No data for date", "database")
 
         today = available.iloc[[-1]]  # Latest available row
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("f2", "missing", "database", "Insufficient data")
-            return {"f2": None, "status": "missing"}
+            return missing(self._status, "f2", "Insufficient data", "database")
 
         score = self.calculate_score(percentile)
 

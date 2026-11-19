@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, missing
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import zscore
@@ -38,13 +39,11 @@ class V2Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         raw = self._db.get_raw_data("v1_erp", start_date, end_date)
         if raw.empty:
-            self._status.record("v2", "missing", "database", "No ERP data available")
-            return {"v2": None, "status": "missing"}
+            return missing(self._status, "v2", "No ERP data available", "database")
 
         erp_df = pd.DataFrame(
             {
@@ -58,13 +57,11 @@ class V2Calculator:
 
         today = erp_df[erp_df["date"] == date]
         if today.empty:
-            self._status.record("v2", "missing", "database", "No data for date")
-            return {"v2": None, "status": "missing"}
+            return missing(self._status, "v2", "No data for date", "database")
 
         score = today["score"].iloc[0]
         if pd.isna(score):
-            self._status.record("v2", "missing", "database", "Insufficient data")
-            return {"v2": None, "status": "missing"}
+            return missing(self._status, "v2", "Insufficient data", "database")
 
         self._db.upsert_raw_data(date, "v2_score", float(score))
         self._db.upsert_raw_data(date, "v2_sigmoid_fraction", float(score) / 100.0)

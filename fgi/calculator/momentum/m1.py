@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 import pandas as pd
 
+from fgi.calculator.common import lookback_start, mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -66,8 +65,7 @@ class M1Calculator:
             lookback_days = self._window + 60
 
         end_date = date
-        start_date = pd.Timestamp(date) - pd.Timedelta(days=lookback_days * 1.5)
-        start_date = start_date.strftime("%Y-%m-%d")
+        start_date = lookback_start(date, lookback_days)
 
         db_data = self._db.get_raw_data("m1_zt_count", start_date, end_date)
 
@@ -94,8 +92,7 @@ class M1Calculator:
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date, date)
             if df is None:
-                self._status.record("m1", "missing", "database", "No data collected")
-                return {"m1": None, "status": "missing"}
+                return missing(self._status, "m1", "No data collected", "database")
         else:
             df = pd.DataFrame(
                 {
@@ -112,28 +109,25 @@ class M1Calculator:
 
         today = df[df["date"] == date]
         if today.empty:
-            self._status.record("m1", "missing", "database", "No data for date")
-            return {"m1": None, "status": "missing"}
+            return missing(self._status, "m1", "No data for date", "database")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("m1", "missing", "database", "Insufficient data")
-            return {"m1": None, "status": "missing"}
+            return missing(self._status, "m1", "Insufficient data", "database")
 
         raw_value = today["zt_count"].iloc[0]
         if pd.isna(raw_value):
-            self._status.record("m1", "missing", "database", "Raw value is NaN")
-            return {"m1": None, "status": "missing"}
+            return missing(self._status, "m1", "Raw value is NaN", "database")
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "m1_zt_count", today["zt_count"].iloc[0])
-        self._db.upsert_raw_data(date, "m1_percentile", percentile)
-        self._db.upsert_score(date, {"M1": score})
-        if fetched_freshly:
-            ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            self._status.record("m1", "normal", "database", f"fetched_at={ts}")
-        else:
-            self._status.record("m1", "normal", None, None)
+        save_score(
+            self._db,
+            date,
+            "m1",
+            score,
+            {"m1_zt_count": today["zt_count"].iloc[0], "m1_percentile": percentile},
+        )
+        mark_success(self._status, "m1", "database", fetched_freshly)
 
         return {"m1": score, "status": "normal", "percentile": percentile}

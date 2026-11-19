@@ -1,7 +1,6 @@
-from datetime import datetime
-
 import pandas as pd
 
+from fgi.calculator.common import mark_success, missing, save_score
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
@@ -42,8 +41,7 @@ class F3Calculator:
 
         result = self._fetch_index(start_date, date)
         if result.status != DataSourceStatus.HEALTHY or result.data is None or result.data.empty:
-            self._status.record("f3", "missing", result.source, result.error or "No data")
-            return {"f3": None, "status": "missing"}
+            return missing(self._status, "f3", result.error or "No data", result.source)
 
         df = result.data.copy()
         df["price_change"] = df["close"].diff()
@@ -57,13 +55,11 @@ class F3Calculator:
 
         today = df[df["date"] == pd.Timestamp(date)]
         if today.empty:
-            self._status.record("f3", "missing", "proxy", "No data for date")
-            return {"f3": None, "status": "missing"}
+            return missing(self._status, "f3", "No data for date", "proxy")
 
         percentile = today["percentile"].iloc[0]
         if pd.isna(percentile):
-            self._status.record("f3", "missing", "proxy", "Insufficient data")
-            return {"f3": None, "status": "missing"}
+            return missing(self._status, "f3", "Insufficient data", "proxy")
 
         score = percentile * 100
 
@@ -78,9 +74,7 @@ class F3Calculator:
             self._db.upsert_raw_data(raw_date, "f3_proxy_close", float(last["close"]))
         if not pd.isna(last.get("volume")):
             self._db.upsert_raw_data(raw_date, "f3_proxy_volume", float(last["volume"]))
-        self._db.upsert_raw_data(date, "f3_percentile", percentile)
-        self._db.upsert_score(date, {"F3": score})
-        ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self._status.record("f3", "normal", "proxy", f"fetched_at={ts}")
+        save_score(self._db, date, "f3", score, {"f3_percentile": percentile})
+        mark_success(self._status, "f3", "proxy", fetched_freshly=True)
 
         return {"f3": score, "status": "normal", "percentile": percentile}
