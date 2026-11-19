@@ -7,7 +7,10 @@ from fgi.calculator.common import lookback_start, missing
 from fgi.calculator.status import StatusRecorder
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import zscore
+from fgi.indicators.registry import raw_key, raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("v2")
 
 
 class V2Calculator:
@@ -41,7 +44,7 @@ class V2Calculator:
         end_date = date
         start_date = lookback_start(date, lookback_days)
 
-        raw = self._db.get_raw_data("v1_erp", start_date, end_date)
+        raw = self._db.get_raw_data(raw_key("v1", "erp"), start_date, end_date)
         if raw.empty:
             return missing(self._status, "v2", "No ERP data available", "database")
 
@@ -63,8 +66,8 @@ class V2Calculator:
         if pd.isna(score):
             return missing(self._status, "v2", "Insufficient data", "database")
 
-        self._db.upsert_raw_data(date, "v2_score", float(score))
-        self._db.upsert_raw_data(date, "v2_sigmoid_fraction", float(score) / 100.0)
+        self._db.upsert_raw_data(date, K["score"], float(score))
+        self._db.upsert_raw_data(date, K["sigmoid_fraction"], float(score) / 100.0)
         self._db.upsert_score(date, {"V2": float(score)})
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self._status.record("v2", "normal", "database", f"calculated_at={ts}")

@@ -6,7 +6,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("f3")
 
 
 class F3Calculator:
@@ -71,10 +74,10 @@ class F3Calculator:
             else str(last["date"].strftime("%Y-%m-%d"))
         )
         if not pd.isna(last.get("close")):
-            self._db.upsert_raw_data(raw_date, "f3_proxy_close", float(last["close"]))
+            self._db.upsert_raw_data(raw_date, K["close"], float(last["close"]))
         if not pd.isna(last.get("volume")):
-            self._db.upsert_raw_data(raw_date, "f3_proxy_volume", float(last["volume"]))
-        save_score(self._db, date, "f3", score, {"f3_percentile": percentile})
+            self._db.upsert_raw_data(raw_date, K["volume"], float(last["volume"]))
+        save_score(self._db, date, "f3", score, {K["percentile"]: percentile})
         mark_success(self._status, "f3", "proxy", fetched_freshly=True)
 
         return {"f3": score, "status": "normal", "percentile": percentile}

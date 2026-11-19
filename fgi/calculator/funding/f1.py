@@ -6,7 +6,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("f1")
 
 
 class F1Calculator:
@@ -27,7 +30,7 @@ class F1Calculator:
         return self._data_manager.fetch("f1_margin", "fetch_margin_data", start_date, end_date)
 
     def fetch_market_cap(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch("f1_market_cap", "fetch_market_cap", start_date, end_date)
+        return self._data_manager.fetch(K["market_cap"], "fetch_market_cap", start_date, end_date)
 
     def calculate_margin_ratio(self, margin_df: pd.DataFrame, cap_df: pd.DataFrame) -> pd.DataFrame:
         margin_df = margin_df.copy()
@@ -72,7 +75,7 @@ class F1Calculator:
         df = self.calculate_margin_ratio(margin_result.data, cap_result.data)
         for _, row in df.iterrows():
             self._db.upsert_raw_data(
-                str(row["date"]), "f1_margin_balance", float(row["margin_balance"])
+                str(row["date"]), K["margin_balance"], float(row["margin_balance"])
             )
         self._db.commit()
         df = self.calculate_percentile(df)
@@ -89,16 +92,16 @@ class F1Calculator:
         score = self.calculate_score(percentile)
 
         # 写入原始数据（margin_balance/market_cap）支持 offline recompute 重构
-        self._db.upsert_raw_data(date, "f1_margin_balance", today["margin_balance"].iloc[0])
+        self._db.upsert_raw_data(date, K["margin_balance"], today["margin_balance"].iloc[0])
         save_score(
             self._db,
             date,
             "f1",
             score,
             {
-                "f1_market_cap": today["market_cap"].iloc[0],
-                "f1_margin_ratio": today["margin_ratio"].iloc[0],
-                "f1_percentile": percentile,
+                K["market_cap"]: today["market_cap"].iloc[0],
+                K["margin_ratio"]: today["margin_ratio"].iloc[0],
+                K["percentile"]: percentile,
             },
         )
         mark_success(self._status, "f1", "akshare", fetched_freshly=True)

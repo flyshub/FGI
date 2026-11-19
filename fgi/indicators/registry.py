@@ -78,6 +78,71 @@ INDICATOR_RAW_KEY: dict[str, str] = {
     "F3": "f3_percentile",
 }
 
+# 每个指标写进 raw_data 的全部键（含派生量）。这是「一次改名只改一处」的另一半：
+# 上表管读（offline 重构 / 回填 / 溯源），这里管写。
+# 约定：
+#   source     上游原始值的主键（必须与 METHOD_RAW / INDEX_DAILY_CHAINS 里的键一致）
+#   其余       该指标自己派生的量（percentile / zscore / ratio …）
+INDICATOR_RAW_KEYS: dict[str, dict[str, str]] = {
+    "m1": {"source": "m1_zt_count", "percentile": "m1_percentile"},
+    "m2": {
+        "up_num": "m2_up_num",
+        "down_num": "m2_down_num",
+        "percentile": "m2_percentile",
+    },
+    "m3": {
+        "close": "m3_close",
+        "deviation": "m3_deviation",
+        "percentile": "m3_percentile",
+    },
+    "m4": {
+        "volume": "m4_volume",
+        "zscore": "m4_zscore",
+        "percentile": "m4_percentile",
+    },
+    "s2": {"heat": "s2_heat", "zscore": "s2_zscore", "percentile": "s2_percentile"},
+    "s3": {
+        "seal_fund": "s3_seal_fund",
+        "ratio": "s3_zt_ratio",
+        "percentile": "s3_percentile",
+    },
+    "v1": {
+        "pe": "v1_pe_ttm",
+        "bond": "v1_bond_yield",
+        "erp": "v1_erp",
+        "percentile": "v1_percentile",
+    },
+    "v2": {"score": "v2_score", "sigmoid_fraction": "v2_sigmoid_fraction"},
+    "v4": {"qvix": "v4_qvix", "percentile": "v4_percentile"},
+    "f1": {
+        "margin_balance": "f1_margin_balance",
+        "market_cap": "f1_market_cap",
+        "margin_ratio": "f1_margin_ratio",
+        "percentile": "f1_percentile",
+    },
+    "f2": {"position": "f2_fund_position", "percentile": "f2_percentile"},
+    "f3": {
+        "close": "f3_proxy_close",
+        "volume": "f3_proxy_volume",
+        "percentile": "f3_percentile",
+    },
+}
+
+
+def raw_keys(indicator: str) -> dict[str, str]:
+    """该指标写入 raw_data 的键表；未登记即编程错误，早失败。"""
+    try:
+        return INDICATOR_RAW_KEYS[indicator.lower()]
+    except KeyError:
+        raise KeyError(f"indicator {indicator!r} has no raw-key table in registry") from None
+
+
+def raw_key(indicator: str, slot: str) -> str:
+    keys = raw_keys(indicator)
+    if slot not in keys:
+        raise KeyError(f"{indicator} has no raw-key slot {slot!r}; known: {sorted(keys)}")
+    return keys[slot]
+
 
 def raw_keys_for(method: str, chain: str | None = None) -> tuple[str, ...] | None:
     """该方法（或该链）落库用的 raw_key 列表；未声明返回 None。"""

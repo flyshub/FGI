@@ -6,7 +6,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("v4")
 
 
 class V4Calculator:
@@ -31,7 +34,7 @@ class V4Calculator:
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
         return self._data_manager.fetch(
-            "v4_qvix",
+            K["qvix"],
             "fetch_qvix",
             start_date,
             end_date,
@@ -56,7 +59,7 @@ class V4Calculator:
         )
 
         # DB-first：从 raw_data 读历史，缺失时从源拉取并持久化
-        db_data = self._db.get_raw_data("v4_qvix", start_date, end_date)
+        db_data = self._db.get_raw_data(K["qvix"], start_date, end_date)
         # today_in_db 必须同时满足 date 存在 AND value 非 NULL（且 QVIX 为正）。
         if not db_data.empty and date in db_data["date"].values:
             today_val = db_data[db_data["date"] == date]["value"].iloc[0]
@@ -71,9 +74,9 @@ class V4Calculator:
                 for _, row in result.data.iterrows():
                     d = row["date"]
                     d = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
-                    self._db.upsert_raw_data(d, "v4_qvix", float(row["close"]))
+                    self._db.upsert_raw_data(d, K["qvix"], float(row["close"]))
                 self._db.commit()
-                db_data = self._db.get_raw_data("v4_qvix", start_date, end_date)
+                db_data = self._db.get_raw_data(K["qvix"], start_date, end_date)
 
         if db_data.empty:
             return missing(self._status, "v4", "No QVIX data", "akshare")
@@ -93,7 +96,7 @@ class V4Calculator:
 
         score = self.calculate_score(percentile)
 
-        save_score(self._db, date, "v4", score, {"v4_percentile": percentile})
+        save_score(self._db, date, "v4", score, {K["percentile"]: percentile})
         mark_success(
             self._status,
             "v4",

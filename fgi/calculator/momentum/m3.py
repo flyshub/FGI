@@ -6,7 +6,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("m3")
 
 
 class M3Calculator:
@@ -64,13 +67,13 @@ class M3Calculator:
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "m3_deviation", today["deviation"].iloc[0])
+        self._db.upsert_raw_data(date, K["deviation"], today["deviation"].iloc[0])
         save_score(
             self._db,
             date,
             "m3",
             score,
-            {"m3_close": today["close"].iloc[0], "m3_percentile": percentile},
+            {K["close"]: today["close"].iloc[0], K["percentile"]: percentile},
         )
         mark_success(self._status, "m3", result.source, fetched_freshly=True)
 

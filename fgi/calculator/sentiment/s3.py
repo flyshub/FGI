@@ -8,7 +8,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("s3")
 
 
 class S3Calculator:
@@ -66,7 +69,7 @@ class S3Calculator:
                 seal_fund = row.get("seal_fund_sum")
                 if seal_fund is None or pd.isna(seal_fund):
                     continue
-                self._db.upsert_raw_data(str(row["date"]), "s3_seal_fund", float(seal_fund) / 1e8)
+                self._db.upsert_raw_data(str(row["date"]), K["seal_fund"], float(seal_fund) / 1e8)
             self._db.commit()
             df = result.data
             df["zt_ratio"] = pd.to_numeric(df["seal_fund_sum"], errors="coerce") / 1e8
@@ -82,7 +85,7 @@ class S3Calculator:
         end_date = date
         start_date = lookback_start(date, lookback_days)
 
-        db_data = self._db.get_raw_data("s3_seal_fund", start_date, end_date)
+        db_data = self._db.get_raw_data(K["seal_fund"], start_date, end_date)
 
         fetched_freshly = False
         # today_in_db 必须同时满足 date 存在 AND value 非 NULL。
@@ -103,10 +106,10 @@ class S3Calculator:
                     fetched_freshly = True
                     for _, row in valid.iterrows():
                         self._db.upsert_raw_data(
-                            str(row["date"]), "s3_seal_fund", float(row["seal_fund_sum"]) / 1e8
+                            str(row["date"]), K["seal_fund"], float(row["seal_fund_sum"]) / 1e8
                         )
                     self._db.commit()
-                    db_data = self._db.get_raw_data("s3_seal_fund", start_date, end_date)
+                    db_data = self._db.get_raw_data(K["seal_fund"], start_date, end_date)
 
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date)
@@ -149,7 +152,7 @@ class S3Calculator:
             date,
             "s3",
             score,
-            {"s3_zt_ratio": today["zt_ratio"].iloc[0], "s3_percentile": percentile},
+            {K["ratio"]: today["zt_ratio"].iloc[0], K["percentile"]: percentile},
         )
         mark_success(self._status, "s3", "database", fetched_freshly)
 

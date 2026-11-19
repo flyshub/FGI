@@ -8,7 +8,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("m1")
 
 
 class M1Calculator:
@@ -50,7 +53,7 @@ class M1Calculator:
         ):
             for _, row in result.data.iterrows():
                 self._db.upsert_raw_data(
-                    str(row["date"]), "m1_zt_count", float(row["limit_up_count"])
+                    str(row["date"]), K["source"], float(row["limit_up_count"])
                 )
             self._db.commit()
             df = result.data
@@ -67,7 +70,7 @@ class M1Calculator:
         end_date = date
         start_date = lookback_start(date, lookback_days)
 
-        db_data = self._db.get_raw_data("m1_zt_count", start_date, end_date)
+        db_data = self._db.get_raw_data(K["source"], start_date, end_date)
 
         fetched_freshly = False
         # today_in_db 必须同时满足 date 存在 AND value 非 NULL。
@@ -84,10 +87,10 @@ class M1Calculator:
                 fetched_freshly = True
                 for _, row in result.data.iterrows():
                     self._db.upsert_raw_data(
-                        str(row["date"]), "m1_zt_count", float(row["limit_up_count"])
+                        str(row["date"]), K["source"], float(row["limit_up_count"])
                     )
                 self._db.commit()
-                db_data = self._db.get_raw_data("m1_zt_count", start_date, end_date)
+                db_data = self._db.get_raw_data(K["source"], start_date, end_date)
 
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date, date)
@@ -126,7 +129,7 @@ class M1Calculator:
             date,
             "m1",
             score,
-            {"m1_zt_count": today["zt_count"].iloc[0], "m1_percentile": percentile},
+            {K["source"]: today["zt_count"].iloc[0], K["percentile"]: percentile},
         )
         mark_success(self._status, "m1", "database", fetched_freshly)
 

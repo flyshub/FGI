@@ -7,7 +7,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("m4")
 
 
 class M4Calculator:
@@ -53,12 +56,12 @@ class M4Calculator:
         for _, row in result.data.iterrows():
             d = row["date"]
             d = d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
-            self._db.upsert_raw_data(d, "m4_volume", float(row["volume"]))
+            self._db.upsert_raw_data(d, K["volume"], float(row["volume"]))
         self._db.commit()
 
     def _get_last_good_volume(self, date: str) -> float | None:
         """取最近一个非 NaN 的 m4_volume 值（用于 last-good-value 回退）。"""
-        df = self._db.get_raw_data("m4_volume", "2015-01-01", date)
+        df = self._db.get_raw_data(K["volume"], "2015-01-01", date)
         if df.empty:
             return None
         df = df[df["value"].notna()]
@@ -74,7 +77,7 @@ class M4Calculator:
         end_date = date
         start_date = lookback_start(date, lookback_days)
 
-        db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
+        db_data = self._db.get_raw_data(K["volume"], start_date, end_date)
 
         is_degraded = False
         fetched_freshly = False
@@ -91,7 +94,7 @@ class M4Calculator:
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
                 fetched_freshly = True
                 self._persist_source_data(result)
-                db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
+                db_data = self._db.get_raw_data(K["volume"], start_date, end_date)
 
         if db_data.empty:
             result = self.fetch_data(start_date, end_date)
@@ -105,7 +108,7 @@ class M4Calculator:
                 if fallback_val is not None:
                     # 不改写 raw_data（避免重复回退累积平坦段 → zscore 发散），
                     # 改从 DB 读取已有历史 + 在内存中追加当日回退值
-                    historical = self._db.get_raw_data("m4_volume", start_date, date)
+                    historical = self._db.get_raw_data(K["volume"], start_date, date)
                     new_row = pd.DataFrame({"date": [date], "value": [fallback_val]})
                     db_data = pd.concat([historical, new_row], ignore_index=True)
                     self._status.record(
@@ -124,7 +127,7 @@ class M4Calculator:
             else:
                 fetched_freshly = True
                 self._persist_source_data(result)
-                db_data = self._db.get_raw_data("m4_volume", start_date, end_date)
+                db_data = self._db.get_raw_data(K["volume"], start_date, end_date)
 
         df = pd.DataFrame(
             {
@@ -150,7 +153,7 @@ class M4Calculator:
             date,
             "m4",
             score,
-            {"m4_zscore": today["volume_zscore"].iloc[0], "m4_percentile": percentile},
+            {K["zscore"]: today["volume_zscore"].iloc[0], K["percentile"]: percentile},
         )
         if not is_degraded:
             mark_success(self._status, "m4", "database", fetched_freshly)

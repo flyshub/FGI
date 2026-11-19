@@ -3,6 +3,8 @@
 这些测试防的是「某处又写了一份映射，改名时漏改」。
 """
 
+from pathlib import Path
+
 import pytest
 
 from fgi.collector.chains import DEFAULT_CHAINS
@@ -10,8 +12,11 @@ from fgi.indicators.registry import (
     CHAIN_METHODS,
     INDEX_DAILY_CHAINS,
     INDICATOR_RAW_KEY,
+    INDICATOR_RAW_KEYS,
     METHOD_RAW,
+    raw_key,
     raw_key_for_field,
+    raw_keys,
     raw_keys_for,
 )
 
@@ -71,3 +76,52 @@ class TestBackfillDerivation:
     def test_unknown_field_returns_none(self):
         assert raw_key_for_field("fetch_pe_data", "不存在的列") is None
         assert raw_key_for_field("fetch_nonexistent", "close") is None
+
+
+class TestWriteSideKeys:
+    """P2-2 的写侧：calculator 不再写字面量 raw_key。"""
+
+    def test_every_indicator_has_a_write_table(self):
+        assert sorted(INDICATOR_RAW_KEYS) == sorted(i.lower() for i in ALL_INDICATORS)
+
+    def test_slots_are_unique_per_indicator(self):
+        for indicator, keys in INDICATOR_RAW_KEYS.items():
+            values = list(keys.values())
+            assert len(values) == len(set(values)), indicator
+
+    def test_source_keys_are_declared_in_read_table(self):
+        """写侧的 source 键必须能在离线重构表里找到，否则 offline 会漏字段。"""
+        readable = set()
+        for keys, _fields in METHOD_RAW.values():
+            readable.update(keys)
+        for keys, _fields in INDEX_DAILY_CHAINS.values():
+            readable.update(keys)
+
+        for indicator, table in INDICATOR_RAW_KEYS.items():
+            source = table.get("source")
+            if source is not None:
+                assert source in readable, f"{indicator}.source={source} 不在读侧映射里"
+
+    def test_unknown_indicator_or_slot_raises(self):
+        with pytest.raises(KeyError):
+            raw_keys("zzz")
+        with pytest.raises(KeyError):
+            raw_key("m1", "no_such_slot")
+
+    def test_calculator_sources_contain_no_raw_key_literals(self):
+        """改名只需改 registry：calculator 里不允许再出现裸 raw_key 字符串。"""
+
+        declared = {k for table in INDICATOR_RAW_KEYS.values() for k in table.values()}
+        offenders = []
+        for path in sorted(Path("fgi/calculator").rglob("*.py")):
+            if path.name in ("status.py", "common.py"):
+                continue
+            text = path.read_text()
+            for lineno, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                for key in declared:
+                    if f'"{key}"' in line:
+                        offenders.append(f"{path}:{lineno} {key}")
+        assert offenders == [], "raw_key 应来自 registry: " + "; ".join(offenders)

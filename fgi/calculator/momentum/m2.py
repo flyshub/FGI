@@ -6,7 +6,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("m2")
 
 
 class M2Calculator:
@@ -69,9 +72,9 @@ class M2Calculator:
             "m2",
             score,
             {
-                "m2_up_num": today["up_num"].iloc[0],
-                "m2_down_num": today["down_num"].iloc[0],
-                "m2_percentile": percentile,
+                K["up_num"]: today["up_num"].iloc[0],
+                K["down_num"]: today["down_num"].iloc[0],
+                K["percentile"]: percentile,
             },
         )
         mark_success(self._status, "m2", result.source or "", fetched_freshly=True)

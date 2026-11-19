@@ -10,7 +10,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("f2")
 
 
 class F2Calculator:
@@ -27,9 +30,7 @@ class F2Calculator:
         self._window = PERCENTILE_WINDOW_YEARS * 252
 
     def fetch_data(self, start_date: str, end_date: str) -> DataSourceResult:
-        return self._data_manager.fetch(
-            "f2_fund_position", "fetch_fund_position", start_date, end_date
-        )
+        return self._data_manager.fetch(K["position"], "fetch_fund_position", start_date, end_date)
 
     def calculate_percentile(self, df: pd.DataFrame) -> pd.DataFrame:
         if "fund_position" in df.columns:
@@ -61,9 +62,7 @@ class F2Calculator:
             and not result.data.empty
         ):
             for _, row in result.data.iterrows():
-                self._db.upsert_raw_data(
-                    str(row["date"]), "f2_fund_position", float(row["position"])
-                )
+                self._db.upsert_raw_data(str(row["date"]), K["position"], float(row["position"]))
             self._db.commit()
             df = result.data
             df["fund_position"] = df["position"]
@@ -79,7 +78,7 @@ class F2Calculator:
         start_date = lookback_start(date, lookback_days)
 
         # First, try to get data from database
-        db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
+        db_data = self._db.get_raw_data(K["position"], start_date, end_date)
 
         fetched_freshly = False
         # F2 是周频数据：today_in_db 不检查 today 是否存在，
@@ -108,10 +107,10 @@ class F2Calculator:
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
                 for _, row in result.data.iterrows():
                     self._db.upsert_raw_data(
-                        str(row["date"]), "f2_fund_position", float(row["position"])
+                        str(row["date"]), K["position"], float(row["position"])
                     )
                 self._db.commit()
-                db_data = self._db.get_raw_data("f2_fund_position", start_date, end_date)
+                db_data = self._db.get_raw_data(K["position"], start_date, end_date)
 
         if db_data.empty:
             df = self._try_fetch_from_source(start_date, end_date, date)
@@ -148,7 +147,7 @@ class F2Calculator:
         # 但 status 应诚实反映：最近 raw_data 距 target_date 超过 7 个日历日
         # 说明周频尚未更新，标 'degraded' 而非 'normal'，避免 health_score 失真。
         # 从 raw_data 取真实原始日期，而非 ffill 后的交易日日期（#88）
-        raw_latest = self._db.get_latest_raw_date("f2_fund_position", date)
+        raw_latest = self._db.get_latest_raw_date(K["position"], date)
         latest_raw_date = (
             pd.to_datetime(raw_latest) if raw_latest else pd.to_datetime(today["date"].iloc[0])
         )
@@ -157,7 +156,7 @@ class F2Calculator:
         is_degraded = staleness_days > 7
 
         # 不把"最近一周值"以当日日期写回 f2_fund_position，避免污染自身百分位窗口
-        self._db.upsert_raw_data(date, "f2_percentile", percentile)
+        self._db.upsert_raw_data(date, K["percentile"], percentile)
         self._db.upsert_score(date, {"F2": score})
         status = "degraded" if is_degraded else "normal"
         ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")

@@ -7,7 +7,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile, zscore
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("s2")
 
 
 class S2Calculator:
@@ -86,13 +89,13 @@ class S2Calculator:
 
         score = self.calculate_score(percentile)
 
-        self._db.upsert_raw_data(date, "s2_heat", today["heat"].iloc[0])
+        self._db.upsert_raw_data(date, K["heat"], today["heat"].iloc[0])
         save_score(
             self._db,
             date,
             "s2",
             score,
-            {"s2_zscore": today["heat_zscore"].iloc[0], "s2_percentile": percentile},
+            {K["zscore"]: today["heat_zscore"].iloc[0], K["percentile"]: percentile},
         )
         mark_success(self._status, "s2", result.source, fetched_freshly=True)
 

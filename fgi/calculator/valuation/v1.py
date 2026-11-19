@@ -7,7 +7,10 @@ from fgi.collector.base import DataSourceResult, DataSourceStatus
 from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import rolling_percentile
 from fgi.config.settings import PERCENTILE_WINDOW_YEARS
+from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
+
+K = raw_keys("v1")
 
 
 class V1Calculator:
@@ -75,7 +78,7 @@ class V1Calculator:
                 "value": pd.to_numeric(pe_data["滚动市盈率"], errors="coerce"),
             }
         ).dropna()
-        self._db.upsert_raw_data_batch(pe_history, "v1_pe_ttm")
+        self._db.upsert_raw_data_batch(pe_history, K["pe"])
 
         # 回写完整债券收益率历史序列，供 OFFLINE_RAW_MAPPING 使用
         bond_data = bond_result.data
@@ -86,7 +89,7 @@ class V1Calculator:
                 "value": pd.to_numeric(bond_data["yield_10y"], errors="coerce"),
             }
         ).dropna()
-        self._db.upsert_raw_data_batch(bond_history, "v1_bond_yield")
+        self._db.upsert_raw_data_batch(bond_history, K["bond"])
 
         # 回写完整 ERP 历史序列（幂等 upsert），供 V2 的 250 日 ΔERP 窗口使用
         erp_history = pd.DataFrame(
@@ -95,7 +98,7 @@ class V1Calculator:
                 "value": df["erp"],
             }
         ).dropna()
-        self._db.upsert_raw_data_batch(erp_history, "v1_erp")
+        self._db.upsert_raw_data_batch(erp_history, K["erp"])
         self._db.commit()
 
         df = self.calculate_percentile(df)
@@ -110,7 +113,7 @@ class V1Calculator:
 
         score = self.calculate_score(percentile)
 
-        save_score(self._db, date, "v1", score, {"v1_percentile": percentile})
+        save_score(self._db, date, "v1", score, {K["percentile"]: percentile})
         mark_success(self._status, "v1", "akshare", fetched_freshly=True)
 
         return {"v1": score, "status": "normal", "percentile": percentile}
