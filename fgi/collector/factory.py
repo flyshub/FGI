@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 
 from fgi.collector.akshare_source import AKShareSource
@@ -28,6 +27,15 @@ def _zzshare_available() -> bool:
     return True
 
 
+def _try_register(manager: DataSourceManager, name: str, factory) -> None:
+    """可选数据源构造失败不该拖垮整条管道，但必须留下痕迹——
+    否则这条源只是「消失了」，事后只能从某个指标长期 missing 反推。"""
+    try:
+        manager.register_source(name, factory())
+    except Exception as exc:
+        logger.warning("data source %r unavailable, continuing without it: %s", name, exc)
+
+
 def setup_data_manager(extra_fallbacks: bool = True) -> DataSourceManager:
     """按配置装配生产数据源。
 
@@ -40,14 +48,11 @@ def setup_data_manager(extra_fallbacks: bool = True) -> DataSourceManager:
     if AKSHARE_ENABLED:
         manager.register_source("akshare", AKShareSource())
     if MOOTDX_ENABLED:
-        with contextlib.suppress(Exception):
-            manager.register_source("mootdx", MootdxSource())
+        _try_register(manager, "mootdx", MootdxSource)
     if TENCENT_ENABLED:
-        with contextlib.suppress(Exception):
-            manager.register_source("tencent", TencentSource())
+        _try_register(manager, "tencent", TencentSource)
     if _zzshare_available():
-        with contextlib.suppress(Exception):
-            manager.register_source("zzshare", ZZShareSource())
+        _try_register(manager, "zzshare", ZZShareSource)
 
     extra = None
     if extra_fallbacks:

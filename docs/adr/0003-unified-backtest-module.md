@@ -21,7 +21,9 @@
 
 具体措施：
 1. 在 `signal_report.py` 中新增 Rank IC 分析、策略模拟（DCA、极端择时）、分层回测
-2. `backtest.py` 顶部加 `NotImplementedError` 标记废弃
+2. `backtest.py` 顶部加 `NotImplementedError` 标记废弃（**2026-11-19 更新**：
+   该模块已整体删除——一个 import 即抛错的空壳只会让 `import fgi.output.backtest`
+   看起来像 bug；`signal_report` 现在是回测的唯一入口）
 3. `decision_matrix.py` 保持不变（它属于输出/解读层，不参与回测）
 
 ## 理由

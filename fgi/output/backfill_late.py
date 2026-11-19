@@ -151,7 +151,9 @@ def main():
 
     # Step 4: Export web data
     logger.info("Re-exporting web data...")
-    os.chdir(Path(__file__).resolve().parent.parent)
+    # 本文件在 fgi/output/ 下：parents[2] 才是仓库根（web_export 的默认输出目录
+    # docs/data 是相对 cwd 的，指错就会写到 fgi/docs/data）
+    os.chdir(Path(__file__).resolve().parents[2])
     from fgi.output.web_export import main as export_main
 
     try:

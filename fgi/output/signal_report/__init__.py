@@ -45,7 +45,7 @@ __all__ = [
     "_render_dca_section",
     "_render_ic_section",
     "_render_layer_section",
-    # 以下两个下划线函数被 scripts/export_fgi_web_data.py 直接使用
+    # 以下两个下划线函数被 fgi/output/web_export.py 直接使用
     "_find_closest_prior_fgi",
     "_get_forward_return",
     "assign_zone",
