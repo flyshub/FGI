@@ -3,13 +3,11 @@ from pathlib import Path
 
 import pytest
 
+from fgi.collector.factory import setup_data_manager
 from fgi.output.backfill import (
     backfill_indicator,
     batch_dates,
     compute_fgi_daily,
-    get_date_range,
-    is_trading_day,
-    setup_data_manager,
 )
 from fgi.storage.database import Database
 
@@ -52,22 +50,8 @@ def mock_calculator():
 
 
 class TestBackfillUtilities:
-    def test_is_trading_day(self):
-        assert is_trading_day("2024-01-01")
-        assert is_trading_day("2024-01-02")
-        assert is_trading_day("2024-01-03")
-        assert is_trading_day("2024-01-04")
-        assert is_trading_day("2024-01-05")
-        assert not is_trading_day("2024-01-06")
-
-    def test_get_date_range(self):
-        dates = get_date_range("2024-01-01", "2024-01-10")
-        assert len(dates) == 8
-        assert "2024-01-01" in dates
-        assert "2024-01-10" in dates
-        assert "2024-01-06" not in dates
-        assert "2024-01-07" not in dates
-
+    # 旧的 weekday 交易日判断已移除：backfill 与 daily_run 现在都走
+    # resolve_trading_days（真实日历 → raw_data 已有日期 → 工作日）
     def test_batch_dates(self):
         dates = ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
         batches = batch_dates(dates, 2)

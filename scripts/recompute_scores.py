@@ -17,9 +17,9 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fgi.calculator.fgi import FGICalculator
+from fgi.collector.factory import setup_data_manager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.common.utils import calculate_health_score
-from fgi.output.backfill import setup_data_manager
 from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
@@ -55,7 +55,7 @@ def main(start="2015-01-01", end=None, include_today=False, resume=False):
             dates = resolve_trading_days(start, end, db=db)
         print(f"Trading days to process: {len(dates)}", flush=True)
 
-        dm = setup_data_manager()
+        dm = setup_data_manager(extra_fallbacks=False)
         dm.set_db(db)  # 注入 DB 用于 offline 模式从 raw_data 重构 DataFrame
         calc = FGICalculator(dm, db)
 

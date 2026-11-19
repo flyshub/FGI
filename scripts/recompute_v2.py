@@ -33,9 +33,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ["FGI_OFFLINE"] = "1"
 
 from fgi.calculator.fgi import FGICalculator
+from fgi.collector.factory import setup_data_manager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.common.utils import calculate_health_score
-from fgi.output.backfill import setup_data_manager
 from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 
@@ -115,7 +115,7 @@ def main(
         print(f"Trading days to process: {total}", flush=True)
         write_heartbeat(f"Processing {total} days")
 
-        dm = setup_data_manager()
+        dm = setup_data_manager(extra_fallbacks=False)
         dm.set_db(db)
         calc = FGICalculator(dm, db)
 

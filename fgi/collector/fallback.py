@@ -11,6 +11,11 @@ if TYPE_CHECKING:
     from fgi.storage.database import Database
 
 from fgi.collector.base import DataSource, DataSourceResult, DataSourceStatus
+from fgi.indicators.registry import (
+    CHAIN_METHODS,
+    INDEX_DAILY_CHAINS,
+    METHOD_RAW,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,52 +23,6 @@ logger = logging.getLogger(__name__)
 COOLDOWN = 300  # 失败后冷却秒数
 MAX_FAILURES = 5  # 连续失败达到此次数进入长禁用
 LONG_COOLDOWN = 3600  # 长禁用秒数
-
-
-# FGI_OFFLINE 模式下从 raw_data 重构 DataFrame 的映射表。
-# 每个 method → (raw_key(s), 重构字段名(s))
-# 单字段: 直接从 value 列映射
-# 多字段: 从多个 raw_key 拼接，按 date 对齐
-# 未列入的 method 在 offline 模式下保持原 FAILED 行为。
-OFFLINE_RAW_MAPPING: dict[str, tuple] = {
-    "fetch_margin_data": (("f1_margin_balance",), ("融资余额",)),
-    "fetch_market_cap": (("f1_market_cap",), ("market_cap",)),
-    "fetch_fund_position": (("f2_fund_position",), ("position",)),
-    "fetch_market_hot_sentiment": (("s2_heat",), ("p_close",)),
-    "fetch_zt_daily_summary": (
-        ("m1_zt_count", "s3_seal_fund"),
-        ("limit_up_count", "seal_fund_sum"),
-    ),
-    "fetch_pe_data": (("v1_pe_ttm",), ("滚动市盈率",)),
-    "fetch_pb_data": (("v1_pb",), ("市净率",)),
-    "fetch_bond_yield": (("v1_bond_yield",), ("yield_10y",)),
-    "fetch_cyb_daily": (("m4_volume",), ("volume",)),
-    "fetch_open_sentiment": (("m2_up_num", "m2_down_num"), ("up_num", "down_num")),
-    "fetch_qvix": (("v4_qvix",), ("close",)),
-}
-
-# fetch_index_daily 被 m3/v2/f3 共用，按 indicator 名分流到不同的 raw_key
-INDEX_DAILY_CHAINS: dict[str, tuple] = {
-    "m3_index": (("m3_close",), ("close",)),
-    "f3_index": (("f3_proxy_close", "f3_proxy_volume"), ("close", "volume")),
-}
-
-# Indicator → raw_key 单一来源（用于 forward-fill 溯源到 raw_data 真实日期）。
-# 必须与 OFFLINE_RAW_MAPPING / INDEX_DAILY_CHAINS 的 raw_key 保持一致 — 改 raw_key 时同步。
-INDICATOR_RAW_KEY: dict[str, str] = {
-    "M1": "m1_zt_count",
-    "M2": "m2_up_num",
-    "M3": "m3_close",
-    "M4": "m4_volume",
-    "S2": "s2_heat",
-    "S3": "s3_seal_fund",
-    "V1": "v1_pe_ttm",
-    "V2": "v1_erp",
-    "V4": "v4_qvix",
-    "F1": "f1_margin_ratio",
-    "F2": "f2_fund_position",
-    "F3": "f3_percentile",
-}
 
 
 class FallbackChain:
@@ -153,8 +112,34 @@ class DataSourceManager:
     def has_source(self, name: str) -> bool:
         return name in self._sources
 
+    def can_serve(self, name: str, method: str | None) -> bool:
+        """该数据源是否实现了指定取数方法（method 为 None 时不作要求）。"""
+        source = self._sources.get(name)
+        if source is None:
+            return False
+        return method is None or callable(getattr(source, method, None))
+
     def configure_chain(self, indicator: str, source_names: list[str]):
-        sources = [self._sources[name] for name in source_names if name in self._sources]
+        """装配一条链，并在配置期剔除「声明了但根本不能服务该链」的数据源。
+
+        此前这类组合会被静默接受，直到运行时才在 FallbackChain 里被剔除——
+        等于你写了一个兜底、以为它在工作，其实从来没生效（P2-5）。
+        """
+        method = CHAIN_METHODS.get(indicator)
+        sources = []
+        for name in source_names:
+            source = self._sources.get(name)
+            if source is None:
+                continue
+            if method and not callable(getattr(source, method, None)):
+                logger.warning(
+                    "%s cannot serve chain %s (no %s) — dropped from configuration",
+                    name,
+                    indicator,
+                    method,
+                )
+                continue
+            sources.append(source)
         self._chains[indicator] = FallbackChain(sources)
 
     def _offline_reconstruct(
@@ -163,7 +148,7 @@ class DataSourceManager:
         """从 raw_data 重构 DataFrame；找不到映射或无数据返回 None。"""
         if self._db is None:
             return None
-        mapping = OFFLINE_RAW_MAPPING.get(method)
+        mapping = METHOD_RAW.get(method)
         if mapping is None and method == "fetch_index_daily":
             mapping = INDEX_DAILY_CHAINS.get(indicator)
         if mapping is None:

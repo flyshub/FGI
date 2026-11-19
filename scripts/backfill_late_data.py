@@ -24,9 +24,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fgi.calculator.fgi import FGICalculator
+from fgi.collector.factory import setup_data_manager
 from fgi.collector.trading_calendar import resolve_trading_days
 from fgi.config.settings import DB_PATH
-from fgi.output.daily_run import setup_data_manager
 from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
 

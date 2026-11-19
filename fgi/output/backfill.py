@@ -1,32 +1,13 @@
-import contextlib
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from fgi.collector.akshare_source import AKShareSource
 from fgi.collector.base import DataSourceStatus
-from fgi.collector.chains import configure_manager
+from fgi.collector.factory import setup_data_manager
 from fgi.collector.fallback import DataSourceManager
 from fgi.collector.trading_calendar import resolve_trading_days
-from fgi.collector.zzshare_source import ZZShareSource
 from fgi.config.settings import LOOKBACK_START
+from fgi.indicators.registry import raw_key_for_field
 from fgi.output.status import record_indicator_status
 from fgi.storage.database import Database
-
-
-def is_trading_day(date_str: str) -> bool:
-    dt = datetime.strptime(date_str, "%Y-%m-%d")
-    return dt.weekday() < 5
-
-
-def get_date_range(start_date: str, end_date: str) -> list[str]:
-    start = datetime.strptime(start_date, "%Y-%m-%d")
-    end = datetime.strptime(end_date, "%Y-%m-%d")
-    dates = []
-    current = start
-    while current <= end:
-        if is_trading_day(current.strftime("%Y-%m-%d")):
-            dates.append(current.strftime("%Y-%m-%d"))
-        current += timedelta(days=1)
-    return dates
 
 
 def batch_dates(dates: list[str], batch_size: int) -> list[list[str]]:
@@ -36,17 +17,6 @@ def batch_dates(dates: list[str], batch_size: int) -> list[list[str]]:
 def backfill_indicator(db: Database, calculator, indicator: str, dates: list[str]):
     for date in dates:
         calculator.run(date)
-
-
-def setup_data_manager() -> DataSourceManager:
-    """生产回填只用真实数据源；任何失败记 missing，绝不写 mock 假数据。
-    MockSource 仅供测试使用。"""
-    manager = DataSourceManager()
-    manager.register_source("akshare", AKShareSource())
-    with contextlib.suppress(Exception):
-        manager.register_source("zzshare", ZZShareSource())
-    configure_manager(manager)
-    return manager
 
 
 def store_indicator_data(db, indicator_key, df, value_col, date_col="date"):
@@ -80,7 +50,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             ("sh000001", full_start, today),
             "close",
             "date",
-            "m3_close",
         ),
         (
             "M4 创业板",
@@ -89,7 +58,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             (full_start, today),
             "volume",
             "date",
-            "m4_volume",
         ),
         (
             "V1 PE-TTM",
@@ -98,7 +66,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             ("2014-01-01", today),
             "滚动市盈率",
             "date",
-            "v1_pe_ttm",
         ),
         (
             "V1 国债收益",
@@ -107,7 +74,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             ("2014-01-01", today),
             "yield_10y",
             "date",
-            "v1_bond_yield",
         ),
         (
             "F1 融资余额",
@@ -116,7 +82,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             (full_start, today),
             "融资余额",
             "date",
-            "f1_margin_balance",
         ),
         (
             "F1 总市值",
@@ -125,7 +90,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             (full_start, today),
             "market_cap",
             "date",
-            "f1_market_cap",
         ),
         (
             "F2 基金仓位",
@@ -134,7 +98,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             (full_start, today),
             "position",
             "date",
-            "f2_fund_position",
         ),
         (
             "F3 上证代理",
@@ -143,7 +106,6 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             ("sh000001", full_start, today),
             "close",
             "date",
-            "f3_proxy_close",
         ),
         (
             "F3 成交额",
@@ -152,12 +114,16 @@ def backfill_raw_all(db, data_manager: DataSourceManager):
             ("sh000001", full_start, today),
             "volume",
             "date",
-            "f3_proxy_volume",
         ),
     ]
 
-    for label, chain, method, args, val_col, date_col, key in indicators_config:
+    for label, chain, method, args, val_col, date_col in indicators_config:
         print(f"  [{label}] {chain}...", end=" ")
+        # raw_key 只从 fgi/indicators/registry.py 取，不再在这里写死第二份
+        key = raw_key_for_field(method, val_col, chain)
+        if key is None:
+            print(f"SKIP（registry 未声明 {chain}/{method}[{val_col}] 的 raw_key）")
+            continue
         try:
             result = data_manager.fetch(chain, method, *args)
             if result.status != DataSourceStatus.HEALTHY or result.data is None:
@@ -246,7 +212,7 @@ def compute_fgi_daily(calculator, db, dates: list[str]):
 
 
 def backfill(start_date: str | None = None, end_date: str | None = None):
-    data_manager = setup_data_manager()
+    data_manager = setup_data_manager(extra_fallbacks=False)
     db = Database()
     db.connect()
     db.init_schema()

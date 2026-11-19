@@ -220,3 +220,27 @@ class TestFailureVisibility:
         assert "Stale data: 1 indicators" in out
         assert "M4" in out
         assert "M1" not in out.split("Stale data:")[1]
+
+
+class TestSharedFactory:
+    """P2-7：daily_run 与 backfill 必须共用同一份数据源装配。"""
+
+    def test_both_entrypoints_use_collector_factory(self):
+        import fgi.collector.factory as factory
+        import fgi.output.backfill as backfill
+
+        assert daily_run.setup_data_manager is factory.setup_data_manager
+        assert backfill.setup_data_manager is factory.setup_data_manager
+
+    def test_backfill_opts_out_of_extra_fallbacks(self):
+        """历史回填只信 akshare：mootdx/tencent 窗口只有几百天。"""
+        import inspect
+
+        import fgi.collector.factory as factory
+
+        sig = inspect.signature(factory.setup_data_manager)
+        assert sig.parameters["extra_fallbacks"].default is True
+        source = inspect.getsource(
+            __import__("fgi.output.backfill", fromlist=["backfill"]).backfill
+        )
+        assert "extra_fallbacks=False" in source

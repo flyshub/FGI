@@ -16,8 +16,8 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fgi.calculator.fgi import FGICalculator
+from fgi.collector.factory import setup_data_manager
 from fgi.config.settings import DB_PATH
-from fgi.output.daily_run import setup_data_manager
 from fgi.output.pushplus import send_fgi_report
 from fgi.storage.database import Database
 

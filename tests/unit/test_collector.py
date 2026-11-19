@@ -141,3 +141,105 @@ class TestDataSourceManager:
         manager.register_source("s1", MockSource("s1", healthy=True))
         assert manager.has_source("s1") is True
         assert manager.has_source("s2") is False
+
+
+class TestChainCapabilityValidation:
+    """P2-5：写进链里但根本不能服务该链的数据源，必须在配置期就暴露。"""
+
+    def test_incapable_source_is_dropped_with_warning(self, caplog):
+        class OnlyDaily(DataSource):
+            def fetch_daily(self, symbol, start_date, end_date):
+                return DataSourceResult(None, DataSourceStatus.FAILED, "only")
+
+            def fetch_index_daily(self, symbol, start_date, end_date):
+                return self.fetch_daily(symbol, start_date, end_date)
+
+            def health_check(self):
+                return DataSourceStatus.HEALTHY
+
+        manager = DataSourceManager()
+        manager.register_source("only_daily", OnlyDaily())
+        for a in ("alpha", "beta"):
+            manager.register_source(a, MockSource(a))
+
+        with caplog.at_level("WARNING"):
+            manager.configure_chain("m1_zt_stats", ["only_daily", "alpha"])
+
+        # only_daily 没有 fetch_zt_daily_summary → 不进链
+        chain = manager._chains["m1_zt_stats"]
+        assert [type(s).__name__ for s in chain._sources] == ["MockSource"]
+        assert any("cannot serve chain m1_zt_stats" in r.getMessage() for r in caplog.records)
+
+    def test_capable_sources_are_kept(self):
+        manager = DataSourceManager()
+        manager.register_source("mock", MockSource("mock"))
+        manager.configure_chain("m1_zt_stats", ["mock"])
+        assert len(manager._chains["m1_zt_stats"]._sources) == 1
+
+    def test_unknown_chain_has_no_method_requirement(self):
+        manager = DataSourceManager()
+        manager.register_source("mock", MockSource("mock"))
+        manager.configure_chain("ad_hoc_chain", ["mock"])
+        assert len(manager._chains["ad_hoc_chain"]._sources) == 1
+
+
+class TestConfigureManager:
+    class _IndexOnly(DataSource):
+        """只实现指数日线——mootdx/tencent 的真实能力形状。"""
+
+        def fetch_daily(self, symbol, start_date, end_date):
+            return DataSourceResult(None, DataSourceStatus.FAILED, "index_only")
+
+        def fetch_index_daily(self, symbol, start_date, end_date):
+            return self.fetch_daily(symbol, start_date, end_date)
+
+        def health_check(self):
+            return DataSourceStatus.HEALTHY
+
+    def _manager(self):
+        manager = DataSourceManager()
+        manager.register_source("akshare", MockSource("akshare"))
+        manager.register_source("index_only", self._IndexOnly())
+        return manager
+
+    def test_extra_fallbacks_only_land_where_supported(self):
+        """mootdx/tencent 过去被追加到全部 14 条链，其中 12 条是死配置。"""
+        from fgi.collector.chains import configure_manager
+
+        manager = self._manager()
+        configure_manager(manager, extra_fallbacks=["index_only"])
+
+        indexed = [name for name, c in manager._chains.items() if len(c._sources) > 1]
+        assert sorted(indexed) == ["f3_index", "m3_index"]
+
+    def test_warns_when_primary_source_cannot_serve(self, caplog):
+        from fgi.collector.chains import configure_manager
+
+        manager = DataSourceManager()
+        manager.register_source("akshare", MockSource("akshare"))
+
+        class NoZt(DataSource):
+            def fetch_daily(self, symbol, start_date, end_date):
+                return DataSourceResult(None, DataSourceStatus.FAILED, "nozt")
+
+            def fetch_index_daily(self, symbol, start_date, end_date):
+                return self.fetch_daily(symbol, start_date, end_date)
+
+            def health_check(self):
+                return DataSourceStatus.HEALTHY
+
+        manager.register_source("zzshare", NoZt())
+        # 人为把 zzshare 写进 m1 链（历史上的死配置）
+        import fgi.collector.chains as chains_module
+
+        original = chains_module.DEFAULT_CHAINS["m1_zt_stats"]
+        chains_module.DEFAULT_CHAINS["m1_zt_stats"] = ["zzshare", "akshare"]
+        try:
+            with caplog.at_level("WARNING"):
+                configure_manager(manager)
+        finally:
+            chains_module.DEFAULT_CHAINS["m1_zt_stats"] = original
+
+        assert any(
+            "m1_zt_stats" in r.getMessage() and "zzshare" in r.getMessage() for r in caplog.records
+        )

@@ -8,31 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 from fgi.calculator.fgi import FGICalculator
-from fgi.collector.akshare_source import AKShareSource
-from fgi.collector.chains import configure_manager
-from fgi.collector.fallback import DataSourceManager
-from fgi.collector.mootdx_source import MootdxSource
-from fgi.collector.tencent_source import TencentSource
+from fgi.collector.factory import setup_data_manager
 from fgi.collector.trading_calendar import TradingCalendar
-from fgi.collector.zzshare_source import ZZShareSource
-from fgi.config.settings import (
-    AKSHARE_ENABLED,
-    DB_PATH,
-    MOOTDX_ENABLED,
-    TENCENT_ENABLED,
-)
-from fgi.storage.database import Database
-
-try:
-    import zzshare  # noqa: F401
-
-    ZZSHARE_ENABLED = True
-except ImportError:
-    ZZSHARE_ENABLED = False
+from fgi.config.settings import DB_PATH
 from fgi.output.alert import Alert
 from fgi.output.decision_matrix import compute_decision_matrix
 from fgi.output.pushplus import send_fgi_report
 from fgi.output.status import record_indicator_status
+from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -59,29 +42,6 @@ def is_trading_day(date_str: str, trading_days=None) -> bool:
             "refusing to guess weekdays as trading days"
         )
     return date_str in set(trading_days)
-
-
-def setup_data_manager() -> DataSourceManager:
-    manager = DataSourceManager()
-
-    if AKSHARE_ENABLED:
-        manager.register_source("akshare", AKShareSource())
-    if MOOTDX_ENABLED:
-        manager.register_source("mootdx", MootdxSource())
-    if TENCENT_ENABLED:
-        manager.register_source("tencent", TencentSource())
-    if ZZSHARE_ENABLED:
-        manager.register_source("zzshare", ZZShareSource())
-
-    # mootdx/tencent 作为兜底追加；不支持的方法会被 FallbackChain 安全剔除
-    extra = []
-    if MOOTDX_ENABLED:
-        extra.append("mootdx")
-    if TENCENT_ENABLED:
-        extra.append("tencent")
-    configure_manager(manager, extra_fallbacks=extra or None)
-
-    return manager
 
 
 def main():

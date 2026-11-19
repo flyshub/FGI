@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from fgi.collector.fallback import INDICATOR_RAW_KEY, DataSourceManager
+from fgi.collector.fallback import DataSourceManager
 from fgi.common.utils import (
     adjust_fgi_with_mad_pct,
     apply_consistency_adjustment,
@@ -15,6 +15,7 @@ from fgi.common.utils import (
     rolling_percentile,
 )
 from fgi.config.settings import MISSING_DAY_LIMIT
+from fgi.indicators.registry import INDICATOR_RAW_KEY
 from fgi.storage.database import Database
 
 logger = logging.getLogger(__name__)
