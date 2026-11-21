@@ -79,8 +79,10 @@ class F3Calculator:
                 self._persist_source_data(result)
                 history = self._load_history(start_date, date)
 
-        # 历史不足一个窗口（新部署 / DB 恢复不完整）：整窗重取。
-        # 否则 rolling_percentile 因行数 < 252 恒为 NaN，指标会永久 missing。
+        # 历史不足一个窗口（新部署 / DB 恢复不完整）：整窗重取补齐。
+        # 不足 252 行时 rolling_percentile 恒为 NaN（指标 missing）；252~1259 行
+        # 虽能出分但窗口被截短，会偏 0.9~1.5 分。数据源本身只有 1211 根时补不满，
+        # 所以下面把实际窗口长度记进 status，别让截断静默发生。
         if len(history) < self._window:
             result = self._fetch_index(start_date, date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
@@ -111,6 +113,9 @@ class F3Calculator:
         score = percentile * 100
 
         save_score(self._db, date, "f3", score, {K["percentile"]: percentile})
-        mark_success(self._status, "f3", "database", fetched_freshly)
+        note = None
+        if len(df) < self._window:
+            note = f"short history: {len(df)}/{self._window} rows"
+        mark_success(self._status, "f3", "database", fetched_freshly, extra_note=note)
 
         return {"f3": score, "status": "normal", "percentile": percentile}

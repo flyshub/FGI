@@ -84,8 +84,10 @@ class M3Calculator:
                 self._persist_source_data(result)
                 db_data = self._db.get_raw_data(K["close"], start_date, end_date)
 
-        # 历史不足一个窗口（新部署 / DB 恢复不完整）：整窗重取。
-        # 否则 rolling_percentile 因行数 < 252 恒为 NaN，指标会永久 missing。
+        # 历史不足一个窗口（新部署 / DB 恢复不完整）：整窗重取补齐。
+        # 不足 252 行时 rolling_percentile 恒为 NaN（指标 missing）；252~1259 行
+        # 虽能出分但窗口被截短，会偏 0.9~1.5 分。数据源本身只有 1211 根时补不满，
+        # 所以下面把实际窗口长度记进 status，别让截断静默发生。
         if len(db_data) < self._window:
             result = self.fetch_data(start_date, end_date)
             if result.status == DataSourceStatus.HEALTHY and result.data is not None:
@@ -118,6 +120,9 @@ class M3Calculator:
             score,
             {K["percentile"]: percentile},
         )
-        mark_success(self._status, "m3", "database", fetched_freshly)
+        note = None
+        if len(df) < self._window:
+            note = f"short history: {len(df)}/{self._window} rows"
+        mark_success(self._status, "m3", "database", fetched_freshly, extra_note=note)
 
         return {"m3": score, "status": "normal", "percentile": percentile}

@@ -46,12 +46,23 @@
 4. **v1 / v2 / s2 / v4 / f1 / f2 不接入**：无对应端点（估值仅最新快照无历史、无国债收益率、无两融、无 QVIX、无股吧热度）。
 5. **backfill 不启用 Fuyao**：回填历史必须走 akshare，Fuyao 窗口太短（沿用 `extra_fallbacks=False` 的既有语义）。
 
+## 与 ADR-0004 的关系
+
+ADR-0004 规定「数据源口径变更时必须回填历史 `raw_data`，不允许新旧口径混合」。本决策**不构成口径变更**，因此不回填：
+
+- **口径未变**：m3 仍是 `(close − MA60) / MA60`，f3 仍是 `price_change × volume`，成交量单位仍是「股」。
+- **数值可交换**：2026-11-19 实测 close / volume 相对误差 1.2e-6，远小于百分位分辨率。
+- **历史未被替换**：DB-first 让历史 `raw_data` 保持原样，Fuyao 只写最近 30 天。
+- **实测残差量级不同**：M3 +0.008、F3 −0.159 分，来自库内序列与 akshare 实时序列的取值差异；ADR-0004 处理的是「分母/字段/单位变了」这类结构性变更（当时是 +2.57 分）。
+
+若将来 Fuyao 与 akshare 出现结构性分歧（例如复权方式不同），回到 ADR-0004：先回填，再切换。
+
 ## 约束
 
 1. **`FUYAO_API_KEY` 只从环境变量读取**，不写入仓库、`.env`、日志或异常消息。Key 缺失时 Fuyao 不注册，链路自动退回 akshare，`daily_run` 不因此失败。
 2. **起始日必须钳到 5 年边界**，否则 `code=1003`。钳位逻辑属于适配器职责，不暴露给计算器。
 3. **成交量单位不得换算**：Fuyao 与 akshare 均为「股」，实测误差 1e-6。任何「除以 100」的转换都会把 F3 的 `close × volume` 打偏 100 倍。
-4. **不得用 Fuyao 回填历史**（`fgi/output/backfill.py` 路径）。历史深度只信 akshare。
+4. **历史回填不得用 Fuyao**：`fgi/output/backfill.py` 走 `setup_data_manager(extra_fallbacks=False)`，链里只有 akshare。`fgi/output/backfill_late.py` 只重算最近 3~5 个交易日的降级指标，允许使用 Fuyao——它同样走 DB-first，历史仍来自 `raw_data`。
 5. `code != 0` 一律按失败处理并进入 `FallbackChain` 冷却，不做静默兜底。
 
 ## 后果
@@ -74,3 +85,5 @@
 | 装配（backfill） | m3/f3/m4 链 = 仅 akshare |
 | 离线重算 2026-11-19 | 空链（任何取数都会 KeyError）下 m3/f3 均返回 normal，证明 DB-first 未触网；窗口 1313 行 |
 | 与库内旧分数对比 | M3 +0.008、F3 −0.159（旧分数由 akshare 实时序列算出，差异来自序列取值而非窗口长度） |
+
+另附 `scripts/verify_sources.py` + `.github/workflows/verify_sources.yml`：手动触发的连通性检查，Key 轮换后跑一次，不写库、不推送、不改历史。它不在决策范围内，是为「Secret 配置正确」这件事提供可复现证据而加的运维工具。
