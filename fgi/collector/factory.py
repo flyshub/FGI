@@ -7,10 +7,12 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fgi.collector.akshare_source import AKShareSource
 from fgi.collector.chains import configure_manager
 from fgi.collector.fallback import DataSourceManager
+from fgi.collector.fuyao_source import FuyaoSource
 from fgi.collector.mootdx_source import MootdxSource
 from fgi.collector.tencent_source import TencentSource
 from fgi.collector.zzshare_source import ZZShareSource
@@ -40,7 +42,8 @@ def setup_data_manager(extra_fallbacks: bool = True) -> DataSourceManager:
     """按配置装配生产数据源。
 
     extra_fallbacks:
-        True  — 把 mootdx/tencent 追加到它们能服务的链（实际只有指数日线，见 registry）
+        True  — 把 mootdx/tencent/fuyao 追加到它们能服务的链，并把 fuyao 提到链首
+                （ADR-0005：m3/m4/f3 以同花顺为主源）
         False — 不追加，供 backfill 使用：历史深度只信 akshare，兜底源窗口太短
     """
     manager = DataSourceManager()
@@ -51,12 +54,17 @@ def setup_data_manager(extra_fallbacks: bool = True) -> DataSourceManager:
         _try_register(manager, "mootdx", MootdxSource)
     if TENCENT_ENABLED:
         _try_register(manager, "tencent", TencentSource)
+    if os.getenv("FUYAO_API_KEY", "").strip():
+        _try_register(manager, "fuyao", FuyaoSource)
     if _zzshare_available():
         _try_register(manager, "zzshare", ZZShareSource)
 
     extra = None
+    prefer = None
     if extra_fallbacks:
-        extra = [name for name in ("mootdx", "tencent") if manager.has_source(name)]
+        extra = [name for name in ("mootdx", "tencent", "fuyao") if manager.has_source(name)]
+        prefer = [name for name in ("fuyao",) if manager.has_source(name)]
 
-    configure_manager(manager, extra_fallbacks=extra)
+    configure_manager(manager, extra_fallbacks=extra, prefer_primary=prefer)
+    logger.info("data sources assembled: %s", ", ".join(sorted(manager._sources)))
     return manager

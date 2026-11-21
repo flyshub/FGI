@@ -1,0 +1,25 @@
+name: Verify Data Sources
+
+# 手动触发：确认各数据源在 CI 环境里能装配、且 fuyao 真能取到数据。
+# Key 轮换后跑一次；不写库、不推送、不改历史。
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 只装本检查用得到的依赖：重依赖（akshare/levistock/zzshare）在源码里是懒加载的
+      - name: Install minimal deps
+        run: pip install pandas numpy requests && pip install -e . --no-deps
+
+      - name: Verify sources
+        env:
+          FUYAO_API_KEY: ${{ secrets.FUYAO_API_KEY }}
+        run: python scripts/verify_sources.py

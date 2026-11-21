@@ -135,3 +135,4 @@
 5. **Python 最低 3.10**，CI 跑 3.10 + 3.12 两个版本。mypy 按 3.12 检查（第三方 stub 用了 3.12 语法），3.10 兼容性由 matrix 实测保证。
 6. **版本号唯一真值**是 `pyproject.toml`；站点页脚的 `app_version` 由导出脚本从包元数据注入，不要在前端或文档里另写一份。
 7. **门禁以 pre-commit 的工具版本为准**。CI 与 hook 用 `.pre-commit-config.yaml` 钉住的 mypy（v1.8），本机 pip 装的最新版推断更松，可能都通过而 CI 失败。改完类型相关代码先跑 `pre-commit run --all-files`，不要只跑 `python -m mypy`。
+8. **m3 / m4 / f3 以同花顺（Fuyao）为主源，历史靠 DB-first 拼接**（ADR-0005）。这三条链的计算器必须先读 `raw_data`、只用数据源补最近 30 天——Fuyao 只有近 5 自然年（1211 根），整窗重取会把 1260 的滚动窗口截短，直接偏 0.9~1.5 分。`FUYAO_API_KEY` 只从环境变量读，缺失时自动退回 akshare；`backfill` 路径永远不启用 Fuyao。
