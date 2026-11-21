@@ -60,11 +60,11 @@ def setup_data_manager(extra_fallbacks: bool = True) -> DataSourceManager:
         _try_register(manager, "zzshare", ZZShareSource)
 
     extra = None
-    prefer = None
+    primary = None
     if extra_fallbacks:
         extra = [name for name in ("mootdx", "tencent", "fuyao") if manager.has_source(name)]
-        prefer = [name for name in ("fuyao",) if manager.has_source(name)]
+        primary = "fuyao" if manager.has_source("fuyao") else None
 
-    configure_manager(manager, extra_fallbacks=extra, prefer_primary=prefer)
+    configure_manager(manager, extra_fallbacks=extra, primary=primary)
     logger.info("data sources assembled: %s", ", ".join(sorted(manager._sources)))
     return manager

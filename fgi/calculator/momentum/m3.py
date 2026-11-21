@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 from fgi.calculator.common import lookback_start, mark_success, missing, save_score
@@ -10,6 +12,8 @@ from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
 
 K = raw_keys("m3")
+
+logger = logging.getLogger(__name__)
 
 
 class M3Calculator:
@@ -57,6 +61,29 @@ class M3Calculator:
             self._db.upsert_raw_data(d, K["close"], float(row["close"]))
         self._db.commit()
 
+    def _bootstrap_history(
+        self, start_date: str, end_date: str, db_data: pd.DataFrame
+    ) -> tuple[pd.DataFrame, bool, DataSourceResult]:
+        """不变式 8 的唯一例外：DB 不足一个窗口时整窗取数引导。
+
+        只应在新部署或 DB 恢复不完整时触发，所以要留下 warning——
+        它出现就说明历史不是从库里拼的，分数与常规运行不可比。
+        数据源本身深度不足（如 Fuyao 1211 根）时补不满，由 status 里的
+        `short history` 记录实际窗口长度。
+        """
+        logger.warning(
+            "m3: raw_data has %d rows (< %d window), bootstrapping full window from source",
+            len(db_data),
+            self._window,
+        )
+        result = self.fetch_data(start_date, end_date)
+        fetched = False
+        if result.status == DataSourceStatus.HEALTHY and result.data is not None:
+            fetched = True
+            self._persist_source_data(result)
+            db_data = self._db.get_raw_data(K["close"], start_date, end_date)
+        return db_data, fetched, result
+
     def run(self, date: str, lookback_days: int = None) -> dict:
         self._status.begin(date)
         if lookback_days is None:
@@ -84,16 +111,11 @@ class M3Calculator:
                 self._persist_source_data(result)
                 db_data = self._db.get_raw_data(K["close"], start_date, end_date)
 
-        # 历史不足一个窗口（新部署 / DB 恢复不完整）：整窗重取补齐。
-        # 不足 252 行时 rolling_percentile 恒为 NaN（指标 missing）；252~1259 行
-        # 虽能出分但窗口被截短，会偏 0.9~1.5 分。数据源本身只有 1211 根时补不满，
-        # 所以下面把实际窗口长度记进 status，别让截断静默发生。
+        # 历史不足一个窗口（新部署 / DB 恢复不完整）：走引导路径整窗取数补齐。
+        # 这是不变式 8 的唯一例外，触发时 `_bootstrap_history` 会打 warning。
         if len(db_data) < self._window:
-            result = self.fetch_data(start_date, end_date)
-            if result.status == DataSourceStatus.HEALTHY and result.data is not None:
-                fetched_freshly = True
-                self._persist_source_data(result)
-                db_data = self._db.get_raw_data(K["close"], start_date, end_date)
+            db_data, bootstrapped, result = self._bootstrap_history(start_date, end_date, db_data)
+            fetched_freshly = fetched_freshly or bootstrapped
             if db_data.empty:
                 return missing(self._status, "m3", result.error, result.source)
 

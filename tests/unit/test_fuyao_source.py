@@ -185,9 +185,9 @@ class TestChainPreference:
         manager.register_source("fuyao", MockSource("fuyao"))
         return manager
 
-    def test_prefer_primary_lifts_fuyao(self):
+    def test_primary_lifts_fuyao(self):
         manager = self._manager()
-        configure_manager(manager, extra_fallbacks=["fuyao"], prefer_primary=["fuyao"])
+        configure_manager(manager, extra_fallbacks=["fuyao"], primary="fuyao")
 
         for chain in ("m3_index", "m4_cyb_volume", "f3_index"):
             assert manager._chains[chain]._sources == [

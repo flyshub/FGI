@@ -13,6 +13,7 @@ from fgi.collector.trading_calendar import TradingCalendar
 from fgi.config.settings import DB_PATH
 from fgi.output.alert import Alert
 from fgi.output.decision_matrix import compute_decision_matrix
+from fgi.output.health_gate import regressions_to_suppress
 from fgi.output.pushplus import send_fgi_report
 from fgi.storage.database import Database
 
@@ -79,9 +80,15 @@ def main():
 
         print(f"FGI Final: {result['fgi_final']}")
         print(f"Health Score: {result['health_score']}")
+        non_normal = sorted(
+            name
+            for name, r in result.get("indicator_results", {}).items()
+            if r.get("status") != "normal"
+        )
+        detail = f" ({', '.join(non_normal)})" if non_normal else ""
         print(
             f"Indicators: {ok_count}/12 normal, {degraded_count} degraded, "
-            f"{missing_count} missing, {error_count} error"
+            f"{missing_count} missing, {error_count} error{detail}"
         )
 
         # 数据日期与目标日期不一致 = 该指标是沿用的旧值，读者需要知道。
@@ -107,9 +114,11 @@ def main():
 
         # 失败可见性优先于推送：多个指标崩溃时 FGI 已经失真，非零退出让
         # workflow 的失败判定生效（不写回数据 + 开 issue）。
+        # 这道门数的是**计算器崩溃**（status='error'）；数据源取不到数落的是
+        # 'missing'，由下面的回归判定负责。
         if error_count >= ERROR_SUPPRESS_THRESHOLD:
             print(
-                f"Push suppressed: {error_count} indicators failed (threshold "
+                f"Push suppressed: {error_count} calculators crashed (threshold "
                 f"{ERROR_SUPPRESS_THRESHOLD}); FGI no longer represents the market.",
                 file=sys.stderr,
             )
@@ -121,6 +130,19 @@ def main():
         first_pass = args.first_pass or os.environ.get("FGI_FIRST_PASS") == "1"
         if first_pass:
             return
+
+        # 数据源故障不进 error_count（那是计算器崩溃），补一道回归判定：
+        # 某指标此前连续 normal、今天却 missing/error → 源断了，不是本来就缺。
+        # 只放在第二趟：第一趟时当日数据可能还没发布，backfill_late 会补；
+        # 补完仍缺才算真断。与 error_count 那道门一样，不受 --force-push 放行。
+        regressions = regressions_to_suppress(db, target_date, result.get("indicator_results", {}))
+        if regressions:
+            print(
+                f"Push suppressed: {len(regressions)} indicators regressed from normal "
+                f"to missing/error: {', '.join(regressions)}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
         if args.force_push:
             anomaly_detected = False

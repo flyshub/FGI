@@ -228,3 +228,11 @@ class TestF3Calculator:
         status = db.get_status("2024-01-10")
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
+
+    def test_bootstrap_logs_warning(self, f3_calculator, db, caplog):
+        """不变式 8 的唯一例外必须留痕：历史不足窗口时打 warning。"""
+        with caplog.at_level("WARNING", logger="fgi.calculator.funding.f3"):
+            result = f3_calculator.run("2024-01-10", lookback_days=300)
+
+        assert result["status"] == "normal"
+        assert "bootstrapping full window" in caplog.text

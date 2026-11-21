@@ -274,6 +274,26 @@ class StatusRepository:
             (date,),
         ).fetchall()
 
+    def get_status_history(self, before_date: str, limit_days: int) -> pd.DataFrame:
+        """before_date 之前最近 limit_days 个「有状态记录」的日期，按日期升序。
+
+        用于回归判定（health_gate）：只看真正跑过管道的交易日，不看日历。
+        """
+        return pd.read_sql_query(
+            """
+            SELECT * FROM daily_status
+            WHERE date IN (
+                SELECT DISTINCT date FROM daily_status
+                WHERE date < ?
+                ORDER BY date DESC
+                LIMIT ?
+            )
+            ORDER BY date, indicator
+            """,
+            self._handle,
+            params=[before_date, limit_days],
+        )
+
     def get_degraded_dates(self, start_date: str, end_date: str) -> list:
         return self._handle.execute(
             "SELECT date, indicator, status, source, error FROM daily_status "

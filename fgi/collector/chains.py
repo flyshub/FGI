@@ -41,7 +41,7 @@ def _can_serve(manager: DataSourceManager, name: str, method: str | None) -> boo
 def configure_manager(
     manager: DataSourceManager,
     extra_fallbacks: list[str] | None = None,
-    prefer_primary: list[str] | None = None,
+    primary: str | None = None,
 ) -> None:
     """为 DataSourceManager 配置所有指标链。
 
@@ -49,7 +49,7 @@ def configure_manager(
         manager: 已注册数据源的 DataSourceManager 实例
         extra_fallbacks: 额外兜底来源（如 ["mootdx", "tencent"]），
             只有真正实现了该链方法的源才会被追加
-        prefer_primary: 提到链首的来源（如 ["fuyao"]，见 ADR-0005），
+        primary: 提到链首的来源（如 "fuyao"，见 ADR-0005），
             只对它能服务的链生效；回填路径不传，历史深度只信 akshare
     """
     offenders: list[str] = []
@@ -77,10 +77,9 @@ def configure_manager(
 
         # 主源上移：Fuyao 能服务的链把它提到最前面（ADR-0005）。
         # 用 list.remove/insert 而非重排整个列表，保持其余来源的相对顺序。
-        for name in prefer_primary or []:
-            if name in chain:
-                chain.remove(name)
-                chain.insert(0, name)
+        if primary and primary in chain:
+            chain.remove(primary)
+            chain.insert(0, primary)
 
         if chain:
             manager.configure_chain(indicator, chain)
