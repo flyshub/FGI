@@ -105,10 +105,6 @@ class F3Calculator:
                 self._persist_source_data(result)
                 history = self._load_history(start_date, date)
 
-        # 历史不足一个窗口（新部署 / DB 恢复不完整）：整窗重取补齐。
-        # 不足 252 行时 rolling_percentile 恒为 NaN（指标 missing）；252~1259 行
-        # 虽能出分但窗口被截短，会偏 0.9~1.5 分。数据源本身只有 1211 根时补不满，
-        # 所以下面把实际窗口长度记进 status，别让截断静默发生。
         # 历史不足一个窗口（新部署 / DB 恢复不完整）：走引导路径整窗取数补齐。
         # 这是不变式 8 的唯一例外，触发时 `_bootstrap_history` 会打 warning。
         if len(history) < self._window:

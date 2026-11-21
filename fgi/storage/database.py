@@ -133,6 +133,9 @@ class Database:
     def get_degraded_dates(self, start_date, end_date):
         return self.status.get_degraded_dates(start_date, end_date)
 
+    def get_status_history(self, before_date, limit_days):
+        return self.status.get_status_history(before_date, limit_days)
+
     # ── Connection lifecycle ──────────────────────────────────
 
     def connect(self):

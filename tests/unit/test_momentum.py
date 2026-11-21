@@ -217,6 +217,8 @@ class TestM4Calculator:
         status = db.get_status("2024-01-10")
         assert len(status) == 1
         assert status.iloc[0]["status"] == "normal"
+        # 种子只有 ~525 行（<1260 窗口）：不变式 8 要求把实际长度记进 status
+        assert "short history" in status.iloc[0]["error"]
 
         z = db.get_raw_data("m4_zscore", "2024-01-10", "2024-01-10")
         assert len(z) == 1
@@ -304,3 +306,23 @@ class TestM4Calculator:
         assert fetched["called"], "NULL today must trigger fetch_data"
         assert result["status"] == "normal", f"got {result['status']}"
         assert result["m4"] is not None
+
+    def test_bootstrap_logs_warning(self, m4_calculator, db, caplog, monkeypatch):
+        """不变式 8 的唯一例外必须留痕：30 天补数拿不到、只能整窗引导时打 warning。"""
+        from fgi.collector.base import DataSourceResult, DataSourceStatus
+
+        real_fetch = m4_calculator.fetch_data
+
+        def fake_fetch(start_date, end_date):
+            # 只有整窗请求才拿得到数据，模拟「源只提供历史批量、不给最近 30 天」
+            span = (pd.Timestamp(end_date) - pd.Timestamp(start_date)).days
+            if span <= 60:
+                return DataSourceResult(None, DataSourceStatus.HEALTHY, "mock")
+            return real_fetch(start_date, end_date)
+
+        monkeypatch.setattr(m4_calculator, "fetch_data", fake_fetch)
+
+        with caplog.at_level("WARNING", logger="fgi.calculator.momentum.m4"):
+            m4_calculator.run("2024-01-10", lookback_days=600)
+
+        assert "bootstrapping full window" in caplog.text

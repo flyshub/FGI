@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -11,6 +13,8 @@ from fgi.indicators.registry import raw_keys
 from fgi.storage.database import Database
 
 K = raw_keys("m4")
+
+logger = logging.getLogger(__name__)
 
 
 class M4Calculator:
@@ -97,6 +101,12 @@ class M4Calculator:
                 db_data = self._db.get_raw_data(K["volume"], start_date, end_date)
 
         if db_data.empty:
+            # 不变式 8 的唯一例外：库里一个字都没有时整窗取数引导（首次部署/DB
+            # 恢复），必须留 warning，否则「历史不是从库里拼的」这件事无从察觉。
+            logger.warning(
+                "m4: raw_data has 0 rows (< %d window), bootstrapping full window from source",
+                self._window,
+            )
             result = self.fetch_data(start_date, end_date)
             if (
                 result.status != DataSourceStatus.HEALTHY
@@ -156,7 +166,10 @@ class M4Calculator:
             {K["zscore"]: today["volume_zscore"].iloc[0], K["percentile"]: percentile},
         )
         if not is_degraded:
-            mark_success(self._status, "m4", "database", fetched_freshly)
+            note = None
+            if len(df) < self._window:
+                note = f"short history: {len(df)}/{self._window} rows"
+            mark_success(self._status, "m4", "database", fetched_freshly, extra_note=note)
 
         return {
             "m4": score,

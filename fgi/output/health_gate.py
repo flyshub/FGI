@@ -51,7 +51,7 @@ def find_regressions(
     if not broken:
         return []
 
-    history = db.status.get_status_history(date, lookback_days)
+    history = db.get_status_history(date, lookback_days)
     if history.empty:
         return []
     recent_dates = sorted(history["date"].unique())
@@ -78,12 +78,7 @@ def regressions_to_suppress(
     """达到阈值时返回应触发抑制的指标列表，否则返回空列表。"""
     regressions = find_regressions(db, date, indicator_results, lookback_days)
     if len(regressions) >= threshold:
-        logger.warning(
-            "%d indicators regressed from normal to %s: %s",
-            len(regressions),
-            "/".join(BROKEN_STATUSES),
-            ", ".join(regressions),
-        )
+        # 调用方（daily_run）负责打印并 exit；这里只留日志供回溯。
         return regressions
     if regressions:
         logger.info(
