@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/flyshub/FGI/actions/workflows/ci.yml/badge.svg)
 
-全自动 A 股市场情绪量化指数。每日从 4 大数据源采集 12 个指标，合成 0–100 的情绪读数，通过 PushPlus 推送至手机。
+全自动 A 股市场情绪量化指数。每日从 5 大数据源采集 12 个指标，合成 0–100 的情绪读数，通过 PushPlus 推送至手机。
 
 > 极度恐惧时买入，极度贪婪时卖出——前提是恐惧/贪婪信号真的有效。FGI 的目标是用数据验证这个假设，并给出可量化的决策辅助。
 
@@ -78,7 +78,7 @@ python -m fgi.output.daily_run --date 2026-07-24  # 指定日期
 ```
 fgi/
 ├── calculator/         # 12 个指标计算器（momentum/sentiment/valuation/funding）
-├── collector/          # 数据源采集层（AKShare/ZZShare/Mootdx/Tencent + 自动降级）
+├── collector/          # 数据源采集层（Fuyao/AKShare/ZZShare/Mootdx/Tencent + 自动降级）
 ├── storage/            # SQLite 存储（raw_data / scores_daily / daily_status）
 ├── output/             # 每日运行、推送、回填、回测、决策矩阵
 ├── common/             # 工具函数
@@ -91,13 +91,16 @@ fgi/
 
 ```
 指标 → DataSourceManager → FallbackChain
-                           ├─ AKShare（主）
+                           ├─ Fuyao（同花顺官方 API，m3/m4/f3 的首选源）
+                           ├─ AKShare（其余指标的首选源，也是 m3/m4/f3 的兜底）
                            ├─ ZZShare
                            ├─ Mootdx（TCP，无 IP 封禁）
                            └─ Tencent（HTTP，无 IP 封禁）
 ```
 
 每个指标有首选来源链。首源失败后按序降级。5 次连续失败后冷却 5 分钟，更多失败后冷却 1 小时。
+
+m3 / m4 / f3 三条链走 **DB-first 拼接**：历史从 `raw_data` 读，数据源只补最近 30 天。原因是 Fuyao 只提供近 5 自然年（约 1211 根），整窗重取会把 1260 的滚动窗口截短（详见 ADR-0005 与 `AGENTS.md` 不变式 8）。
 
 ### 存储
 
@@ -116,12 +119,18 @@ SQLite（`data/fgi.db`），三张核心表：
 通过环境变量控制数据源可用性。默认全部开启（值为 `true` / `false`）：
 
 ```bash
-FGI_AKSHARE_ENABLED=false python -m fgi.output.daily_run   # 关闭 akshare（主源）
+FGI_AKSHARE_ENABLED=false python -m fgi.output.daily_run   # 关闭 akshare
 FGI_MOOTDX_ENABLED=false python -m fgi.output.daily_run    # 关闭 mootdx 兜底
 FGI_TENCENT_ENABLED=false python -m fgi.output.daily_run   # 关闭腾讯兜底
 ```
 
 zzshare 没有开关：以 `import zzshare` 的成败决定是否注册（M2、S2、S3 依赖它）。
+
+Fuyao 没有 `FGI_*_ENABLED` 开关：由 `FUYAO_API_KEY` 是否存在决定。没有 Key 时它不注册，m3/m4/f3 自动退回 akshare，`daily_run` 不会因此失败。需要 Key 时才用官方 API（申请入口见 [fuyao.aicubes.cn](https://fuyao.aicubes.cn/admin/)）：
+
+```bash
+export FUYAO_API_KEY=sk-fuyao-...    # 不要写进仓库或 .env 后提交
+```
 
 支持离线重建模式（`FGI_OFFLINE=1`）：从数据库直接加载，无需网络。仅用于历史重算，不可用于生产推送。
 
@@ -141,12 +150,15 @@ python scripts/recompute_v2.py        # 重算历史得分（可中断续算，�
 - **配置**：在 Settings → Secrets → Actions 添加以下 Secret（注意不带 `FGI_` 前缀——workflow 会映射为对应的环境变量）：
   - `PUSHPLUS_TOKEN` — 主推送地址（对应环境变量 `FGI_PUSHPLUS_TOKEN`）
   - `PUSHPLUS_FRIENDS` — 好友令牌（逗号分隔，可选；对应环境变量 `FGI_PUSHPLUS_FRIENDS`）
+  - `FUYAO_API_KEY` — 同花顺 API Key（可选；缺失时 m3/m4/f3 退回 akshare，管道照常运行）
 - **流水线**：
   1. `python -m fgi.output.daily_run` — 计算 FGI + PushPlus 推送
   2. `gh release upload data-latest data/fgi.db` — 数据库回传（**不进 git**，见不变式 1）
   3. `python -m fgi.output.web_export --full` — 导出 6 个 JSON 文件
   4. `git commit docs/data/` — Web 数据回写 → GitHub Pages 自动部署
 - **产物**：每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact
+- **失败处理**：指标崩溃 ≥3 个，或 ≥2 个指标从「此前 3 个有状态日期全 `normal`」掉成 `missing`/`error`（`fgi/output/health_gate.py` 的回归判定）时，不推送、`exit 1`，DB 与 Web 数据都不写回，并自动开 issue。单个指标缺失不拦——当日未发布、次日由 `backfill_late` 补齐属正常流程。
+- **连通性检查**：`verify_sources.yml`（手动触发，`gh workflow run verify_sources.yml`）逐个指标打印实际命中的数据源，用来确认 Key 有效、链序正确。不写库、不推送；Key 轮换后跑一次。
 
 ## Web 前端
 
@@ -213,7 +225,7 @@ pytest tests/ -x -q
 
 ## 数据真实性说明
 
-- 数据来自 AKShare / ZZShare / Mootdx / Tencent 等免费公开接口，爬虫类数据源可能因网站改版中断。
+- 数据来自同花顺（Fuyao）/ AKShare / ZZShare / Mootdx / Tencent 等公开接口，爬虫类数据源可能因网站改版中断。m3 / m4 / f3 三条链已改用同花顺官方 API（ADR-0005），其余指标仍依赖爬虫类接口。
 - F3（主力资金板块偏好）使用上证指数量价代理估算（真实 API 不可达）。V3.8.5 全量 recompute 后分布健康（mean≈49，范围 0–100），序列内百分位相对位置有效。
 - F2（基金股票仓位）为周频数据，前向填充超过 7 天标记为 degraded。
 - F1（融资余额占比）受上游数据 T+1 发布节奏影响，前向填充 >1 天标记为 degraded。
