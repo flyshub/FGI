@@ -145,7 +145,7 @@ V3.8 基于 V3.7 深度评审，修正以下核心问题：
 #### M1 涨停板家数
 
 - **原始值**：当日涨停板股票家数（含一字板、炸板后封板）
-- **数据源**：levistock `stock_zt_pool_em`（主），AKShare `stock_zt_pool_em`（备，仅历史）
+- **数据源**：levistock `market_emotion_kph` 的 `sjzt`（主，缺失回退 `zt`）；AKShare `stock_zt_pool_em`（备，仅近期）
 - **处理**：直接对原始值做滚动 5 年百分位。
 - **方向**：涨停家数越多 → 得分越高（贪婪）。
 - **降级**：levistock 失败 → AKShare（仅限历史日期 < 今日）。
@@ -185,7 +185,7 @@ V3.8 基于 V3.7 深度评审，修正以下核心问题：
 #### S3 涨停封单量
 
 - **原始值**：当日所有涨停板股票的封单金额总和（亿元）
-- **数据源**：levistock `stock_zt_pool_em`（主），AKShare `stock_zt_pool_em`（备，仅历史）
+- **数据源**：levistock `limit_up_his_kph` 的 `seal_money` 求和（主）；AKShare `stock_zt_pool_em` 的 `封板资金`（备，仅近期）
 - **处理**：滚动 5 年百分位。**V3.8.8 修复**：raw=0 及 denormalized float（≤ 1e-100）一律视为数据源中断（production DB 中 496 行此类值经审计全部证实为中断，非真实零封单日），在 percentile 计算前过滤。
 - **方向**：封单量越大 → 得分越高。
 - **降级**：同 M1。
