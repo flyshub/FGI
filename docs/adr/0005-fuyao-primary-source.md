@@ -2,7 +2,7 @@
 
 **日期：** 2026-11-22
 **状态：** 已接受
-**关联：** 探针脚本 `scripts/probe_fuyao.py`、`scripts/probe_fuyao2.py`（一次性，未提交）
+**关联：** 探针脚本 `scripts/probe_fuyao.py`、`scripts/probe_fuyao2.py`（一次性，未提交）；运维检查 `scripts/verify_sources.py`
 
 ## 背景
 
@@ -72,18 +72,19 @@ ADR-0004 规定「数据源口径变更时必须回填历史 `raw_data`，不允
 - ✅ 不新增依赖（直接 `requests`，不引入其 Python SDK / DuckDB / `marketdb`，SDK 还要求 Python 3.11+，与本项目 3.10 下限冲突）。
 - ❌ 引入一个外部 Key 依赖，CI 需要配置 `secrets.FUYAO_API_KEY`。
 - ❌ 费用未确认：官方文档写「不限制累计调用次数」，但没有公开定价，需账号侧确认。
-- ❌ Fuyao 若某日数据滞后，DB-first 会取不到当日值并记 `missing`——这是可见失败，符合项目「不许 fail-open」原则。
+- ❌ Fuyao 若某日数据滞后，DB-first 会取不到当日值并记 `missing`——这是可见失败，符合项目「不许 fail-open」原则。这条在实现后由 `fgi/output/health_gate.py` 的回归判定兜住：`missing` 不进 `error_count`，但某指标此前 3 个有状态记录的日期全 `normal`、今天却 `missing`/`error` 且这类指标 ≥2 个时，推送会被抑制。
 
 ## 验证（2026-11-22）
 
 | 检查 | 结果 |
 |---|---|
-| 单元测试 | `pytest tests/` 402 passed |
-| 静态门禁 | `pre-commit run`：ruff / ruff-format / mypy / DB 连接守卫 全通过 |
-| 装配（无 Key） | m3/f3/m4 链 = akshare → mootdx → tencent，Fuyao 不注册 |
-| 装配（有 Key） | m3/f3/m4 链 = **Fuyao** → akshare → mootdx → tencent |
-| 装配（backfill） | m3/f3/m4 链 = 仅 akshare |
+| 单元测试 | `pytest tests/` 415 passed（含本轮评审补的 `test_health_gate.py`、`test_fuyao_source.py` 与 m3/f3/m4 引导路径测试） |
+| 静态门禁 | `pre-commit run --all-files`：ruff / ruff-format / mypy / DB 连接守卫 全通过；GitHub CI（3.10 + 3.12）success |
+| 装配（无 Key） | m3 / f3 链 = akshare → mootdx → tencent；m4 链 = 仅 akshare（mootdx/tencent 未实现 `fetch_cyb_daily`，按 `CHAIN_METHODS` 门控不入链）；Fuyao 不注册 |
+| 装配（有 Key） | m3 / f3 链 = **Fuyao** → akshare → mootdx → tencent；m4 链 = **Fuyao** → akshare |
+| 装配（backfill） | m3 / f3 / m4 链 = 仅 akshare |
 | 离线重算 2026-11-19 | 空链（任何取数都会 KeyError）下 m3/f3 均返回 normal，证明 DB-first 未触网；窗口 1313 行 |
 | 与库内旧分数对比 | M3 +0.008、F3 −0.159（旧分数由 akshare 实时序列算出，差异来自序列取值而非窗口长度） |
+| CI 连通性检查（run 44929480327） | `m3_index` / `m4_cyb_volume` / `f3_index` 三条链首源均为 fuyao，各取到 15 个交易日、`healthy` |
 
 另附 `scripts/verify_sources.py` + `.github/workflows/verify_sources.yml`：手动触发的连通性检查，Key 轮换后跑一次，不写库、不推送、不改历史。它不在决策范围内，是为「Secret 配置正确」这件事提供可复现证据而加的运维工具。
