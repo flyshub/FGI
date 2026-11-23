@@ -25,6 +25,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# 读 Fuyao market-dumps 的 parquet 需要 pyarrow。只有跑 scripts/validate_m1.py
+# 的人才需要装（pip install -e ".[dump]"），CI 的 [dev] 与每日管道都不装。
+dump = [
+    "pyarrow>=14.0.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
