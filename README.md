@@ -159,6 +159,7 @@ python scripts/recompute_v2.py        # 重算历史得分（可中断续算，�
 - **产物**：每次运行后可在 Actions 页面下载 `fgi-results-<date>` artifact
 - **失败处理**：指标崩溃 ≥3 个，或 ≥2 个指标从「此前 3 个有状态日期全 `normal`」掉成 `missing`/`error`（`fgi/output/health_gate.py` 的回归判定）时，不推送、`exit 1`，DB 与 Web 数据都不写回，并自动开 issue。单个指标缺失不拦——当日未发布、次日由 `backfill_late` 补齐属正常流程。
 - **连通性检查**：`verify_sources.yml`（手动触发，`gh workflow run verify_sources.yml`）逐个指标打印实际命中的数据源，用来确认 Key 有效、链序正确。不写库、不推送；Key 轮换后跑一次。
+- **M1 交叉校验**：`validate_m1.yml` 每周一 11:00（北京时间）自动跑，用全市场日 K 按交易所规则自行推导涨停家数，与 `raw_data.m1_zt_count` 比对（`fgi/analysis/limit_up.py`）。只读；偏差突然变大才开 issue。本地：`pip install -e ".[dump]"` 后 `python scripts/validate_m1.py --days 120`。已知系统性偏差（约 +2 家；2026-07-06 主板 ST 改 10% 后为 +8~13）属正常，判定看的是突变。详见 `docs/research/2026-11-22-limit-up-history-sources.md`。
 
 ## Web 前端
 

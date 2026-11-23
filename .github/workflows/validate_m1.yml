@@ -1,0 +1,108 @@
+name: Validate M1 Limit-Up Count
+
+# 每周校验一次 M1 的原始值：用全市场日 K 按交易所规则自行推导涨停家数，
+# 与 raw_data 里 levistock 的值比对。只读——不写库、不推送、不改历史。
+# 判定逻辑见 fgi/analysis/limit_up.py（含已知偏差与时区陷阱）。
+on:
+  schedule:
+    # 每周一 03:00 UTC（11:00 北京时间）：上一交易日的收盘数据此时已稳定
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: '回看的交易日数'
+        required: false
+        default: '120'
+      start:
+        description: '起始日 YYYY-MM-DD（可选，优先于 days）'
+        required: false
+      end:
+        description: '结束日 YYYY-MM-DD（可选，默认取库内最新）'
+        required: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 只装本检查用得到的依赖：重依赖（akshare/levistock/zzshare）是懒加载的
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy requests pyarrow
+          pip install -e . --no-deps
+
+      # 与每日管道同源：DB 基线来自 Release 资产
+      - name: Restore DB baseline
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p data
+          gh release download data-latest --pattern fgi.db --dir data --clobber
+          ls -lh data/fgi.db
+
+      - name: Run validator
+        id: validate
+        env:
+          FUYAO_API_KEY: ${{ secrets.FUYAO_API_KEY }}
+          INPUT_DAYS: ${{ github.event.inputs.days }}
+          INPUT_START: ${{ github.event.inputs.start }}
+          INPUT_END: ${{ github.event.inputs.end }}
+        run: |
+          set -o pipefail
+          ARGS=(--days "${INPUT_DAYS:-120}" --report m1-report.md --json m1-summary.json)
+          [ -n "$INPUT_START" ] && ARGS+=(--start "$INPUT_START")
+          [ -n "$INPUT_END" ] && ARGS+=(--end "$INPUT_END")
+          python scripts/validate_m1.py "${ARGS[@]}"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-validation-report
+          path: |
+            m1-report.md
+            m1-summary.json
+          retention-days: 30
+
+      # 失败只开一条 issue，后续每周在同一 issue 上追加评论，避免刷屏
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="M1 validator: 涨停家数偏差异常"
+          SUMMARY=$(python - <<'PY'
+          import json, pathlib
+          p = pathlib.Path("m1-summary.json")
+          if not p.exists():
+              print("（无 summary，校验在数据装载阶段失败）")
+          else:
+              s = json.loads(p.read_text())
+              print(
+                  f"区间 {s['start']} ~ {s['end']}，{s['days']} 个交易日\n"
+                  f"- 结论：{s['verdict']}\n"
+                  f"- fail 日：{s['fail_days']}（最近 5 日 {s['recent_fail_days']}）\n"
+                  f"- 平均偏差：{s['mean_delta']:+.2f} 家\n"
+                  f"- 偏差范围：{s['min_delta']:+d} ~ {s['max_delta']:+d} 家\n"
+                  f"- 最长连续同向超容差：{s['max_consecutive']} 天"
+              )
+          PY
+          )
+          BODY=$(printf '运行：%s\n\n```\n%s\n```\n\n报告见运行产物 `m1-validation-report`。' "$RUN_URL" "$SUMMARY")
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number -q '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
