@@ -8401,10 +8401,10 @@
   },
   {
     "date": "2026-11-23",
-    "fgi": 62.8,
-    "anchor_date": "2023-01-03",
-    "anchor_fgi": 62.7,
-    "anchor_delta": 8.6,
-    "forward_20": 4.2
+    "fgi": 64.1,
+    "anchor_date": "2017-02-10",
+    "anchor_fgi": 64.1,
+    "anchor_delta": 2.3,
+    "forward_20": 0.5
   }
 ]
