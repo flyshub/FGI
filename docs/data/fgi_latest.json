@@ -1,62 +1,67 @@
 {
   "date": "2026-11-24",
-  "fgi_final": 59.19,
-  "fgi_raw": 59.19,
-  "health_score": 66.7,
+  "fgi_final": 59.46,
+  "fgi_raw": 59.46,
+  "health_score": 90.0,
   "zone": "中性",
   "trend": "↓",
-  "delta": -4.92,
+  "delta": -4.65,
   "prev_fgi": 64.11,
-  "percentile": 67.2,
-  "percentile_label": "位于历史中上区域（67%分位）",
+  "percentile": 68.1,
+  "percentile_label": "位于历史中上区域（68%分位）",
   "extreme_note": "",
   "scores": {
-    "M1": 0.0,
-    "M2": null,
-    "M3": null,
-    "M4": null,
-    "S2": null,
+    "M1": 52.5,
+    "M2": 32.8,
+    "M3": 3.8,
+    "M4": 79.8,
+    "S2": 4.7,
     "S3": 84.4,
-    "V1": null,
-    "V2": null,
+    "V1": 46.6,
+    "V2": 97.2,
     "V4": null,
     "F1": null,
     "F2": 94.0,
-    "F3": null
+    "F3": 67.5
   },
   "dimensions": {
-    "momentum": 0.0,
-    "sentiment": 84.4,
-    "valuation": null,
+    "momentum": 42.2,
+    "sentiment": 44.5,
+    "valuation": 71.9,
     "volatility": null,
-    "funding": 94.0
+    "funding": 80.8
   },
   "statuses": {
     "F1": "forward_fill",
     "F2": "normal",
-    "F3": "forward_fill",
+    "F3": "normal",
     "M1": "normal",
-    "M2": "forward_fill",
-    "M3": "forward_fill",
-    "M4": "forward_fill",
-    "S2": "forward_fill",
+    "M2": "normal",
+    "M3": "normal",
+    "M4": "normal",
+    "S2": "normal",
     "S3": "normal",
-    "V1": "forward_fill",
-    "V2": "forward_fill",
+    "V1": "normal",
+    "V2": "normal",
     "V4": "degraded"
   },
   "decision_matrix": {
-    "fgi": 59.18739392042451,
+    "fgi": 59.45798028103026,
     "sentiment_tier": "中性",
-    "pe_pct": 0.6901565995525727,
+    "pe_pct": 0.6983240223463687,
     "pb_pct": 0.8243243243243243,
-    "valuation_pct": 0.7572404619384485,
+    "valuation_pct": 0.7613241733353465,
     "valuation_tier": "高估",
     "quadrant": "谨慎",
     "advice": "估值偏高，建议谨慎"
   },
   "extreme_signals": {
     "high": [
+      [
+        "V2",
+        "ΔERP Z-score",
+        97.2
+      ],
       [
         "F2",
         "基金股票仓位",
@@ -65,65 +70,70 @@
     ],
     "low": [
       [
-        "M1",
-        "涨停板家数",
-        0.0
+        "M3",
+        "偏离60日均线",
+        3.8
+      ],
+      [
+        "S2",
+        "股吧热度",
+        4.7
       ]
     ]
   },
   "zone_context": {
     "zone": "中性",
-    "n": 1548,
-    "total": 2655,
+    "n": 1549,
+    "total": 2656,
     "pct": 58.3,
     "horizons": {
       "5": {
-        "mean": 0.0009433486957108758,
-        "win_rate": 0.5290697674418605
+        "mean": 0.0009362182852370955,
+        "win_rate": 0.5287282117495158
       },
       "20": {
-        "mean": 0.003646161351794186,
-        "win_rate": 0.5283018867924528
+        "mean": 0.003625979520741765,
+        "win_rate": 0.5279583875162549
       },
       "60": {
-        "mean": 0.011370835973170861,
-        "win_rate": 0.5623342175066313
+        "mean": 0.011306344010831994,
+        "win_rate": 0.5619615639496355
       }
     }
   },
   "anchor": {
-    "closest_date": "2017-03-02",
-    "closest_fgi": 59.2,
-    "delta": -8.3,
-    "forward_20d_return": -0.6,
+    "closest_date": "2019-10-29",
+    "closest_fgi": 59.5,
+    "delta": -9.0,
+    "forward_20d_return": -1.6,
     "detail_table": [
       {
-        "date": "2022-02-25",
-        "fgi": 59.2,
-        "forward_20": -6.9
+        "date": "2019-10-29",
+        "fgi": 59.5,
+        "forward_20": -1.6
       },
       {
-        "date": "2017-03-02",
-        "fgi": 59.2,
-        "forward_20": -0.6
+        "date": "2016-10-25",
+        "fgi": 59.5,
+        "forward_20": 3.7
       },
       {
-        "date": "2023-03-22",
-        "fgi": 59.2,
-        "forward_20": 3.1
+        "date": "2026-03-18",
+        "fgi": 59.5,
+        "forward_20": -0.2
       },
       {
-        "date": "2016-10-26",
-        "fgi": 59.1,
-        "forward_20": 4.0
+        "date": "2017-02-06",
+        "fgi": 59.5,
+        "forward_20": 2.4
       },
       {
-        "date": "2023-02-02",
-        "fgi": 59.1,
-        "forward_20": 0.8
+        "date": "2024-11-13",
+        "fgi": 59.5,
+        "forward_20": -0.2
       }
     ]
   },
-  "generated_at": "2026-11-24T01:12:16",
+  "generated_at": "2026-11-24T20:36:16",
   "app_version": "3.9.0"
 }
